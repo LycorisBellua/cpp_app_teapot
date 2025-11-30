@@ -1,0 +1,11 @@
+# Temporary files
+*.swp
+~*
+.vscode
+
+# Compilation files
+*.o
+*.a
+a.out
+webserv
+build

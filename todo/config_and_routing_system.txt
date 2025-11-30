@@ -1,0 +1,221 @@
+                  ┌───────────────────────────────┐
+                  │   Configuration & Routing     │
+                  │           System              │
+                  └──────────────┬────────────────┘
+                                 │
+                                 ▼
+                  ┌───────────────────────────────┐
+                  │       HTTP Server Core        │
+                  └───────────────────────────────┘
+
+The configuration and routing system is the logic layer which decides what the 
+server should do.
+
+--------------------------------------------------------------------------------
+PHASE 0 — Starter Pack
+--------------------------------------------------------------------------------
+
+These tasks give you test material, sample routes, and the basic config 
+environment.
+
+0.1 Create a test website
+
+- `www/index.html`
+- `www/upload.html`
+- `www/delete_test.html`
+
+0.2 Create a simple CGI script
+
+- `cgi/test.py` -> prints "Hello CGI"
+
+0.3 Create an upload directory
+
+- `uploads/` (empty)
+
+0.4 Create default error pages
+
+- `www/errors/default.html` -> Catch-All, receives the status code and status 
+message to display the error if no specific error page does exist.
+- Specific pages for common errors:
+	* `www/errors/403.html` (Forbidden)
+	* `www/errors/404.html` (Not Found)
+	* `www/errors/500.html` (Internal Server Error)
+- The config file can list error file paths. If the path leads to an existing 
+file, serve it. Otherwise, serve your own specific error page, and if it 
+doesn't exist either then serve the default error page.
+
+0.5 Create a sample config file
+
+Example includes:
+- server block
+- static route
+- CGI route
+- upload route
+- delete route
+- error pages
+- max body size
+
+0.6 Create MIME type mapping
+
+- Simple `extension -> Content-Type`
+
+--------------------------------------------------------------------------------
+PHASE 1 — Configuration system
+--------------------------------------------------------------------------------
+
+1.1 Parse the configuration file
+
+Output internal structures containing:
+- server blocks
+- location blocks
+- methods allowed
+- root
+- upload paths
+- CGI handlers
+- error page paths
+- redirections
+
+1.2 Validate config values
+
+- port format
+- directories must exist
+- error pages must exist
+- CGI interpreters must exist
+- methods must be valid (GET, POST, DELETE)
+
+1.3 Provide routing interface
+
+Function that given:
+
+```
+(method, uri)
+```
+
+returns:
+- which location block matches
+- allowed methods
+- root directory
+- full file path
+- MIME type
+- CGI info (interpreter + script)
+- upload directory
+- error pages
+- redirection info
+
+This function is what your mate will call before generating the response.
+
+--------------------------------------------------------------------------------
+PHASE 2 — Static file & directory utilities
+--------------------------------------------------------------------------------
+
+2.1 File system helpers
+
+- Detect if path exists
+- Detect if path is directory
+- Build absolute path from root + URI
+
+2.2 Read file into buffer
+
+- Simple helper used by your mate's HTTP code.
+
+2.3 Serve directories
+
+- Serve `index.html` if present
+- If not present -> autoindex (optional)
+- Autoindex = simple HTML listing
+
+2.4 Determine MIME type
+
+- Use the MIME map created earlier.
+
+--------------------------------------------------------------------------------
+PHASE 3 — Upload handling (POST)
+--------------------------------------------------------------------------------
+
+Should rely on your routing system from Phase 1.
+
+3.1 Implement file upload
+
+- Save POST body to disk inside upload directory
+- Create safe non-clashing filenames
+
+3.2 Enforce max_body_size
+
+- Using configuration value.
+
+3.3 Support chunked uploads
+
+- Your mate decodes the chunks, you implement what happens after the body is 
+ready.
+
+--------------------------------------------------------------------------------
+PHASE 4 — DELETE handling
+--------------------------------------------------------------------------------
+
+4.1 Validate DELETE allowed
+
+- Use routing info from Phase 1.
+
+4.2 Delete files
+
+- Remove file from disk
+- Handle:
+	* 404 (file not found)
+	* 403 (permission denied)
+	* 405 (method not allowed)
+
+4.3 Return correct response body
+
+- Use default/custom error pages from Phase 0.
+
+--------------------------------------------------------------------------------
+PHASE 5 — CGI environment & execution helper
+--------------------------------------------------------------------------------
+
+5.1 Generate CGI environment variables
+
+Follow RFC 3875 §4.1:
+- REQUEST_METHOD
+- CONTENT_LENGTH
+- CONTENT_TYPE
+- SCRIPT_FILENAME
+- QUERY_STRING
+- etc.
+
+5.2 Prepare CGI stdin
+
+- Use dummy Request objects at first.
+
+5.3 Setup pipes
+
+- parent writes body to CGI stdin
+- parent reads CGI stdout into buffer
+
+5.4 Implement `run_cgi()` helper
+
+- fork
+- execve interpreter + script
+- return stdout buffer
+
+This can all be tested without your mate's HTTP server.
+
+--------------------------------------------------------------------------------
+PHASE 6 — Error pages & redirection
+--------------------------------------------------------------------------------
+
+6.1 Map status codes -> pages
+
+- Use default or config-defined pages.
+
+6.2 Redirection system
+
+- Read `return 301 /path` from config
+- Provide easy API for redirect responses
+
+6.3 Provide ready-to-send Response objects
+
+For:
+- 301/302
+- 403
+- 404
+- 500

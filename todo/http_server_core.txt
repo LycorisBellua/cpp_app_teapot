@@ -1,0 +1,113 @@
+1. Initialize TCP server sockets
+
+- Create listening sockets
+- Set non-blocking
+- Bind to addresses/ports
+- Call `listen()`
+
+--------------------------------------------------------------------------------
+
+2. Implement poll/epoll/select loop
+
+- Create poll structure
+- Add server sockets to poll
+- Handle readable/writable events
+- Manage multiple clients
+
+--------------------------------------------------------------------------------
+
+3. Accept new client connections
+
+- Accept on readable server socket
+- Set client socket non-blocking
+- Store client FD + connection state
+
+--------------------------------------------------------------------------------
+
+4. Close connections on disconnect
+
+- Detect EOF or errors
+- Clean up state + remove from poll
+
+--------------------------------------------------------------------------------
+
+5. Parse HTTP requests
+
+(Parsing must be incremental and state-based)
+
+5.1 Parse request line
+
+- Method
+- URI
+- HTTP version
+- Validate `HTTP/1.1`
+- Host header required (checked after headers)
+
+5.2 Parse headers
+
+- Read header lines into a map
+- Detect `Host` header
+- Detect `Content-Length`
+- Detect `Transfer-Encoding: chunked`
+- (Optional) handle folded/multi-line headers
+
+5.3 Parse body
+
+- If `Content-Length` -> read exact body size
+- If `chunked` -> decode chunks
+
+--------------------------------------------------------------------------------
+
+6. Handle parsing errors
+
+- If malformed -> send 400 Bad Request
+- If unsupported method -> 405 Method Not Allowed
+- If bad version -> 505 HTTP Version Not Supported
+
+--------------------------------------------------------------------------------
+
+7. Map request to a route
+
+- Call your mate's routing API
+- Determine:
+	* which file to serve
+	* whether to run CGI
+	* allowed methods
+	* upload directory
+	* redirects
+
+--------------------------------------------------------------------------------
+
+8. Handle cookies and session management
+
+- Read `Cookie` headers from request
+- Look up session in memory or using session ID
+- Create new session if none exists or expired
+- Attach session data to request context for route handlers
+
+--------------------------------------------------------------------------------
+
+9. Build the HTTP response
+
+- Status line
+- Headers
+- Content-Length or Transfer-Encoding
+- Body (static file, upload result, CGI output, error page, etc.)
+
+--------------------------------------------------------------------------------
+
+10. Set cookies for session management
+
+- If session was created or modified -> send `Set-Cookie` header
+- Include any other cookies the route requires
+
+--------------------------------------------------------------------------------
+
+11. Connection management
+
+- Support persistent connections (`keep-alive`)
+- Reset parser state after response
+- Close connection only if
+	* client sends `Connection: close`, or
+	* fatal error
+- Support multiple requests on the same connection (pipelining-compatible)
