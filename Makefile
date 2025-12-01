@@ -3,7 +3,6 @@ CFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude -g# -fsanitize=address
 LDFLAGS =
 NAME = webserv
 DIR_OBJ = build
-# TODO: SRC files are to be hardcoded, not fetched automatically
 SRC = $(shell find src -name '*.cpp')
 OBJ = $(patsubst %.cpp, $(DIR_OBJ)/%.o, $(SRC))
 

@@ -1,0 +1,8 @@
+- Remove placeholder files once actual files are added to the directory
+- No need to include the actual path of header files thanks to `-Iinclude` in 
+the makefile.
+
+- Before locking the project, the compiler must be the `c++` shortcut.
+- Before locking the project, src files in the makefile are to be hardcoded, 
+not fetched automatically.
+- Before locking the project, check forbidden functions with `nm`.
