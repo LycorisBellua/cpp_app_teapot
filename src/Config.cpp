@@ -285,7 +285,7 @@ void Config::parse() {
         throw std::runtime_error("Invalid Server Directive in config file: " + line);
     }
 
-    else if (state == LOCATION) {
+    if (state == LOCATION) {
       if (validateBlockClose(tokens)) {
         state = SERVER;
         continue;
@@ -361,7 +361,7 @@ bool Config::parseServer(const std::vector<std::string>& tokens) {
 
 bool Config::parseLocation(const std::vector<std::string>& tokens) {
   if (tokens[0] == "location" && validatePath(tokens))
-    servers.back().locations.back().path = tokens[1].substr(1);
+    servers.back().locations.back().path = tokens[1];
   else if (tokens[0] == "allowed_methods" && validateMethods(tokens))
     servers.back().locations.back().allowed_methods.assign(tokens.begin() + 1, tokens.end());
   else if (tokens[0] == "root" && validateRoot(tokens))

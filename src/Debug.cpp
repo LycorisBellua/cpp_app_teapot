@@ -47,6 +47,7 @@ void debugPrintConfig(const Config& conf) {
         std::cout << BOLD << "Redirect: " << l->redirect.first << " " << l->redirect.second << "\n";
       ++location_number;
     }
+    std::cout << "\n";
     ++server_number;
   }
 }
