@@ -1,0 +1,8 @@
+BasedOnStyle: Google
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+DerivePointerAlignment: false
+PointerAlignment: Left
+ReferenceAlignment: Left
+ColumnLimit: 0
+PackConstructorInitializers: PCIS_NextLine
