@@ -2,7 +2,7 @@
 
 #include <sys/stat.h>
 
-#include <cerrno>
+#include <cerrno>  // IWYU pragma: keep
 #include <cstdlib>
 #include <fstream>   // IWYU pragma: keep
 #include <iostream>  // IWYU pragma: keep
@@ -58,6 +58,7 @@ class Config {
   bool parseMime(const std::vector<std::string>&);
   bool parseServer(const std::vector<std::string>&);
   bool parseLocation(const std::vector<std::string>&);
+  void verifyRequiredData() const;
 
   const std::string conf_path;
   std::map<std::string, std::string> mime_types;

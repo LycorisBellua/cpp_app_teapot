@@ -3,17 +3,13 @@
 // CONSTRUCTORS / DESTRUCTOR
 ServerData::ServerData() : port(0), client_body_max(1000000) {}
 
-LocationData::LocationData()
-    : autoindex(false),
-      redirect(0, "") {}
+LocationData::LocationData() : autoindex(false), redirect(0, "") {}
 
-Config::Config()
-    : conf_path(DEFAULT_CONFIG_FILE_PATH) {
+Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {
   setDefaultMime();
 }
 
-Config::Config(const std::string& conf)
-    : conf_path(conf) {
+Config::Config(const std::string& conf) : conf_path(conf) {
   setDefaultMime();
 }
 
@@ -56,7 +52,8 @@ static ParseState validateBlockOpen(const std::vector<std::string>& tokens) {
   states["mime"] = MIME;
   states["server"] = SERVER;
   states["location"] = LOCATION;
-  if (states.find(tokens[0]) == states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{"))
+  if (states.find(tokens[0]) == states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") ||
+      (tokens.size() == 3 && tokens[2] != "{"))
     return NONE;
   return states[tokens[0]];
 }
@@ -220,6 +217,33 @@ static bool validateRedirect(const std::vector<std::string>& tokens) {
   return true;
 }
 
+static void verifyRequiredServerData(const ServerData& server) {
+  // Client max body size and error pages use default if not provided
+  if (server.port == 0)
+    throw std::runtime_error("A port must be provided for each server");
+  if (server.host.empty())
+    throw std::runtime_error("A host must be provided for each server");
+  if (server.locations.empty())
+    throw std::runtime_error("At least one location block is required for each server");
+}
+
+static void verifyRequiredLocationData(const LocationData& location) {
+  // Path always required - presence guaranteed by parsing
+  if (location.allowed_methods.empty())
+    throw std::runtime_error("Location: " + location.path + "allowed_methods must be provided for each location");
+  // Redirect only requires path, allowed methods and redirect
+  if (location.redirect.first != 0)
+    return;
+  // If one cgi field is present, the other must be
+  if (!location.cgi_extension.empty() && location.cgi_interpreter.empty())
+    throw std::runtime_error("Location: " + location.path + ": cgi extension provided without cgi interpreter");
+  if (location.cgi_extension.empty() && !location.cgi_interpreter.empty())
+    throw std::runtime_error("Location: " + location.path + ": cgi_interpreter provided without cgi extension");
+  // Root required if not redirect
+  if (location.root.empty())
+    throw std::runtime_error("Location: " + location.path + ": root must be provided for all non-redirect locations");
+}
+
 // CLASS FUNCTIONS
 
 void Config::parse() {
@@ -274,6 +298,7 @@ void Config::parse() {
         throw std::runtime_error("Invalid Location Directive in config file: " + line);
     }
   }
+  verifyRequiredData();
 }
 
 const std::string& Config::getPath() const {
@@ -359,4 +384,12 @@ bool Config::parseLocation(const std::vector<std::string>& tokens) {
   else
     return false;
   return true;
+}
+
+void Config::verifyRequiredData() const {
+  for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
+    verifyRequiredServerData(*s);
+    for (std::vector<LocationData>::const_iterator l = s->locations.begin(); l != s->locations.end(); ++l)
+      verifyRequiredLocationData(*l);
+  }
 }
