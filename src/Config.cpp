@@ -3,14 +3,17 @@
 // CONSTRUCTORS / DESTRUCTOR
 ServerData::ServerData() : port(0), client_body_max(1000000) {}
 
-LocationData::LocationData() : autoindex(false), redirect(0, "") {}
+LocationData::LocationData()
+    : autoindex(false),
+      redirect(0, "") {}
 
-
-Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {
+Config::Config()
+    : conf_path(DEFAULT_CONFIG_FILE_PATH) {
   setDefaultMime();
 }
 
-Config::Config(const std::string& conf) : conf_path(conf) {
+Config::Config(const std::string& conf)
+    : conf_path(conf) {
   setDefaultMime();
 }
 
@@ -33,18 +36,15 @@ Config& Config::operator=(const Config& src) {
 // Remove comments and leading/trailing whitespace, split on whitespace
 static std::vector<std::string> tokenizeLine(std::string line) {
   size_t comment_start = line.find_first_of("#");
-
   if (comment_start != line.npos) {
     if (comment_start == 0)
       line.clear();
     else
       line = line.substr(0, comment_start);
   }
-
   std::istringstream line_s(line);
   std::vector<std::string> result;
   std::string token;
-
   while (line_s >> token) {
     result.push_back(token);
   }
@@ -56,10 +56,8 @@ static ParseState validateBlockOpen(const std::vector<std::string>& tokens) {
   states["mime"] = MIME;
   states["server"] = SERVER;
   states["location"] = LOCATION;
-
   if (states.find(tokens[0]) == states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{"))
     return NONE;
-
   return states[tokens[0]];
 }
 
@@ -99,7 +97,6 @@ static bool validateBodySize(const std::string& body) {
     return false;
   if (body.length() == 1 && body[0] == '0')
     return true;
-
   char* end;
   size_t result = std::strtoul(body.c_str(), &end, 10);
   if (errno == ERANGE || *end != '\0' || result == 0)
@@ -133,7 +130,6 @@ static bool validatePath(const std::vector<std::string>& tokens) {
 static bool validateMethods(const std::vector<std::string>& tokens) {
   if (tokens.size() < 2 || tokens.size() > 4)
     return false;
-  
   for (std::vector<std::string>::const_iterator t = tokens.begin() + 1; t != tokens.end(); ++t) {
     if (*t != "GET" && *t != "POST" && *t != "DELETE")
       return false;
@@ -147,14 +143,11 @@ static bool validateMethods(const std::vector<std::string>& tokens) {
 static bool validateRoot(const std::vector<std::string>& tokens) {
   if (tokens.size() != 2 || tokens[1].empty())
     return false;
-
   struct stat info;
   if (stat(tokens[1].c_str(), &info) != 0)
     return false;
-
   if (!S_ISDIR(info.st_mode))
     return false;
-
   return true;
 }
 
@@ -182,16 +175,12 @@ static bool validateAutoIndex(const std::vector<std::string>& tokens) {
 static bool validateUploadPath(const std::vector<std::string>& tokens) {
   if (tokens.size() != 2 || tokens[1].empty())
     return false;
-  
   std::string path = tokens[1];
   std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/");
-  
   if (path.find_first_not_of(allowed) != std::string::npos)
     return false;
-  
   if (path.find("//") != std::string::npos)
     return false;
-  
   return true;
 }
 
@@ -204,17 +193,13 @@ static bool validateCgiExtension(const std::vector<std::string>& tokens) {
 static bool validateCgiInterpreter(const std::vector<std::string>& tokens) {
   if (tokens.size() != 2 || tokens[1].empty())
     return false;
-  
   struct stat info;
   if (stat(tokens[1].c_str(), &info) != 0)
     return false;
-  
   if (!S_ISREG(info.st_mode))
     return false;
-  
   if (!(info.st_mode & S_IXUSR))
     return false;
-  
   return true;
 }
 
@@ -241,28 +226,25 @@ void Config::parse() {
   std::ifstream infile(conf_path.c_str());
   std::string line;
   ParseState state = NONE;
-
   if (!infile.is_open())
     throw std::runtime_error("Failed to open configuration file: " + conf_path);
-
   while (std::getline(infile, line, '\n')) {
     std::vector<std::string> tokens = tokenizeLine(line);
     if (tokens.empty())
       continue;
-
     if (state == NONE) {
       state = validateBlockOpen(tokens);
       if (state == SERVER) {
         servers.push_back(ServerData());
         continue;
-      } else if (state == MIME)
+      }
+      else if (state == MIME)
         continue;
       else if (state == NONE && validateBlockClose(tokens))
         break;
       else
         throw std::runtime_error("Invalid Line in config file: " + line);
     }
-
     if (state == MIME) {
       if (validateBlockClose(tokens)) {
         state = NONE;
@@ -271,7 +253,6 @@ void Config::parse() {
       if (!parseMime(tokens))
         throw std::runtime_error("Invalid Mime Type in config file: " + line);
     }
-
     else if (state == SERVER) {
       if (validateBlockClose(tokens)) {
         state = NONE;
@@ -284,7 +265,6 @@ void Config::parse() {
       else if (!parseServer(tokens))
         throw std::runtime_error("Invalid Server Directive in config file: " + line);
     }
-
     if (state == LOCATION) {
       if (validateBlockClose(tokens)) {
         state = SERVER;
@@ -335,11 +315,9 @@ bool Config::parseMime(const std::vector<std::string>& tokens) {
   size_t divide = tokens[0].find_first_of("/");
   if (tokens.size() == 1 || divide == tokens[0].npos || divide == 0 || divide == tokens[0].length() - 1)
     return false;
-
   for (size_t i = 1; i < tokens.size(); ++i) {
     mime_types["." + tokens[i]] = tokens[0];
   }
-
   return true;
 }
 

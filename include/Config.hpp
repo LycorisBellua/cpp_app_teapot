@@ -1,20 +1,20 @@
 #pragma once
 
-#include <fstream>    // IWYU pragma: keep
-#include <iostream>   // IWYU pragma: keep
-#include <map>        // IWYU pragma: keep
-#include <sstream>    // IWYU pragma: keep
-#include <stdexcept>  // IWYU pragma: keep
 #include <sys/stat.h>
+
 #include <cerrno>
 #include <cstdlib>
+#include <fstream>   // IWYU pragma: keep
+#include <iostream>  // IWYU pragma: keep
+#include <map>
+#include <sstream>    // IWYU pragma: keep
+#include <stdexcept>  // IWYU pragma: keep
 #include <string>
 #include <vector>
 
 #include "./webserv.hpp"  // IWYU pragma: keep
 
 enum ParseState { NONE, MIME, SERVER, LOCATION };
-
 
 struct LocationData {
   std::string path;
@@ -26,7 +26,7 @@ struct LocationData {
   std::string cgi_extension;
   std::string cgi_interpreter;
   std::pair<int, std::string> redirect;
-    
+
   LocationData();
 };
 
@@ -45,12 +45,11 @@ class Config {
   Config();
   Config(const std::string&);
   ~Config();
-  void parse();
 
+  void parse();
   const std::string& getPath() const;
   const std::map<std::string, std::string>& getMime() const;
   const std::vector<ServerData>& getServers() const;
-
 
  private:
   Config(const Config&);

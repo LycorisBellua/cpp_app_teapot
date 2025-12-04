@@ -4,5 +4,10 @@ AllowShortIfStatementsOnASingleLine: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Left
-ColumnLimit: 0
-PackConstructorInitializers: PCIS_NextLine
+ColumnLimit: 120
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: false
+  BeforeElse: true
+BreakConstructorInitializers: BeforeColon
+PackConstructorInitializers: CurrentLine

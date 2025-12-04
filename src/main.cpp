@@ -1,19 +1,19 @@
-#include "../include/webserv.hpp"
+#include <cstdlib>
+#include <iostream>
+
 #include "../include/Config.hpp"
 #include "../include/Debug.hpp"
-#include <iostream>
-#include <cstdlib>
+#include "../include/webserv.hpp"
 
-int main(int argc, char **argv)
-{
-	if (argc > 2)
-	{
-		std::cerr << "Error: Too many arguments. Provide only one "
-			"configuration file." << std::endl;
-		return 1;
-	}
+int main(int argc, char** argv) {
+  if (argc > 2) {
+    std::cerr << "Error: Too many arguments. Provide only one "
+                 "configuration file."
+              << std::endl;
+    return 1;
+  }
 
-	std::string path_config = argc == 1 ? DEFAULT_CONFIG_FILE_PATH : argv[1];
+  std::string path_config = argc == 1 ? DEFAULT_CONFIG_FILE_PATH : argv[1];
 
   Config conf(path_config);
   try {
@@ -24,5 +24,5 @@ int main(int argc, char **argv)
     std::exit(EXIT_FAILURE);
   }
 
-	return 0;
+  return 0;
 }
