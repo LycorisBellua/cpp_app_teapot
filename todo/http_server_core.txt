@@ -7,10 +7,10 @@
 
 --------------------------------------------------------------------------------
 
-2. Implement poll/epoll/select loop
+2. Implement epoll loop
 
-- Create poll structure
-- Add server sockets to poll
+- Create epoll structure
+- Add server sockets to epoll
 - Handle readable/writable events
 - Manage multiple clients
 
@@ -27,7 +27,7 @@
 4. Close connections on disconnect
 
 - Detect EOF or errors
-- Clean up state + remove from poll
+- Clean up state + remove from epoll
 
 --------------------------------------------------------------------------------
 

@@ -1,4 +1,5 @@
 #include "webserv.hpp"
+#include "Server.hpp"
 #include <iostream>
 
 int main(int argc, char **argv)
@@ -14,5 +15,6 @@ int main(int argc, char **argv)
 	std::cout << "Debug: The path to the config file is " << path_config
 		<< std::endl;
 
+	Server server;
 	return 0;
 }
