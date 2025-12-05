@@ -1,4 +1,5 @@
 #include "../include/Config.hpp"
+#include "../include/Debug.hpp"
 
 // CONSTRUCTORS / DESTRUCTOR
 ServerData::ServerData() : port(0), client_body_max(1000000) {}
@@ -437,6 +438,8 @@ bool Config::parseLocation(const std::vector<std::string>& tokens) {
 }
 
 void Config::verifyRequiredData() const {
+  if (servers.empty())
+    throw std::runtime_error("No servers defined in config file");
   for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
     if (s->port == 0) {
       throw std::runtime_error("A port must be provided for each server");

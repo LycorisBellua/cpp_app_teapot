@@ -65,3 +65,7 @@ void debugPrintConfig(const Config& conf) {
     ++server_number;
   }
 }
+
+void debugPrintLn(std::string msg) {
+  std::cout << RED << msg << RESET << std::endl;
+}
