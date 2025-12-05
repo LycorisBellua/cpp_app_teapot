@@ -1,13 +1,14 @@
 BasedOnStyle: Google
+InsertBraces: true
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Left
-ColumnLimit: 120
+ColumnLimit: 100
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: false
   BeforeElse: true
 BreakConstructorInitializers: BeforeColon
-PackConstructorInitializers: CurrentLine
+PackConstructorInitializers: NextLine

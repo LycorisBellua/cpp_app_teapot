@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "Config.hpp"
 #include "Colors.hpp"
+#include "Config.hpp"
 
 void debugPrintConfig(const Config& conf);

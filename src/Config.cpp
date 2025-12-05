@@ -33,10 +33,12 @@ Config& Config::operator=(const Config& src) {
 static std::vector<std::string> tokenizeLine(std::string line) {
   size_t comment_start = line.find_first_of("#");
   if (comment_start != line.npos) {
-    if (comment_start == 0)
+    if (comment_start == 0) {
       line.clear();
-    else
+    }
+    else {
       line = line.substr(0, comment_start);
+    }
   }
   std::istringstream line_s(line);
   std::vector<std::string> result;
@@ -52,9 +54,10 @@ static ParseState validateBlockOpen(const std::vector<std::string>& tokens) {
   states["mime"] = MIME;
   states["server"] = SERVER;
   states["location"] = LOCATION;
-  if (states.find(tokens[0]) == states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") ||
-      (tokens.size() == 3 && tokens[2] != "{"))
+  if (states.find(tokens[0]) == states.end() || tokens.size() > 3 ||
+      (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{")) {
     return NONE;
+  }
   return states[tokens[0]];
 }
 
@@ -63,185 +66,205 @@ static bool validateBlockClose(const std::vector<std::string>& tokens) {
 }
 
 static bool validatePort(const std::string& port) {
-  if (port.length() == 0 || port.length() > 5 || port.find_first_not_of("1234567890") != port.npos)
+  if (port.length() == 0 || port.length() > 5 ||
+      port.find_first_not_of("1234567890") != port.npos) {
     return false;
+  }
+  int port_number = std::atoi(port.c_str());
+  if (port_number < 1 || port_number > 65535) {
+    return false;
+  }
   return true;
 }
 
 static bool validateHost(const std::string& host) {
-  if (host.empty())
+  if (host.empty()) {
     return false;
-  if (host == "localhost")
+  }
+  if (host == "localhost") {
     return true;
-  if (host.find_first_not_of("1234567890.") != host.npos || host.length() < 7 || host.length() > 15)
+  }
+  if (host.find_first_not_of("1234567890.") != host.npos || host.length() < 7 ||
+      host.length() > 15) {
     return false;
+  }
   std::istringstream address(host);
   int a, b, c, d;
   char dot1, dot2, dot3;
-  if (!(address >> a >> dot1 >> b >> dot2 >> c >> dot3 >> d))
+  if (!(address >> a >> dot1 >> b >> dot2 >> c >> dot3 >> d)) {
     return false;
-  if (dot1 != '.' || dot2 != '.' || dot3 != '.')
+  }
+  if (dot1 != '.' || dot2 != '.' || dot3 != '.') {
     return false;
-  if (address.peek() != EOF)
+  }
+  if (address.peek() != EOF) {
     return false;
-  if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0 || d > 255)
+  }
+  if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0 || d > 255) {
     return false;
+  }
   return true;
 }
 
 static bool validateBodySize(const std::string& body) {
-  if (body.empty() || body.find_first_not_of("1234567890") != body.npos)
+  if (body.empty() || body.find_first_not_of("1234567890") != body.npos) {
     return false;
-  if (body.length() == 1 && body[0] == '0')
+  }
+  if (body.length() == 1 && body[0] == '0') {
     return true;
+  }
   char* end;
   size_t result = std::strtoul(body.c_str(), &end, 10);
-  if (errno == ERANGE || *end != '\0' || result == 0)
+  if (errno == ERANGE || *end != '\0' || result == 0) {
     return false;
+  }
   return true;
 }
 
 static bool validateErrorPage(const std::vector<std::string>& tokens) {
-  if (tokens[0].length() != 14)
+  if (tokens[0].length() != 14) {
     return false;
+  }
   std::string errpage_num = tokens[0].substr(11);
-  if (errpage_num.length() != 3 || errpage_num.find_first_not_of("1234567890") != errpage_num.npos)
+  if (errpage_num.length() != 3 ||
+      errpage_num.find_first_not_of("1234567890") != errpage_num.npos) {
     return false;
+  }
   std::ifstream errfile(tokens[1].c_str());
-  if (!errfile.is_open())
+  if (!errfile.is_open()) {
     return false;
+  }
   errfile.close();
   return true;
 }
 
 static bool validatePath(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 3 || tokens[1].empty() || tokens[1][0] != '/' || tokens[2] != "{")
+  if (tokens.size() != 3 || tokens[1].empty() || tokens[1][0] != '/' || tokens[2] != "{") {
     return false;
+  }
   std::string path = tokens[1];
   std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
-  if (path.find_first_not_of(allowed) != path.npos || path.find("//") != path.npos)
+  if (path.find_first_not_of(allowed) != path.npos || path.find("//") != path.npos) {
     return false;
+  }
   return true;
 }
 
 static bool validateMethods(const std::vector<std::string>& tokens) {
-  if (tokens.size() < 2 || tokens.size() > 4)
+  if (tokens.size() < 2 || tokens.size() > 4) {
     return false;
+  }
   for (std::vector<std::string>::const_iterator t = tokens.begin() + 1; t != tokens.end(); ++t) {
-    if (*t != "GET" && *t != "POST" && *t != "DELETE")
+    if (*t != "GET" && *t != "POST" && *t != "DELETE") {
       return false;
-    for (std::vector<std::string>::const_iterator t2 = t + 1; t2 != tokens.end(); ++t2)
-      if (*t == *t2)
+    }
+    for (std::vector<std::string>::const_iterator t2 = t + 1; t2 != tokens.end(); ++t2) {
+      if (*t == *t2) {
         return false;
+      }
+    }
   }
   return true;
 }
 
 static bool validateRoot(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty())
+  if (tokens.size() != 2 || tokens[1].empty()) {
     return false;
+  }
   struct stat info;
-  if (stat(tokens[1].c_str(), &info) != 0)
+  if (stat(tokens[1].c_str(), &info) != 0) {
     return false;
-  if (!S_ISDIR(info.st_mode))
+  }
+  if (!S_ISDIR(info.st_mode)) {
     return false;
-  return true;
-}
-
-static bool validateIndex(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty() || tokens[1][0] == '.')
-    return false;
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.");
-  if (tokens[1].find_first_not_of(allowed) != tokens[1].npos)
-    return false;
-  size_t dot = tokens[1].find_first_of(".");
-  if (dot == tokens[1].npos)
-    return false;
-  std::string extension = tokens[1].substr(dot + 1);
-  if (extension.empty() || extension.find_first_of(".") != extension.npos)
-    return false;
-  return true;
-}
-
-static bool validateAutoIndex(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty())
-    return false;
-  return tokens[1] == "true" || tokens[1] == "false";
-}
-
-static bool validateUploadPath(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty())
-    return false;
-  std::string path = tokens[1];
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/");
-  if (path.find_first_not_of(allowed) != std::string::npos)
-    return false;
-  if (path.find("//") != std::string::npos)
-    return false;
-  return true;
-}
-
-static bool validateCgiExtension(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty())
-    return false;
-  return tokens[1] == ".py";
-}
-
-static bool validateCgiInterpreter(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty())
-    return false;
-  struct stat info;
-  if (stat(tokens[1].c_str(), &info) != 0)
-    return false;
-  if (!S_ISREG(info.st_mode))
-    return false;
-  if (!(info.st_mode & S_IXUSR))
-    return false;
-  return true;
-}
-
-static bool validateRedirect(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 3 || tokens[1].empty() || tokens[2].empty() || tokens[2][0] != '/')
-    return false;
-  if (tokens[1] != "301" && tokens[1] != "302")
-    return false;
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
-  if (tokens[2].find_first_not_of(allowed) != tokens[2].npos)
-    return false;
-  size_t dot = tokens[2].find_first_of('.');
-  if (dot != tokens[2].npos) {
-    std::string extension = tokens[2].substr(dot + 1);
-    if (extension.find_first_of('.') != extension.npos)
-      return false;
   }
   return true;
 }
 
-static void verifyRequiredServerData(const ServerData& server) {
-  // Client max body size and error pages use default if not provided
-  if (server.port == 0)
-    throw std::runtime_error("A port must be provided for each server");
-  if (server.host.empty())
-    throw std::runtime_error("A host must be provided for each server");
-  if (server.locations.empty())
-    throw std::runtime_error("At least one location block is required for each server");
+static bool validateIndex(const std::vector<std::string>& tokens) {
+  if (tokens.size() != 2 || tokens[1].empty() || tokens[1][0] == '.') {
+    return false;
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.");
+  if (tokens[1].find_first_not_of(allowed) != tokens[1].npos) {
+    return false;
+  }
+  size_t dot = tokens[1].find_first_of(".");
+  if (dot == tokens[1].npos) {
+    return false;
+  }
+  std::string extension = tokens[1].substr(dot + 1);
+  if (extension.empty() || extension.find_first_of(".") != extension.npos) {
+    return false;
+  }
+  return true;
 }
 
-static void verifyRequiredLocationData(const LocationData& location) {
-  // Path always required - presence guaranteed by parsing
-  if (location.allowed_methods.empty())
-    throw std::runtime_error("Location: " + location.path + "allowed_methods must be provided for each location");
-  // Redirect only requires path, allowed methods and redirect
-  if (location.redirect.first != 0)
-    return;
-  // If one cgi field is present, the other must be
-  if (!location.cgi_extension.empty() && location.cgi_interpreter.empty())
-    throw std::runtime_error("Location: " + location.path + ": cgi extension provided without cgi interpreter");
-  if (location.cgi_extension.empty() && !location.cgi_interpreter.empty())
-    throw std::runtime_error("Location: " + location.path + ": cgi_interpreter provided without cgi extension");
-  // Root required if not redirect
-  if (location.root.empty())
-    throw std::runtime_error("Location: " + location.path + ": root must be provided for all non-redirect locations");
+static bool validateAutoIndex(const std::vector<std::string>& tokens) {
+  if (tokens.size() != 2 || tokens[1].empty()) {
+    return false;
+  }
+  return tokens[1] == "true" || tokens[1] == "false";
+}
+
+static bool validateUploadPath(const std::vector<std::string>& tokens) {
+  if (tokens.size() != 2 || tokens[1].empty()) {
+    return false;
+  }
+  std::string path = tokens[1];
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/");
+  if (path.find_first_not_of(allowed) != std::string::npos) {
+    return false;
+  }
+  if (path.find("//") != std::string::npos) {
+    return false;
+  }
+  return true;
+}
+
+static bool validateCgiExtension(const std::vector<std::string>& tokens) {
+  if (tokens.size() != 2 || tokens[1].empty()) {
+    return false;
+  }
+  return tokens[1] == ".py";
+}
+
+static bool validateCgiInterpreter(const std::vector<std::string>& tokens) {
+  if (tokens.size() != 2 || tokens[1].empty()) {
+    return false;
+  }
+  struct stat info;
+  if (stat(tokens[1].c_str(), &info) != 0) {
+    return false;
+  }
+  if (!S_ISREG(info.st_mode)) {
+    return false;
+  }
+  if (!(info.st_mode & S_IXUSR)) {
+    return false;
+  }
+  return true;
+}
+
+static bool validateRedirect(const std::vector<std::string>& tokens) {
+  if (tokens.size() != 3 || tokens[1].empty() || tokens[2].empty() || tokens[2][0] != '/') {
+    return false;
+  }
+  if (tokens[1] != "301" && tokens[1] != "302") {
+    return false;
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
+  if (tokens[2].find_first_not_of(allowed) != tokens[2].npos) {
+    return false;
+  }
+  size_t dot = tokens[2].find_first_of('.');
+  if (dot != tokens[2].npos) {
+    std::string extension = tokens[2].substr(dot + 1);
+    if (extension.find_first_of('.') != extension.npos) {
+      return false;
+    }
+  }
+  return true;
 }
 
 // CLASS FUNCTIONS
@@ -250,32 +273,38 @@ void Config::parse() {
   std::ifstream infile(conf_path.c_str());
   std::string line;
   ParseState state = NONE;
-  if (!infile.is_open())
+  if (!infile.is_open()) {
     throw std::runtime_error("Failed to open configuration file: " + conf_path);
+  }
   while (std::getline(infile, line, '\n')) {
     std::vector<std::string> tokens = tokenizeLine(line);
-    if (tokens.empty())
+    if (tokens.empty()) {
       continue;
+    }
     if (state == NONE) {
       state = validateBlockOpen(tokens);
       if (state == SERVER) {
         servers.push_back(ServerData());
         continue;
       }
-      else if (state == MIME)
+      else if (state == MIME) {
         continue;
-      else if (state == NONE && validateBlockClose(tokens))
+      }
+      else if (state == NONE && validateBlockClose(tokens)) {
         break;
-      else
+      }
+      else {
         throw std::runtime_error("Invalid Line in config file: " + line);
+      }
     }
     if (state == MIME) {
       if (validateBlockClose(tokens)) {
         state = NONE;
         continue;
       }
-      if (!parseMime(tokens))
+      if (!parseMime(tokens)) {
         throw std::runtime_error("Invalid Mime Type in config file: " + line);
+      }
     }
     else if (state == SERVER) {
       if (validateBlockClose(tokens)) {
@@ -286,16 +315,18 @@ void Config::parse() {
         state = LOCATION;
         servers.back().locations.push_back(LocationData());
       }
-      else if (!parseServer(tokens))
+      else if (!parseServer(tokens)) {
         throw std::runtime_error("Invalid Server Directive in config file: " + line);
+      }
     }
     if (state == LOCATION) {
       if (validateBlockClose(tokens)) {
         state = SERVER;
         continue;
       }
-      if (!parseLocation(tokens))
+      if (!parseLocation(tokens)) {
         throw std::runtime_error("Invalid Location Directive in config file: " + line);
+      }
     }
   }
   verifyRequiredData();
@@ -338,8 +369,10 @@ void Config::setDefaultMime() {
 
 bool Config::parseMime(const std::vector<std::string>& tokens) {
   size_t divide = tokens[0].find_first_of("/");
-  if (tokens.size() == 1 || divide == tokens[0].npos || divide == 0 || divide == tokens[0].length() - 1)
+  if (tokens.size() == 1 || divide == tokens[0].npos || divide == 0 ||
+      divide == tokens[0].length() - 1) {
     return false;
+  }
   for (size_t i = 1; i < tokens.size(); ++i) {
     mime_types["." + tokens[i]] = tokens[0];
   }
@@ -347,49 +380,98 @@ bool Config::parseMime(const std::vector<std::string>& tokens) {
 }
 
 bool Config::parseServer(const std::vector<std::string>& tokens) {
-  if (tokens.size() > 2)
+  if (tokens.size() > 2) {
     return false;
-  if (tokens[0] == "listen" && validatePort(tokens[1]))
+  }
+  if (tokens[0] == "listen" && validatePort(tokens[1])) {
     servers.back().port = std::atoi(tokens[1].c_str());
-  else if (tokens[0] == "host" && validateHost(tokens[1]))
+  }
+  else if (tokens[0] == "host" && validateHost(tokens[1])) {
     servers.back().host = tokens[1];
-  else if (tokens[0] == "client_max_body_size" && validateBodySize(tokens[1]))
+  }
+  else if (tokens[0] == "client_max_body_size" && validateBodySize(tokens[1])) {
     servers.back().client_body_max = std::atol(tokens[1].c_str());
-  else if (tokens[0].compare(0, 11, "error_page_") == 0 && validateErrorPage(tokens))
+  }
+  else if (tokens[0].compare(0, 11, "error_page_") == 0 && validateErrorPage(tokens)) {
     servers.back().errors[std::atoi(tokens[0].substr(11).c_str())] = tokens[1];
-  else
+  }
+  else {
     return false;
+  }
   return true;
 }
 
 bool Config::parseLocation(const std::vector<std::string>& tokens) {
-  if (tokens[0] == "location" && validatePath(tokens))
+  if (tokens[0] == "location" && validatePath(tokens)) {
     servers.back().locations.back().path = tokens[1];
-  else if (tokens[0] == "allowed_methods" && validateMethods(tokens))
+  }
+  else if (tokens[0] == "allowed_methods" && validateMethods(tokens)) {
     servers.back().locations.back().allowed_methods.assign(tokens.begin() + 1, tokens.end());
-  else if (tokens[0] == "root" && validateRoot(tokens))
+  }
+  else if (tokens[0] == "root" && validateRoot(tokens)) {
     servers.back().locations.back().root = tokens[1];
-  else if (tokens[0] == "index" && validateIndex(tokens))
+  }
+  else if (tokens[0] == "index" && validateIndex(tokens)) {
     servers.back().locations.back().index = tokens[1];
-  else if (tokens[0] == "autoindex" && validateAutoIndex(tokens))
-    servers.back().locations.back().autoindex = tokens[1] == "true" ? true : false;
-  else if (tokens[0] == "upload_path" && validateUploadPath(tokens))
+  }
+  else if (tokens[0] == "autoindex" && validateAutoIndex(tokens)) {
+    servers.back().locations.back().autoindex = tokens[1] == "true";
+  }
+  else if (tokens[0] == "upload_path" && validateUploadPath(tokens)) {
     servers.back().locations.back().upload_path = tokens[1];
-  else if (tokens[0] == "cgi_extension" && validateCgiExtension(tokens))
+  }
+  else if (tokens[0] == "cgi_extension" && validateCgiExtension(tokens)) {
     servers.back().locations.back().cgi_extension = tokens[1];
-  else if (tokens[0] == "cgi_interpreter" && validateCgiInterpreter(tokens))
+  }
+  else if (tokens[0] == "cgi_interpreter" && validateCgiInterpreter(tokens)) {
     servers.back().locations.back().cgi_interpreter = tokens[1];
-  else if (tokens[0] == "redirect" && validateRedirect(tokens))
-    servers.back().locations.back().redirect = std::make_pair(std::atoi(tokens[1].c_str()), tokens[2]);
-  else
+  }
+  else if (tokens[0] == "redirect" && validateRedirect(tokens)) {
+    servers.back().locations.back().redirect =
+        std::make_pair(std::atoi(tokens[1].c_str()), tokens[2]);
+  }
+  else {
     return false;
+  }
   return true;
 }
 
 void Config::verifyRequiredData() const {
   for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
-    verifyRequiredServerData(*s);
-    for (std::vector<LocationData>::const_iterator l = s->locations.begin(); l != s->locations.end(); ++l)
-      verifyRequiredLocationData(*l);
+    if (s->port == 0) {
+      throw std::runtime_error("A port must be provided for each server");
+    }
+    if (s->host.empty()) {
+      throw std::runtime_error("A host must be provided for each server");
+    }
+    if (s->locations.empty()) {
+      throw std::runtime_error("At least one location block is required for each server");
+    }
+    for (std::vector<LocationData>::const_iterator l = s->locations.begin();
+         l != s->locations.end(); ++l) {
+      // Path always required - presence guaranteed by parsing
+      if (l->allowed_methods.empty()) {
+        throw std::runtime_error("Location: " + l->path +
+                                 ": allowed_methods must be provided for each location");
+      }
+      // Redirect only requires path, allowed methods and redirect
+      if (l->redirect.first != 0) {
+        continue;
+      }
+      // If one cgi field is present, the other must be
+      if (!l->cgi_extension.empty() && l->cgi_interpreter.empty()) {
+        throw std::runtime_error("Location: " + l->path +
+                                 ": cgi extension provided without cgi interpreter");
+      }
+      if (l->cgi_extension.empty() && !l->cgi_interpreter.empty()) {
+        throw std::runtime_error("Location: " + l->path +
+                                 ": cgi_interpreter provided without cgi extension");
+      }
+      // Root required if not redirect
+      if (l->root.empty()) {
+        throw std::runtime_error("Location: " + l->path +
+                                 ": root must be provided for all non-redirect locations");
+      }
+    }
   }
 }
