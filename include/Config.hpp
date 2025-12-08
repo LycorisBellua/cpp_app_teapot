@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <algorithm>
 #include <cerrno>  // IWYU pragma: keep
 #include <cstdlib>
 #include <fstream>   // IWYU pragma: keep
@@ -55,9 +56,10 @@ class Config {
   Config(const Config&);
   Config& operator=(const Config&);
   void setDefaultMime();
-  bool parseMime(const std::vector<std::string>&);
-  bool parseServer(const std::vector<std::string>&);
-  bool parseLocation(const std::vector<std::string>&);
+  bool parseMime(const std::vector<std::string>&, std::string&);
+  bool parseServer(const std::vector<std::string>&, const std::string&, std::vector<std::string>&);
+  bool parseLocation(const std::vector<std::string>&, const std::string&,
+                     std::vector<std::string>&);
   void verifyRequiredData() const;
 
   const std::string conf_path;
