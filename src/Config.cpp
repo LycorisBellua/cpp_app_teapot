@@ -1,18 +1,13 @@
 #include "../include/Config.hpp"
-#include "../include/Debug.hpp"
 
 /* ---------- CONSTRUCTORS / DESTRUCTOR ---------- */
 ServerData::ServerData() : port(0), client_body_max(1000000) {}
 
 LocationData::LocationData() : autoindex(false), redirect(0, "") {}
 
-Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {
-  setDefaultMime();
-}
+Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {}
 
-Config::Config(const std::string& conf) : conf_path(conf) {
-  setDefaultMime();
-}
+Config::Config(const std::string& conf) : conf_path(conf) {}
 
 Config::Config(const Config& src) {
   // Private - not to be used
@@ -24,27 +19,28 @@ Config::~Config() {}
 Config& Config::operator=(const Config& src) {
   // Private - not to be used
   (void)src;
-  setDefaultMime();
   return *this;
 }
 
+/* ---------- Exception Class ---------- */
+Config::ConfigError::ConfigError(std::string msg) {
+  err_msg = "Config File Error:\n" + msg;
+}
+
+Config::ConfigError::ConfigError(const int& line_n, const std::string& line,
+                                 const std::string msg) {
+  std::stringstream num;
+  num << line_n;
+  err_msg = "Config File Error: " + msg + "\nLine " + num.str() + ": " + line;
+}
+
+Config::ConfigError::~ConfigError() throw() {}
+
+const char* Config::ConfigError::what() const throw() {
+  return err_msg.c_str();
+}
+
 /* ---------- HELPER FUNCTIONS ---------- */
-
-static std::map<std::string, std::pair<ParseState, int> > open_states;
-static std::map<ParseState, std::string> open_states_errors;
-
-static void initOpenStatesMap() {
-  open_states["mime"] = std::make_pair(MIME, 0);
-  open_states["server"] = std::make_pair(SERVER, 0);
-  open_states["location"] = std::make_pair(LOCATION, 1);
-}
-
-static void initOpenStatesErrors() {
-  open_states_errors[MIME] = "Mime block must be at top level";
-  open_states_errors[SERVER] = "Server block must be at top level";
-  open_states_errors[LOCATION] = "Location block must be inside Server block";
-}
-
 static std::vector<std::string> tokenizeLine(std::string line) {
   size_t comment_start = line.find_first_of("#");
   if (comment_start != line.npos) {
@@ -64,21 +60,23 @@ static std::vector<std::string> tokenizeLine(std::string line) {
   return result;
 }
 
-static ParseState validateBlockOpen(const std::vector<std::string>& tokens, int& nest_level) {
+static ParseState validateBlockOpen(const std::vector<std::string>& tokens) {
+  static std::map<std::string, ParseState> open_states;
+  open_states["mime"] = MIME;
+  open_states["server"] = SERVER;
+  open_states["location"] = LOCATION;
   if (open_states.find(tokens[0]) == open_states.end() || tokens.size() > 3 ||
       (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{")) {
     return NONE;
   }
-  std::pair<ParseState, int> new_state = open_states[tokens[0]];
-  if (new_state.second != nest_level) {
-    throw std::runtime_error(open_states_errors[new_state.first]);
-  }
-  ++nest_level;
-  return new_state.first;
+  return open_states[tokens[0]];
 }
 
 static bool validateBlockClose(const std::vector<std::string>& tokens) {
-  return tokens.size() == 1 && tokens[0] == "}";
+  if (tokens.size() == 1 && tokens[0] == "}") {
+    return true;
+  }
+  return false;
 }
 
 static bool validatePort(const std::string& port) {
@@ -288,24 +286,24 @@ static bool findToken(const std::vector<std::string>& processed, const std::stri
 }
 
 /* ---------- CLASS MEMBER FUNCTIONS ---------- */
-
 void Config::parse() {
   std::ifstream infile(conf_path.c_str());
   std::string line;
+  int line_number = 0;
   ParseState state = NONE;
   std::vector<std::string> server_processed;
   std::vector<std::string> location_processed;
-  int nest_level = 0;
   if (!infile.is_open()) {
-    throw std::runtime_error("Failed to open configuration file: " + conf_path);
+    throw ConfigError("Failed to open Config File: " + conf_path);
   }
   while (std::getline(infile, line, '\n')) {
+    ++line_number;
     std::vector<std::string> tokens = tokenizeLine(line);
     if (tokens.empty()) {
       continue;
     }
     if (state == NONE) {
-      state = validateBlockOpen(tokens, nest_level);
+      state = validateBlockOpen(tokens);
       if (state == SERVER) {
         servers.push_back(ServerData());
         server_processed.clear();
@@ -318,7 +316,7 @@ void Config::parse() {
         break;
       }
       else {
-        throw std::runtime_error("Invalid Line in config file: " + line);
+        throw ConfigError(line_number, line, "Invalid line");
       }
     }
     if (state == MIME) {
@@ -326,26 +324,26 @@ void Config::parse() {
         state = NONE;
         continue;
       }
-      parseMime(tokens, line);
+      parseMime(tokens, line, line_number);
     }
     else if (state == SERVER) {
       if (validateBlockClose(tokens)) {
         state = NONE;
         continue;
       }
-      if (validateBlockOpen(tokens, nest_level) == LOCATION) {
+      if (validateBlockOpen(tokens) == LOCATION) {
         state = LOCATION;
         servers.back().locations.push_back(LocationData());
         location_processed.clear();
       }
-      parseServer(tokens, line, server_processed);
+      parseServer(tokens, line, server_processed, line_number);
     }
     if (state == LOCATION) {
       if (validateBlockClose(tokens)) {
         state = SERVER;
         continue;
       }
-      parseLocation(tokens, line, location_processed);
+      parseLocation(tokens, line, location_processed, line_number);
     }
   }
   verifyRequiredData();
@@ -386,11 +384,11 @@ void Config::setDefaultMime() {
   mime_types[".gz"] = "application/gzip";
 }
 
-bool Config::parseMime(const std::vector<std::string>& tokens, std::string& line) {
+bool Config::parseMime(const std::vector<std::string>& tokens, std::string& line, int& line_n) {
   size_t divide = tokens[0].find_first_of("/");
   if (tokens.size() == 1 || divide == tokens[0].npos || divide == 0 ||
       divide == tokens[0].length() - 1) {
-    throw std::runtime_error("Invalid Mime in config file: " + line);
+    throw ConfigError(line_n, line, "Invalid Mime Directive");
   }
   for (size_t i = 1; i < tokens.size(); ++i) {
     mime_types["." + tokens[i]] = tokens[0];
@@ -399,9 +397,9 @@ bool Config::parseMime(const std::vector<std::string>& tokens, std::string& line
 }
 
 bool Config::parseServer(const std::vector<std::string>& tokens, const std::string& line,
-                         std::vector<std::string>& processed) {
+                         std::vector<std::string>& processed, int& line_n) {
   if (findToken(processed, tokens[0])) {
-    throw std::runtime_error("Duplicate Server Directive in config file: " + line);
+    throw ConfigError(line_n, line, "Duplicate Server Directive");
   }
   // FIX THIS
   if (tokens.size() > 2) {
@@ -420,16 +418,16 @@ bool Config::parseServer(const std::vector<std::string>& tokens, const std::stri
     servers.back().errors[std::atoi(tokens[0].substr(11).c_str())] = tokens[1];
   }
   else {
-    throw std::runtime_error("Invalid Server Directive in config file: " + line);
+    throw ConfigError(line_n, line, "Invalid Server Directive");
   }
   processed.push_back(tokens[0]);
   return true;
 }
 
 bool Config::parseLocation(const std::vector<std::string>& tokens, const std::string& line,
-                           std::vector<std::string>& processed) {
+                           std::vector<std::string>& processed, int& line_n) {
   if (findToken(processed, tokens[0])) {
-    throw std::runtime_error("Duplicate Location Directive in config file: " + line);
+    throw ConfigError(line_n, line, "Duplicate Location Directive");
   }
   if (tokens[0] == "location" && validatePath(tokens)) {
     servers.back().locations.back().path = tokens[1];
@@ -460,15 +458,18 @@ bool Config::parseLocation(const std::vector<std::string>& tokens, const std::st
         std::make_pair(std::atoi(tokens[1].c_str()), tokens[2]);
   }
   else {
-    throw std::runtime_error("Invalid Location Directive in config file: " + line);
+    throw ConfigError(line_n, line, "Invalid Location Directive");
   }
   processed.push_back(tokens[0]);
   return true;
 }
 
-void Config::verifyRequiredData() const {
+void Config::verifyRequiredData() {
+  if (mime_types.empty()) {
+    setDefaultMime();
+  }
   if (servers.empty()) {
-    throw std::runtime_error("No servers defined in config file");
+    throw ConfigError("No servers defined in config file");
   }
   for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
     if (s->port == 0) {

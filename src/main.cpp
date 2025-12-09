@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     conf.parse();
     debugPrintConfig(conf);
   } catch (std::exception& e) {
-    std::cerr << "Error:\n" << e.what() << std::endl;
+    std::cerr << e.what() << std::endl;
     std::exit(EXIT_FAILURE);
   }
 

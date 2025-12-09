@@ -2,14 +2,14 @@
 
 #include <sys/stat.h>
 
-#include <algorithm>
-#include <cerrno>  // IWYU pragma: keep
+#include <algorithm>  // IWYU pragma: keep
+#include <cerrno>     // IWYU pragma: keep
 #include <cstdlib>
-#include <fstream>   // IWYU pragma: keep
-#include <iostream>  // IWYU pragma: keep
+#include <exception>  // IWYU pragma: keep
+#include <fstream>    // IWYU pragma: keep
+#include <iostream>   // IWYU pragma: keep
 #include <map>
-#include <sstream>    // IWYU pragma: keep
-#include <stdexcept>  // IWYU pragma: keep
+#include <sstream>  // IWYU pragma: keep
 #include <string>
 #include <vector>
 
@@ -56,13 +56,25 @@ class Config {
   Config(const Config&);
   Config& operator=(const Config&);
   void setDefaultMime();
-  bool parseMime(const std::vector<std::string>&, std::string&);
-  bool parseServer(const std::vector<std::string>&, const std::string&, std::vector<std::string>&);
-  bool parseLocation(const std::vector<std::string>&, const std::string&,
-                     std::vector<std::string>&);
-  void verifyRequiredData() const;
+  bool parseMime(const std::vector<std::string>&, std::string&, int&);
+  bool parseServer(const std::vector<std::string>&, const std::string&, std::vector<std::string>&,
+                   int&);
+  bool parseLocation(const std::vector<std::string>&, const std::string&, std::vector<std::string>&,
+                     int&);
+  void verifyRequiredData();
 
   const std::string conf_path;
   std::map<std::string, std::string> mime_types;
   std::vector<ServerData> servers;
+
+  class ConfigError : public std::exception {
+   public:
+    ConfigError(std::string);
+    ConfigError(const int&, const std::string&, const std::string);
+    ~ConfigError() throw();
+    const char* what() const throw();
+
+   private:
+    std::string err_msg;
+  };
 };
