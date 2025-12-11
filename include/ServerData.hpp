@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 struct LocationData {
@@ -27,4 +28,10 @@ struct ServerData {
   std::vector<LocationData> locations;
 
   ServerData();
+};
+
+struct ConfigData {
+  std::vector<ServerData> servers;
+  std::map<std::string, std::string> mime;
+  ConfigData(const std::vector<ServerData>&, const std::map<std::string, std::string>&);
 };

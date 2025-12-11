@@ -12,3 +12,5 @@ BraceWrapping:
   BeforeElse: true
 BreakConstructorInitializers: BeforeColon
 PackConstructorInitializers: NextLine
+NamespaceIndentation: All
+FixNamespaceComments: false

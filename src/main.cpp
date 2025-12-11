@@ -5,22 +5,25 @@
 #include "../include/Debug.hpp"
 #include "../include/webserv.hpp"
 
+namespace {
+  ConfigData getConfig(const std::string& conf_file) {
+    try {
+      Config conf(conf_file);
+      conf.parse();
+      return ConfigData(conf.getServers(), conf.getMime());
+    } catch (const std::exception& e) {
+      std::cerr << e.what() << std::endl;
+      std::exit(EXIT_FAILURE);
+    }
+  }
+}
+
 int main(int argc, char** argv) {
   if (argc > 2) {
-    std::cerr << "Error: Too many arguments. Provide only one configuration file." << std::endl;
+    std::cerr << "Error: Provide only one configuration file\n";
     return 1;
   }
 
-  std::string path_config = argc == 1 ? DEFAULT_CONFIG_FILE_PATH : argv[1];
-
-  Config conf(path_config);
-  try {
-    conf.parse();
-    debugPrintConfig(conf);
-  } catch (std::exception& e) {
-    std::cerr << e.what() << std::endl;
-    std::exit(EXIT_FAILURE);
-  }
-
-  return 0;
+  const ConfigData conf = getConfig(argc == 1 ? DEFAULT_CONFIG_FILE_PATH : argv[1]);
+  debugPrintConfig(conf);
 }

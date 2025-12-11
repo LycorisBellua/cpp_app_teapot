@@ -29,16 +29,19 @@ class Config {
   const std::vector<ServerData>& getServers() const;
 
  private:
+  // Member Data
   const std::string conf_path;
   std::map<std::string, std::string> mime_types;
   std::vector<ServerData> servers;
 
+  // Parsing State
   enum ParseState { NONE, MIME, SERVER, LOCATION };
 
   struct ParsingData {
     std::ifstream infile;
     std::string line;
     int line_number;
+    int nest_level;
     ParseState state;
     std::vector<std::string> tokens;
     std::vector<std::string> server_processed;
@@ -46,6 +49,7 @@ class Config {
     ParsingData(const std::string&);
   };
 
+  // Exception Class
   class ConfigError : public std::exception {
    public:
     ConfigError(const std::string);
@@ -57,16 +61,26 @@ class Config {
     std::string err_msg;
   };
 
+  // OCF Requirements
   Config(const Config&);
   Config& operator=(const Config&);
 
+  // Top Level Parsing
   bool parseMime(ParsingData&);
+
+  enum ServerDirective { PORT, HOST, BODY, ERR, INVALID };
+  ServerDirective strToServerDirective(const ParsingData&);
   bool parseServer(ParsingData&);
+
+  enum LocationDirective { LOC, MET, ROOT, IND, AUTOIND, UPLOAD, CGI_EXT, CGI_INT, REDIR, INVLD };
+  LocationDirective strToLocationDirective(const ParsingData&);
   bool parseLocation(ParsingData&);
 
-  Config::ParseState validateBlockOpen(const std::vector<std::string>& tokens);
-  bool validateBlockClose(const std::vector<std::string>& tokens);
+  // Block Open/Close
+  Config::ParseState validateBlockOpen(ParsingData&);
+  bool validateBlockClose(ParsingData&);
 
+  // Validate and set
   void setPort(const ParsingData&);
   void setHost(const ParsingData&);
   void setBodySize(const ParsingData&);
@@ -81,6 +95,7 @@ class Config {
   void setCgiInterpreter(const ParsingData&);
   void setRedirect(const ParsingData&);
 
+  // Final Verification
   void verifyRequiredData();
   void setDefaultMime();
 };

@@ -1,25 +1,15 @@
 #include "../include/Config.hpp"
+#include "../include/Debug.hpp"
 
 /* ---------- CONSTRUCTORS / DESTRUCTOR ---------- */
 Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {}
 
 Config::Config(const std::string& conf) : conf_path(conf) {}
 
-Config::Config(const Config& src) {
-  // Private - not to be used
-  (void)src;
-}
-
 Config::~Config() {}
 
-Config& Config::operator=(const Config& src) {
-  // Private - not to be used
-  (void)src;
-  return *this;
-}
-
 Config::ParsingData::ParsingData(const std::string& conf_file)
-    : infile(conf_file.c_str()), line_number(0), state(NONE) {}
+    : infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE) {}
 
 /* ---------- EXCEPTION ---------- */
 Config::ConfigError::ConfigError(const std::string msg) {
@@ -39,27 +29,29 @@ const char* Config::ConfigError::what() const throw() {
 }
 
 /* ---------- HELPER FUNCTIONS ---------- */
-static std::vector<std::string> tokenizeLine(std::string line) {
-  size_t comment_start = line.find_first_of("#");
-  if (comment_start != line.npos) {
-    if (comment_start == 0) {
-      line.clear();
+namespace {
+  std::vector<std::string> tokenizeLine(std::string line) {
+    size_t comment_start = line.find_first_of("#");
+    if (comment_start != line.npos) {
+      if (comment_start == 0) {
+        line.clear();
+      }
+      else {
+        line = line.substr(0, comment_start);
+      }
     }
-    else {
-      line = line.substr(0, comment_start);
+    std::istringstream line_s(line);
+    std::vector<std::string> result;
+    std::string token;
+    while (line_s >> token) {
+      result.push_back(token);
     }
+    return result;
   }
-  std::istringstream line_s(line);
-  std::vector<std::string> result;
-  std::string token;
-  while (line_s >> token) {
-    result.push_back(token);
-  }
-  return result;
-}
 
-static bool findToken(const std::vector<std::string>& processed, const std::string& token) {
-  return std::find(processed.begin(), processed.end(), token) != processed.end();
+  bool findToken(const std::vector<std::string>& processed, const std::string& token) {
+    return std::find(processed.begin(), processed.end(), token) != processed.end();
+  }
 }
 
 /* ---------- CLASS MEMBER METHODS ---------- */
@@ -70,6 +62,7 @@ void Config::parse() {
   }
   while (std::getline(data.infile, data.line, '\n')) {
     ++data.line_number;
+
     data.tokens = tokenizeLine(data.line);
     if (data.tokens.empty()) {
       continue;
@@ -77,7 +70,7 @@ void Config::parse() {
 
     // Not in any block. Either open Server/Mime block, end file or error
     if (data.state == NONE) {
-      data.state = validateBlockOpen(data.tokens);
+      data.state = validateBlockOpen(data);
       if (data.state == SERVER) {
         servers.push_back(ServerData());
         data.server_processed.clear();
@@ -86,7 +79,7 @@ void Config::parse() {
       else if (data.state == MIME) {
         continue;
       }
-      else if (data.state == NONE && validateBlockClose(data.tokens)) {
+      else if (data.state == NONE && validateBlockClose(data)) {
         break;
       }
       else {
@@ -96,7 +89,7 @@ void Config::parse() {
 
     // Close mime block or parse mime value
     if (data.state == MIME) {
-      if (validateBlockClose(data.tokens)) {
+      if (validateBlockClose(data)) {
         data.state = NONE;
         continue;
       }
@@ -105,11 +98,11 @@ void Config::parse() {
 
     // Close server block, open location block, or parse server value
     else if (data.state == SERVER) {
-      if (validateBlockClose(data.tokens)) {
+      if (validateBlockClose(data)) {
         data.state = NONE;
         continue;
       }
-      if (validateBlockOpen(data.tokens) == LOCATION) {
+      if (validateBlockOpen(data) == LOCATION) {
         data.state = LOCATION;
         servers.back().locations.push_back(LocationData());
         data.location_processed.clear();
@@ -121,7 +114,7 @@ void Config::parse() {
 
     // Close location block or parse location value
     if (data.state == LOCATION) {
-      if (validateBlockClose(data.tokens)) {
+      if (validateBlockClose(data)) {
         data.state = SERVER;
         continue;
       }
@@ -155,88 +148,132 @@ bool Config::parseMime(ParsingData& data) {
   return true;
 }
 
+Config::ServerDirective Config::strToServerDirective(const ParsingData& data) {
+  std::string type = data.tokens[0].substr(0, 11) == "error_page_" ? "error_page_" : data.tokens[0];
+  static std::map<std::string, ServerDirective> types_map;
+  if (types_map.empty()) {
+    types_map["listen"] = PORT;
+    types_map["host"] = HOST;
+    types_map["client_max_body_size"] = BODY;
+    types_map["error_page_"] = ERR;
+  }
+  std::map<std::string, ServerDirective>::const_iterator it = types_map.find(type);
+  return it != types_map.end() ? it->second : INVALID;
+}
+
 bool Config::parseServer(ParsingData& data) {
   if (findToken(data.server_processed, data.tokens[0])) {
     throw ConfigError(data, "Duplicate Server Directive");
   }
-  if (data.tokens[0] == "listen") {
-    setPort(data);
-  }
-  else if (data.tokens[0] == "host") {
-    setHost(data);
-  }
-  else if (data.tokens[0] == "client_max_body_size") {
-    setBodySize(data);
-  }
-  else if (data.tokens[0].compare(0, 11, "error_page_") == 0) {
-    setErrorPage(data);
-  }
-  else {
-    throw ConfigError(data, "Invalid Server Directive");
+  switch (strToServerDirective(data)) {
+    case PORT:
+      setPort(data);
+      break;
+    case HOST:
+      setHost(data);
+      break;
+    case BODY:
+      setBodySize(data);
+      break;
+    case ERR:
+      setErrorPage(data);
+      break;
+    case INVALID:
+      throw ConfigError(data, "Invalid Server Directive");
   }
   data.server_processed.push_back(data.tokens[0]);
   return true;
+}
+
+Config::LocationDirective Config::strToLocationDirective(const ParsingData& data) {
+  const std::string& type = data.tokens[0];
+  static std::map<std::string, LocationDirective> types_map;
+  if (types_map.empty()) {
+    types_map["location"] = LOC;
+    types_map["allowed_methods"] = MET;
+    types_map["root"] = ROOT;
+    types_map["index"] = IND;
+    types_map["autoindex"] = AUTOIND;
+    types_map["upload_path"] = UPLOAD;
+    types_map["cgi_extension"] = CGI_EXT;
+    types_map["cgi_interpreter"] = CGI_INT;
+    types_map["redirect"] = REDIR;
+  }
+  std::map<std::string, LocationDirective>::const_iterator it = types_map.find(type);
+  return it != types_map.end() ? it->second : INVLD;
 }
 
 bool Config::parseLocation(ParsingData& data) {
   if (findToken(data.location_processed, data.tokens[0])) {
     throw ConfigError(data, "Duplicate Location Directive");
   }
-  if (data.tokens[0] == "location") {
-    setPath(data);
-  }
-  else if (data.tokens[0] == "allowed_methods") {
-    setMethods(data);
-  }
-  else if (data.tokens[0] == "root") {
-    setRoot(data);
-  }
-  else if (data.tokens[0] == "index") {
-    setIndex(data);
-  }
-  else if (data.tokens[0] == "autoindex") {
-    setAutoIndex(data);
-  }
-  else if (data.tokens[0] == "upload_path") {
-    setUploadPath(data);
-  }
-  else if (data.tokens[0] == "cgi_extension") {
-    setCgiExtension(data);
-  }
-  else if (data.tokens[0] == "cgi_interpreter") {
-    setCgiInterpreter(data);
-  }
-  else if (data.tokens[0] == "redirect") {
-    setRedirect(data);
-  }
-  else {
-    throw ConfigError(data, "Invalid Location Directive");
+  switch (strToLocationDirective(data)) {
+    case LOC:
+      setPath(data);
+      break;
+    case MET:
+      setMethods(data);
+      break;
+    case ROOT:
+      setRoot(data);
+      break;
+    case IND:
+      setIndex(data);
+      break;
+    case AUTOIND:
+      setAutoIndex(data);
+      break;
+    case UPLOAD:
+      setUploadPath(data);
+      break;
+    case CGI_EXT:
+      setCgiExtension(data);
+      break;
+    case CGI_INT:
+      setCgiInterpreter(data);
+      break;
+    case REDIR:
+      setRedirect(data);
+      break;
+    case INVLD:
+      throw ConfigError(data, "Invalid Location Directive");
   }
   data.location_processed.push_back(data.tokens[0]);
   return true;
 }
 
-Config::ParseState Config::validateBlockOpen(const std::vector<std::string>& tokens) {
-  static std::map<std::string, ParseState> open_states;
-  open_states["mime"] = MIME;
-  open_states["server"] = SERVER;
-  open_states["location"] = LOCATION;
-  if (open_states.find(tokens[0]) == open_states.end() || tokens.size() > 3 ||
-      (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{")) {
+Config::ParseState Config::validateBlockOpen(ParsingData& data) {
+  const std::vector<std::string>& tokens = data.tokens;
+  static std::map<std::string, std::pair<ParseState, int> > open_states;
+  if (open_states.empty()) {
+    open_states["mime"] = std::make_pair(MIME, 0);
+    open_states["server"] = std::make_pair(SERVER, 0);
+    open_states["location"] = std::make_pair(LOCATION, 1);
+  }
+  std::map<std::string, std::pair<ParseState, int> >::const_iterator it =
+      open_states.find(tokens[0]);
+  if (it == open_states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") ||
+      (tokens.size() == 3 && tokens[2] != "{")) {
     return NONE;
   }
-  return open_states[tokens[0]];
+  if (it->second.second != data.nest_level) {
+    throw ConfigError(data,
+                      "Can't open " + tokens[0] + " block here. Ensure previous blocks are closed");
+  }
+  ++data.nest_level;
+  return it->second.first;
 }
 
-bool Config::validateBlockClose(const std::vector<std::string>& tokens) {
-  if (tokens.size() == 1 && tokens[0] == "}") {
+bool Config::validateBlockClose(ParsingData& data) {
+  if (data.tokens.size() == 1 && data.tokens[0] == "}") {
+    --data.nest_level;
     return true;
   }
   return false;
 }
 
 void Config::setPort(const ParsingData& data) {
-  const std::vector<std::string>& port(data.tokens);
+  const std::vector<std::string>& port = data.tokens;
   if (port.size() != 2 || port[1].empty()) {
     throw ConfigError(data, "One listen port must be specified per server");
   }
@@ -252,7 +289,7 @@ void Config::setPort(const ParsingData& data) {
 }
 
 void Config::setHost(const ParsingData& data) {
-  const std::vector<std::string>& host(data.tokens);
+  const std::vector<std::string>& host = data.tokens;
   if (host.size() != 2 || host[1].empty()) {
     throw ConfigError(data, "One host must be specified per server");
   }
@@ -283,7 +320,7 @@ void Config::setHost(const ParsingData& data) {
 }
 
 void Config::setBodySize(const ParsingData& data) {
-  const std::vector<std::string>& body(data.tokens);
+  const std::vector<std::string>& body = data.tokens;
   if (body.size() != 2 || body[1].empty()) {
     throw ConfigError(data, "One client_max_body_size must be specified per server");
   }
@@ -302,7 +339,7 @@ void Config::setBodySize(const ParsingData& data) {
 }
 
 void Config::setErrorPage(const ParsingData& data) {
-  const std::vector<std::string>& errpage(data.tokens);
+  const std::vector<std::string>& errpage = data.tokens;
   if (errpage.size() != 2 || errpage[1].empty()) {
     throw ConfigError(data, "One file must be specified per error page");
   }
@@ -322,7 +359,7 @@ void Config::setErrorPage(const ParsingData& data) {
 }
 
 void Config::setPath(const ParsingData& data) {
-  const std::vector<std::string>& path(data.tokens);
+  const std::vector<std::string>& path = data.tokens;
   if (path.size() != 3 || path[1].empty()) {
     throw ConfigError(data, "One path must be specified per location");
   }
@@ -337,7 +374,7 @@ void Config::setPath(const ParsingData& data) {
 }
 
 void Config::setMethods(const ParsingData& data) {
-  const std::vector<std::string>& methods(data.tokens);
+  const std::vector<std::string>& methods = data.tokens;
   if (methods.size() < 2 || methods.size() > 4) {
     throw ConfigError(data, "A minimum of 1 and maximum of 3 allowed methods must be specified");
   }
@@ -355,7 +392,7 @@ void Config::setMethods(const ParsingData& data) {
 }
 
 void Config::setRoot(const ParsingData& data) {
-  const std::vector<std::string>& root(data.tokens);
+  const std::vector<std::string>& root = data.tokens;
   if (root.size() != 2 || root[1].empty()) {
     throw ConfigError(data, "A single root path must be specified");
   }
@@ -370,7 +407,7 @@ void Config::setRoot(const ParsingData& data) {
 }
 
 void Config::setIndex(const ParsingData& data) {
-  const std::vector<std::string>& index(data.tokens);
+  const std::vector<std::string>& index = data.tokens;
   if (index.size() != 2 || index[1].empty() || index[1][0] == '.') {
     throw ConfigError(data, "Invalid index");
   }
@@ -390,7 +427,7 @@ void Config::setIndex(const ParsingData& data) {
 }
 
 void Config::setAutoIndex(const ParsingData& data) {
-  const std::vector<std::string>& autoindex(data.tokens);
+  const std::vector<std::string>& autoindex = data.tokens;
   if (autoindex.size() != 2 || autoindex[1].empty() ||
       (autoindex[1] != "true" && autoindex[1] != "false")) {
     throw ConfigError(data, "A single 'true' or 'false' must be specified");
@@ -399,7 +436,7 @@ void Config::setAutoIndex(const ParsingData& data) {
 }
 
 void Config::setUploadPath(const ParsingData& data) {
-  const std::vector<std::string>& path(data.tokens);
+  const std::vector<std::string>& path = data.tokens;
   if (path.size() != 2 || path[1].empty()) {
     throw ConfigError(data, "One upload path must be specified");
   }
@@ -414,7 +451,7 @@ void Config::setUploadPath(const ParsingData& data) {
 }
 
 void Config::setCgiExtension(const ParsingData& data) {
-  const std::vector<std::string> cgi_ext(data.tokens);
+  const std::vector<std::string> cgi_ext = data.tokens;
   if (cgi_ext.size() != 2 || cgi_ext[1].empty() || cgi_ext[1] != ".py") {
     throw ConfigError(data, "One CGI extension must be specified (.py)");
   }
@@ -422,7 +459,7 @@ void Config::setCgiExtension(const ParsingData& data) {
 }
 
 void Config::setCgiInterpreter(const ParsingData& data) {
-  const std::vector<std::string>& cgi_int(data.tokens);
+  const std::vector<std::string>& cgi_int = data.tokens;
   if (cgi_int.size() != 2 || cgi_int[1].empty()) {
     throw ConfigError(data, "One CGI Interpreter must be specified");
   }
@@ -440,7 +477,7 @@ void Config::setCgiInterpreter(const ParsingData& data) {
 }
 
 void Config::setRedirect(const ParsingData& data) {
-  const std::vector<std::string> redir(data.tokens);
+  const std::vector<std::string> redir = data.tokens;
   if (redir.size() != 3 || redir[1].empty() || redir[2].empty() || redir[2][0] != '/') {
     throw ConfigError(data, "A valid response code and path must be specified");
   }
