@@ -1,3 +1,203 @@
+NOTES
+
+- One port per server, and possibly different servers. It's not asked in the 
+subject, but why not.
+
+- The first digit of a status code indentifies the general category of response:
+	* 1xx: Informational message only.
+	* 2xx: Success of some kind.
+	* 3xx: Redirects the client to another URL.
+	* 4xx: Error on the client's part.
+	* 5xx: Error on the server's part.
+
+- The HEAD method is when the client doesn't want the request body, just the 
+header. It's useful to check characteristics of a resource without actually 
+downloading it and thus saving bandwidth.
+
+- The POST method is used to send data to the server to be processed in some 
+way, like by a CGI script. It's different from the GET method in that:
+	* the request has a body, and usually extra headers such as Content-Type 
+	and Content-Length,
+	* the request URI is not a resource to retrieve, it's usually a program to 
+	handle the data being sent,
+	* the response is normally program output and not a static file.
+
+- Be strict in what you send, and tolerant with what you receive:
+	* Even though the standard says that header lines should end with CRLF 
+	(\r\n), someone might use a single LF (\n) instead, so accept either.
+	* Make sure your response's header ends with a blank line (still CRLF) even 
+	without a body.
+	* The three fields in the initial line should be separated by a single 
+	space, but someone might use several spaces or tabs. Accept any number of 
+	spaces and tabs between these fields.
+	* A header must end with a CRLF line, even if there's no body. Otherwise, 
+	the other machine may wait indefinitely or close the connection as 
+	malformed.
+
+- The "Host" header line is required in HTTP/1.1. Parse it to know who the 
+request is intended for. It indicates not only the domain but the port. For 
+example, `www.host1.com:80`. Of course, if there's no port, interpret it as 80.
+- Accept abolute URLs. Both of these initial request lines are valid:
+	"GET /path/file.html HTTP/1.1"
+	"GET http://www.somehost.com/path/file.html HTTP/1.1"
+The "Host" header line is still required though.
+
+- Chunked transfer-encoding is indicated by the "Transfer-Encoding: chunked" 
+header, which can be used by requests and responses alike. Although the server 
+is not required to send chunked responses, it must be able to receive chunked 
+requests. This feature is used when the sender doesn't know the size of the 
+body, and would rather send it in chunks. The size of the next chunk is 
+indicated, of course, and then the end of the body is marked. The subject 
+doesn't require the response to use this encoding, but the request might use it 
+so it's important to know how to parse and "unchunk" such a request, so that 
+the parsed request body ends up as a block ended with EOF and with the full 
+byte size calculated for good measure.
+- Example of classic request:
+```
+POST /upload HTTP/1.1\r\n
+Host: example.com\r\n
+Content-Type: text/plain\r\n
+Content-Length: 15\r\n
+\r\n
+0123456789abcde
+```
+- Example of chunked request:
+```
+POST /upload HTTP/1.1\r\n
+Host: example.com\r\n
+Content-Type: text/plain\r\n
+Transfer-Encoding: chunked\r\n
+\r\n
+A\r\n
+0123456789\r\n
+5\r\n
+abcde\r\n
+0;note="final chunk"\r\n
+X-Checksum: sha256:abcd1234\r\n
+X-Meta: part=7\r\n
+\r\n
+```
+- Each chunk is prefaced with the byte size in hex format. This value can be 
+followed by a semicolon, and extra parameters. Ignore everything in between the 
+byte size value and CRLF.
+- A final size line of 0 is given at the end to indicate that the chunks have 
+all been sent.
+- In between this final size line and the final CRLF line, can trailer lines be 
+found. Ignore them.
+
+- In HTTP/1.1, connection is persistent. It means that the same connection can 
+be used to exchange requests and responses back and forth. However, if the 
+client has the "Connection: close" header line, it means that it closes the 
+connection after the response has been received. Similarly, if the server sends 
+a response with this header line, it closes connection right after.
+- The client sending multiple requests over the same connection without waiting 
+for the corresponding responses is called "pipelining". The server is expected 
+to send back the responses in the same order the requests were received.
+- A GET or DELETE request shouldn't have a body, your server is allowed to 
+reject the request.
+- A POST request should have a body. If there's none, then the request should 
+specify "Content-Length: 0" or a Transfer-Encoding to express the same thing. 
+And if the header line is not present, then your server should assume that 
+there's no body, and that the next part of the data is a new request. In 
+practice, many servers reject the request or close the connection, because the 
+boundary is ambiguous if pipeline is expected.
+- Example of pipelining:
+```
+POST /submit HTTP/1.1\r\n
+Host: example.com\r\n
+Content-Length: 0\r\n
+\r\n
+GET /next HTTP/1.1\r\n
+Host: example.com\r\n
+\r\n
+```
+- Another example:
+```
+POST /submit HTTP/1.1\r\n
+Host: example.com\r\n
+Content-Type: application/x-www-form-urlencoded\r\n
+Content-Length: 13\r\n
+\r\n
+name=alice123\r\n
+GET /next HTTP/1.1\r\n
+Host: example.com\r\n
+\r\n
+```
+It's allowed to add CRLF or whatever whitespaces between the a body and the 
+next request, because the server will read according to Content-Length, and 
+that outside of this length any whitespaces are interpreted as not being a 
+request, so the server will know to wait for the "GET ..." line. Also, note 
+that the CRLF at the end of the body's single line is not needed. The server 
+reads a certain amount of bytes, we don't care about CRLF within the body. It's 
+only relevant to add them if the client wants them to be part of the body, 
+otherwise they don't hurt because it's only whitespaces, so they'd be void 
+space in between requests.
+- If the client wants to close the connection, it either must send 
+"Connection: close" within the header of its last request, or close the TCP 
+connection abruptly.
+- "Connection: keep-alive" is optional, as in HTTP/1.1 persistent connection is 
+the default anyway. Ignore any other connection than "close", honestly.
+- Your server must close the connection after a fatal error. A fatal error is a 
+malformed request, whereas a recoverable error is when the request was readable 
+but the server cannot fulfill it. Use the correct status code (4xx, because 
+client error), and if it's not within the scope of the project to be very 
+precise, then at least use "400 Bad Request".
+- Whether it's to echo the request's desire to close the connection, or in case 
+of a fatal error, of course the response must contain "Connection: close".
+- If the connection is idle, the server should close it after some timeout 
+period (it can be anything, 10 seconds is fine).
+
+- The client can send a header with the "Expect: 100-continue" line and without 
+a body. It's asking the server whether the header is valid. If it's not, the 
+server sends an error, and the client knows not to send the body for nothing. 
+If the header was valid, the server sends "HTTP/1.1 100 Continue\r\n\r\n", and 
+the client knows to send the body.
+- If the client sends the body right away, the server doesn't have to bother 
+with responding with 100. It becomes the same as a typical request, but in case 
+of an error the server has to read and discard the body fully, it cannot stop 
+at the header, or the socket will be a mess.
+- Note that the "417 Expectation Failed" error is only if the server rejects 
+the "Expect" header line itself, for example because the feature is not 
+implemented, or the expect value is not "100-continue", as it's the only one 
+that exists. Of course, if the header had another issue, you send "400 Bad 
+Request", but if the only issue is the Expect value, it's 417.
+
+- Except for the "100 Continue" response, all responses must include the date, 
+and it must use Greenwich Mean Time: "Date: Fri, 31 Dec 1999 23:59:59 GMT". The 
+purpose of this is to allow the client to use caching, which doesn't work 
+without timestamps. The server can ignore the "Date" request header line.
+
+- If you don't recognize the method used in the request, return the "501 Not 
+Implemented" error. It works for both methods that exist in the standard but 
+you don't implement, and those which don't exist at all.
+- The "405 Method Not Allowed" error is when the server implements the method, 
+but it's not allowed for the requested URL. For example, using GET for an URL 
+only used for DELETE. Here is a very short example of response:
+```
+HTTP/1.1 405 Method Not Allowed
+Allow: GET, POST
+```
+
+- You must support HTTP/1.0 requests:
+	* By default, connection is not persistent, so close it everytime unless 
+	the client sends "Connection: keep-alive".
+	* The Host header line is optional. You can default to a main host in case 
+	of virtual hosting, as indeed we still need to know to which host forward 
+	the request.
+	* Do not send chunked responses, and you must always specify Content-Length.
+	* Stick to status codes that HTTP/1.0 recognizes:
+		2xx: 200, 201, 202
+		3xx: 301, 302, 304
+		4xx: 400, 401, 403, 404
+		5xx: 500, 501, 502, 503
+	Note that the following are the most common ones and safest for 1.0 clients:
+		200, 301, 302, 404 and 500.
+	Many 1.0 clients may ignore rarely used codes like 201, 202, 502 or 503 but 
+	they will not break.
+
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+
 1. Initialize TCP server sockets
 
 - Create listening sockets
@@ -55,6 +255,8 @@
 
 - If `Content-Length` -> read exact body size
 - If `chunked` -> decode chunks
+	-> From subject: "Remember that for chunked requests your server needs to 
+	un-chunk them, as the CGI will expect EOF as the end of the body."
 
 --------------------------------------------------------------------------------
 
