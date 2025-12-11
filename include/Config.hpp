@@ -13,33 +13,8 @@
 #include <string>
 #include <vector>
 
+#include "../include/ServerData.hpp"
 #include "./webserv.hpp"  // IWYU pragma: keep
-
-enum ParseState { NONE, MIME, SERVER, LOCATION };
-
-struct LocationData {
-  std::string path;
-  std::vector<std::string> allowed_methods;
-  std::string root;
-  std::string index;
-  bool autoindex;
-  std::string upload_path;
-  std::string cgi_extension;
-  std::string cgi_interpreter;
-  std::pair<int, std::string> redirect;
-
-  LocationData();
-};
-
-struct ServerData {
-  size_t port;
-  std::string host;
-  size_t client_body_max;
-  std::map<int, std::string> errors;
-  std::vector<LocationData> locations;
-
-  ServerData();
-};
 
 class Config {
  public:
@@ -48,33 +23,64 @@ class Config {
   ~Config();
 
   void parse();
+
   const std::string& getPath() const;
   const std::map<std::string, std::string>& getMime() const;
   const std::vector<ServerData>& getServers() const;
 
  private:
-  Config(const Config&);
-  Config& operator=(const Config&);
-  void setDefaultMime();
-  bool parseMime(const std::vector<std::string>&, std::string&, int&);
-  bool parseServer(const std::vector<std::string>&, const std::string&, std::vector<std::string>&,
-                   int&);
-  bool parseLocation(const std::vector<std::string>&, const std::string&, std::vector<std::string>&,
-                     int&);
-  void verifyRequiredData();
-
   const std::string conf_path;
   std::map<std::string, std::string> mime_types;
   std::vector<ServerData> servers;
 
+  enum ParseState { NONE, MIME, SERVER, LOCATION };
+
+  struct ParsingData {
+    std::ifstream infile;
+    std::string line;
+    int line_number;
+    ParseState state;
+    std::vector<std::string> tokens;
+    std::vector<std::string> server_processed;
+    std::vector<std::string> location_processed;
+    ParsingData(const std::string&);
+  };
+
   class ConfigError : public std::exception {
    public:
-    ConfigError(std::string);
-    ConfigError(const int&, const std::string&, const std::string);
+    ConfigError(const std::string);
+    ConfigError(const ParsingData&, const std::string);
     ~ConfigError() throw();
     const char* what() const throw();
 
    private:
     std::string err_msg;
   };
+
+  Config(const Config&);
+  Config& operator=(const Config&);
+
+  bool parseMime(ParsingData&);
+  bool parseServer(ParsingData&);
+  bool parseLocation(ParsingData&);
+
+  Config::ParseState validateBlockOpen(const std::vector<std::string>& tokens);
+  bool validateBlockClose(const std::vector<std::string>& tokens);
+
+  void setPort(const ParsingData&);
+  void setHost(const ParsingData&);
+  void setBodySize(const ParsingData&);
+  void setErrorPage(const ParsingData&);
+  void setPath(const ParsingData&);
+  void setMethods(const ParsingData&);
+  void setRoot(const ParsingData&);
+  void setIndex(const ParsingData&);
+  void setAutoIndex(const ParsingData&);
+  void setUploadPath(const ParsingData&);
+  void setCgiExtension(const ParsingData&);
+  void setCgiInterpreter(const ParsingData&);
+  void setRedirect(const ParsingData&);
+
+  void verifyRequiredData();
+  void setDefaultMime();
 };

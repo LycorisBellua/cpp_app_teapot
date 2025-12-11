@@ -1,10 +1,6 @@
 #include "../include/Config.hpp"
 
 /* ---------- CONSTRUCTORS / DESTRUCTOR ---------- */
-ServerData::ServerData() : port(0), client_body_max(1000000) {}
-
-LocationData::LocationData() : autoindex(false), redirect(0, "") {}
-
 Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {}
 
 Config::Config(const std::string& conf) : conf_path(conf) {}
@@ -22,16 +18,18 @@ Config& Config::operator=(const Config& src) {
   return *this;
 }
 
-/* ---------- Exception Class ---------- */
-Config::ConfigError::ConfigError(std::string msg) {
+Config::ParsingData::ParsingData(const std::string& conf_file)
+    : infile(conf_file.c_str()), line_number(0), state(NONE) {}
+
+/* ---------- EXCEPTION ---------- */
+Config::ConfigError::ConfigError(const std::string msg) {
   err_msg = "Config File Error:\n" + msg;
 }
 
-Config::ConfigError::ConfigError(const int& line_n, const std::string& line,
-                                 const std::string msg) {
+Config::ConfigError::ConfigError(const ParsingData& data, const std::string msg) {
   std::stringstream num;
-  num << line_n;
-  err_msg = "Config File Error: " + msg + "\nLine " + num.str() + ": " + line;
+  num << data.line_number;
+  err_msg = "Config File Error: " + msg + "\nLine " + num.str() + ": " + data.line;
 }
 
 Config::ConfigError::~ConfigError() throw() {}
@@ -60,290 +58,74 @@ static std::vector<std::string> tokenizeLine(std::string line) {
   return result;
 }
 
-static ParseState validateBlockOpen(const std::vector<std::string>& tokens) {
-  static std::map<std::string, ParseState> open_states;
-  open_states["mime"] = MIME;
-  open_states["server"] = SERVER;
-  open_states["location"] = LOCATION;
-  if (open_states.find(tokens[0]) == open_states.end() || tokens.size() > 3 ||
-      (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{")) {
-    return NONE;
-  }
-  return open_states[tokens[0]];
-}
-
-static bool validateBlockClose(const std::vector<std::string>& tokens) {
-  if (tokens.size() == 1 && tokens[0] == "}") {
-    return true;
-  }
-  return false;
-}
-
-static bool validatePort(const std::string& port) {
-  if (port.length() == 0 || port.length() > 5 ||
-      port.find_first_not_of("1234567890") != port.npos) {
-    return false;
-  }
-  int port_number = std::atoi(port.c_str());
-  if (port_number < 1 || port_number > 65535) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateHost(const std::string& host) {
-  if (host.empty()) {
-    return false;
-  }
-  if (host == "localhost") {
-    return true;
-  }
-  if (host.find_first_not_of("1234567890.") != host.npos || host.length() < 7 ||
-      host.length() > 15) {
-    return false;
-  }
-  std::istringstream address(host);
-  int a, b, c, d;
-  char dot1, dot2, dot3;
-  if (!(address >> a >> dot1 >> b >> dot2 >> c >> dot3 >> d)) {
-    return false;
-  }
-  if (dot1 != '.' || dot2 != '.' || dot3 != '.') {
-    return false;
-  }
-  if (address.peek() != EOF) {
-    return false;
-  }
-  if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0 || d > 255) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateBodySize(const std::string& body) {
-  if (body.empty() || body.find_first_not_of("1234567890") != body.npos) {
-    return false;
-  }
-  if (body.length() == 1 && body[0] == '0') {
-    return true;
-  }
-  char* end;
-  size_t result = std::strtoul(body.c_str(), &end, 10);
-  if (errno == ERANGE || *end != '\0' || result == 0) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateErrorPage(const std::vector<std::string>& tokens) {
-  if (tokens[0].length() != 14) {
-    return false;
-  }
-  std::string errpage_num = tokens[0].substr(11);
-  if (errpage_num.length() != 3 ||
-      errpage_num.find_first_not_of("1234567890") != errpage_num.npos) {
-    return false;
-  }
-  std::ifstream errfile(tokens[1].c_str());
-  if (!errfile.is_open()) {
-    return false;
-  }
-  errfile.close();
-  return true;
-}
-
-static bool validatePath(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 3 || tokens[1].empty() || tokens[1][0] != '/' || tokens[2] != "{") {
-    return false;
-  }
-  std::string path = tokens[1];
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
-  if (path.find_first_not_of(allowed) != path.npos || path.find("//") != path.npos) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateMethods(const std::vector<std::string>& tokens) {
-  if (tokens.size() < 2 || tokens.size() > 4) {
-    return false;
-  }
-  for (std::vector<std::string>::const_iterator t = tokens.begin() + 1; t != tokens.end(); ++t) {
-    if (*t != "GET" && *t != "POST" && *t != "DELETE") {
-      return false;
-    }
-    for (std::vector<std::string>::const_iterator t2 = t + 1; t2 != tokens.end(); ++t2) {
-      if (*t == *t2) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-static bool validateRoot(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty()) {
-    return false;
-  }
-  struct stat info;
-  if (stat(tokens[1].c_str(), &info) != 0) {
-    return false;
-  }
-  if (!S_ISDIR(info.st_mode)) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateIndex(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty() || tokens[1][0] == '.') {
-    return false;
-  }
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.");
-  if (tokens[1].find_first_not_of(allowed) != tokens[1].npos) {
-    return false;
-  }
-  size_t dot = tokens[1].find_first_of(".");
-  if (dot == tokens[1].npos) {
-    return false;
-  }
-  std::string extension = tokens[1].substr(dot + 1);
-  if (extension.empty() || extension.find_first_of(".") != extension.npos) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateAutoIndex(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty()) {
-    return false;
-  }
-  return tokens[1] == "true" || tokens[1] == "false";
-}
-
-static bool validateUploadPath(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty()) {
-    return false;
-  }
-  std::string path = tokens[1];
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/");
-  if (path.find_first_not_of(allowed) != std::string::npos) {
-    return false;
-  }
-  if (path.find("//") != std::string::npos) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateCgiExtension(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty()) {
-    return false;
-  }
-  return tokens[1] == ".py";
-}
-
-static bool validateCgiInterpreter(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 2 || tokens[1].empty()) {
-    return false;
-  }
-  struct stat info;
-  if (stat(tokens[1].c_str(), &info) != 0) {
-    return false;
-  }
-  if (!S_ISREG(info.st_mode)) {
-    return false;
-  }
-  if (!(info.st_mode & S_IXUSR)) {
-    return false;
-  }
-  return true;
-}
-
-static bool validateRedirect(const std::vector<std::string>& tokens) {
-  if (tokens.size() != 3 || tokens[1].empty() || tokens[2].empty() || tokens[2][0] != '/') {
-    return false;
-  }
-  if (tokens[1] != "301" && tokens[1] != "302") {
-    return false;
-  }
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
-  if (tokens[2].find_first_not_of(allowed) != tokens[2].npos) {
-    return false;
-  }
-  size_t dot = tokens[2].find_first_of('.');
-  if (dot != tokens[2].npos) {
-    std::string extension = tokens[2].substr(dot + 1);
-    if (extension.find_first_of('.') != extension.npos) {
-      return false;
-    }
-  }
-  return true;
-}
-
 static bool findToken(const std::vector<std::string>& processed, const std::string& token) {
   return std::find(processed.begin(), processed.end(), token) != processed.end();
 }
 
-/* ---------- CLASS MEMBER FUNCTIONS ---------- */
+/* ---------- CLASS MEMBER METHODS ---------- */
 void Config::parse() {
-  std::ifstream infile(conf_path.c_str());
-  std::string line;
-  int line_number = 0;
-  ParseState state = NONE;
-  std::vector<std::string> server_processed;
-  std::vector<std::string> location_processed;
-  if (!infile.is_open()) {
+  ParsingData data(conf_path);
+  if (!data.infile.is_open()) {
     throw ConfigError("Failed to open Config File: " + conf_path);
   }
-  while (std::getline(infile, line, '\n')) {
-    ++line_number;
-    std::vector<std::string> tokens = tokenizeLine(line);
-    if (tokens.empty()) {
+  while (std::getline(data.infile, data.line, '\n')) {
+    ++data.line_number;
+    data.tokens = tokenizeLine(data.line);
+    if (data.tokens.empty()) {
       continue;
     }
-    if (state == NONE) {
-      state = validateBlockOpen(tokens);
-      if (state == SERVER) {
+
+    // Not in any block. Either open Server/Mime block, end file or error
+    if (data.state == NONE) {
+      data.state = validateBlockOpen(data.tokens);
+      if (data.state == SERVER) {
         servers.push_back(ServerData());
-        server_processed.clear();
+        data.server_processed.clear();
         continue;
       }
-      else if (state == MIME) {
+      else if (data.state == MIME) {
         continue;
       }
-      else if (state == NONE && validateBlockClose(tokens)) {
+      else if (data.state == NONE && validateBlockClose(data.tokens)) {
         break;
       }
       else {
-        throw ConfigError(line_number, line, "Invalid line");
+        throw ConfigError(data, "Invalid line");
       }
     }
-    if (state == MIME) {
-      if (validateBlockClose(tokens)) {
-        state = NONE;
+
+    // Close mime block or parse mime value
+    if (data.state == MIME) {
+      if (validateBlockClose(data.tokens)) {
+        data.state = NONE;
         continue;
       }
-      parseMime(tokens, line, line_number);
+      parseMime(data);
     }
-    else if (state == SERVER) {
-      if (validateBlockClose(tokens)) {
-        state = NONE;
+
+    // Close server block, open location block, or parse server value
+    else if (data.state == SERVER) {
+      if (validateBlockClose(data.tokens)) {
+        data.state = NONE;
         continue;
       }
-      if (validateBlockOpen(tokens) == LOCATION) {
-        state = LOCATION;
+      if (validateBlockOpen(data.tokens) == LOCATION) {
+        data.state = LOCATION;
         servers.back().locations.push_back(LocationData());
-        location_processed.clear();
+        data.location_processed.clear();
       }
-      parseServer(tokens, line, server_processed, line_number);
+      else {
+        parseServer(data);
+      }
     }
-    if (state == LOCATION) {
-      if (validateBlockClose(tokens)) {
-        state = SERVER;
+
+    // Close location block or parse location value
+    if (data.state == LOCATION) {
+      if (validateBlockClose(data.tokens)) {
+        data.state = SERVER;
         continue;
       }
-      parseLocation(tokens, line, location_processed, line_number);
+      parseLocation(data);
     }
   }
   verifyRequiredData();
@@ -359,6 +141,370 @@ const std::map<std::string, std::string>& Config::getMime() const {
 
 const std::vector<ServerData>& Config::getServers() const {
   return this->servers;
+}
+
+bool Config::parseMime(ParsingData& data) {
+  size_t divide = data.tokens[0].find_first_of("/");
+  if (data.tokens.size() == 1 || divide == data.tokens[0].npos || divide == 0 ||
+      divide == data.tokens[0].length() - 1) {
+    throw ConfigError(data, "Invalid Mime Directive");
+  }
+  for (size_t i = 1; i < data.tokens.size(); ++i) {
+    mime_types["." + data.tokens[i]] = data.tokens[0];
+  }
+  return true;
+}
+
+bool Config::parseServer(ParsingData& data) {
+  if (findToken(data.server_processed, data.tokens[0])) {
+    throw ConfigError(data, "Duplicate Server Directive");
+  }
+  if (data.tokens[0] == "listen") {
+    setPort(data);
+  }
+  else if (data.tokens[0] == "host") {
+    setHost(data);
+  }
+  else if (data.tokens[0] == "client_max_body_size") {
+    setBodySize(data);
+  }
+  else if (data.tokens[0].compare(0, 11, "error_page_") == 0) {
+    setErrorPage(data);
+  }
+  else {
+    throw ConfigError(data, "Invalid Server Directive");
+  }
+  data.server_processed.push_back(data.tokens[0]);
+  return true;
+}
+
+bool Config::parseLocation(ParsingData& data) {
+  if (findToken(data.location_processed, data.tokens[0])) {
+    throw ConfigError(data, "Duplicate Location Directive");
+  }
+  if (data.tokens[0] == "location") {
+    setPath(data);
+  }
+  else if (data.tokens[0] == "allowed_methods") {
+    setMethods(data);
+  }
+  else if (data.tokens[0] == "root") {
+    setRoot(data);
+  }
+  else if (data.tokens[0] == "index") {
+    setIndex(data);
+  }
+  else if (data.tokens[0] == "autoindex") {
+    setAutoIndex(data);
+  }
+  else if (data.tokens[0] == "upload_path") {
+    setUploadPath(data);
+  }
+  else if (data.tokens[0] == "cgi_extension") {
+    setCgiExtension(data);
+  }
+  else if (data.tokens[0] == "cgi_interpreter") {
+    setCgiInterpreter(data);
+  }
+  else if (data.tokens[0] == "redirect") {
+    setRedirect(data);
+  }
+  else {
+    throw ConfigError(data, "Invalid Location Directive");
+  }
+  data.location_processed.push_back(data.tokens[0]);
+  return true;
+}
+
+Config::ParseState Config::validateBlockOpen(const std::vector<std::string>& tokens) {
+  static std::map<std::string, ParseState> open_states;
+  open_states["mime"] = MIME;
+  open_states["server"] = SERVER;
+  open_states["location"] = LOCATION;
+  if (open_states.find(tokens[0]) == open_states.end() || tokens.size() > 3 ||
+      (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{")) {
+    return NONE;
+  }
+  return open_states[tokens[0]];
+}
+
+bool Config::validateBlockClose(const std::vector<std::string>& tokens) {
+  if (tokens.size() == 1 && tokens[0] == "}") {
+    return true;
+  }
+  return false;
+}
+
+void Config::setPort(const ParsingData& data) {
+  const std::vector<std::string>& port(data.tokens);
+  if (port.size() != 2 || port[1].empty()) {
+    throw ConfigError(data, "One listen port must be specified per server");
+  }
+  if (port[1].length() == 0 || port[1].length() > 5 ||
+      port[1].find_first_not_of("1234567890") != port[1].npos) {
+    throw ConfigError(data, "Port value must be a number from 1-65535");
+  }
+  int port_number = std::atoi(port[1].c_str());
+  if (port_number < 1 || port_number > 65535) {
+    throw ConfigError(data, "Port value must be a number from 1-65535");
+  }
+  servers.back().port = port_number;
+}
+
+void Config::setHost(const ParsingData& data) {
+  const std::vector<std::string>& host(data.tokens);
+  if (host.size() != 2 || host[1].empty()) {
+    throw ConfigError(data, "One host must be specified per server");
+  }
+  if (host[1] == "localhost") {
+    servers.back().host = host[1];
+    return;
+  }
+  if (host[1].find_first_not_of("1234567890.") != host[1].npos || host[1].length() < 7 ||
+      host[1].length() > 15) {
+    throw ConfigError(data, "Invalid Host Value");
+  }
+  std::istringstream address(host[1]);
+  int a, b, c, d;
+  char dot1, dot2, dot3;
+  if (!(address >> a >> dot1 >> b >> dot2 >> c >> dot3 >> d)) {
+    throw ConfigError(data, "Invalid IP address");
+  }
+  if (dot1 != '.' || dot2 != '.' || dot3 != '.') {
+    throw ConfigError(data, "Invalid IP address");
+  }
+  if (address.peek() != EOF) {
+    throw ConfigError(data, "Invalid IP address");
+  }
+  if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0 || d > 255) {
+    throw ConfigError(data, "Invalid IP address");
+  }
+  servers.back().host = host[1];
+}
+
+void Config::setBodySize(const ParsingData& data) {
+  const std::vector<std::string>& body(data.tokens);
+  if (body.size() != 2 || body[1].empty()) {
+    throw ConfigError(data, "One client_max_body_size must be specified per server");
+  }
+  if (body[1].find_first_not_of("1234567890") != body[1].npos) {
+    throw ConfigError(data, "Invalid Body Size value");
+  }
+  if (body[1].length() == 1 && body[1][0] == '0') {
+    servers.back().client_body_max = 0;
+  }
+  char* end;
+  size_t result = std::strtoul(body[1].c_str(), &end, 10);
+  if (errno == ERANGE || *end != '\0' || result == 0) {
+    throw ConfigError(data, "Invalid Body Size value");
+  }
+  servers.back().client_body_max = result;
+}
+
+void Config::setErrorPage(const ParsingData& data) {
+  const std::vector<std::string>& errpage(data.tokens);
+  if (errpage.size() != 2 || errpage[1].empty()) {
+    throw ConfigError(data, "One file must be specified per error page");
+  }
+  if (errpage[0].length() != 14) {
+    throw ConfigError(data, "Invalid error type");
+  }
+  std::string error_num = errpage[0].substr(11);
+  if (error_num.length() != 3 || error_num.find_first_not_of("1234567890") != error_num.npos) {
+    throw ConfigError(data, "Invalid error number");
+  }
+  std::ifstream errfile(errpage[1].c_str());
+  if (!errfile.is_open()) {
+    throw ConfigError(data, "Invalid file");
+  }
+  errfile.close();
+  servers.back().errors[std::atoi(error_num.c_str())] = errpage[1];
+}
+
+void Config::setPath(const ParsingData& data) {
+  const std::vector<std::string>& path(data.tokens);
+  if (path.size() != 3 || path[1].empty()) {
+    throw ConfigError(data, "One path must be specified per location");
+  }
+  if (path[1][0] != '/' || path[2] != "{") {
+    throw ConfigError(data, "Invalid Path");
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
+  if (path[1].find_first_not_of(allowed) != path[1].npos || path[1].find("//") != path[1].npos) {
+    throw ConfigError(data, "Invalid Path");
+  }
+  servers.back().locations.back().path = path[1];
+}
+
+void Config::setMethods(const ParsingData& data) {
+  const std::vector<std::string>& methods(data.tokens);
+  if (methods.size() < 2 || methods.size() > 4) {
+    throw ConfigError(data, "A minimum of 1 and maximum of 3 allowed methods must be specified");
+  }
+  for (std::vector<std::string>::const_iterator m = methods.begin() + 1; m != methods.end(); ++m) {
+    if (*m != "GET" && *m != "POST" && *m != "DELETE") {
+      throw ConfigError(data, "Invalid Method: " + *m);
+    }
+    for (std::vector<std::string>::const_iterator m2 = m + 1; m2 != methods.end(); ++m2) {
+      if (*m == *m2) {
+        throw ConfigError(data, "Each method may only be specified once per location");
+      }
+    }
+  }
+  servers.back().locations.back().allowed_methods.assign(methods.begin() + 1, methods.end());
+}
+
+void Config::setRoot(const ParsingData& data) {
+  const std::vector<std::string>& root(data.tokens);
+  if (root.size() != 2 || root[1].empty()) {
+    throw ConfigError(data, "A single root path must be specified");
+  }
+  struct stat info;
+  if (stat(root[1].c_str(), &info) != 0) {
+    throw ConfigError(data, "Root directory does not exist");
+  }
+  if (!S_ISDIR(info.st_mode)) {
+    throw ConfigError(data, "Root must be a directory");
+  }
+  servers.back().locations.back().root = root[1];
+}
+
+void Config::setIndex(const ParsingData& data) {
+  const std::vector<std::string>& index(data.tokens);
+  if (index.size() != 2 || index[1].empty() || index[1][0] == '.') {
+    throw ConfigError(data, "Invalid index");
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.");
+  if (index[1].find_first_not_of(allowed) != index[1].npos) {
+    throw ConfigError(data, "Invalid characters in index");
+  }
+  size_t dot = index[1].find_first_of(".");
+  if (dot == index[1].npos) {
+    throw ConfigError(data, "Index must have a file extension");
+  }
+  std::string extension = index[1].substr(dot + 1);
+  if (extension.empty() || extension.find_first_of(".") != extension.npos) {
+    throw ConfigError(data, "Index must have a valid file extension");
+  }
+  servers.back().locations.back().index = index[1];
+}
+
+void Config::setAutoIndex(const ParsingData& data) {
+  const std::vector<std::string>& autoindex(data.tokens);
+  if (autoindex.size() != 2 || autoindex[1].empty() ||
+      (autoindex[1] != "true" && autoindex[1] != "false")) {
+    throw ConfigError(data, "A single 'true' or 'false' must be specified");
+  }
+  servers.back().locations.back().autoindex = autoindex[1] == "true";
+}
+
+void Config::setUploadPath(const ParsingData& data) {
+  const std::vector<std::string>& path(data.tokens);
+  if (path.size() != 2 || path[1].empty()) {
+    throw ConfigError(data, "One upload path must be specified");
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/");
+  if (path[1].find_first_not_of(allowed) != path[1].npos) {
+    throw ConfigError(data, "Invalid characters in upload path");
+  }
+  if (path[1].find("//") != path[1].npos) {
+    throw ConfigError(data, "A valid upload path must not contain '//'");
+  }
+  servers.back().locations.back().upload_path = path[1];
+}
+
+void Config::setCgiExtension(const ParsingData& data) {
+  const std::vector<std::string> cgi_ext(data.tokens);
+  if (cgi_ext.size() != 2 || cgi_ext[1].empty() || cgi_ext[1] != ".py") {
+    throw ConfigError(data, "One CGI extension must be specified (.py)");
+  }
+  servers.back().locations.back().cgi_extension = cgi_ext[1];
+}
+
+void Config::setCgiInterpreter(const ParsingData& data) {
+  const std::vector<std::string>& cgi_int(data.tokens);
+  if (cgi_int.size() != 2 || cgi_int[1].empty()) {
+    throw ConfigError(data, "One CGI Interpreter must be specified");
+  }
+  struct stat info;
+  if (stat(cgi_int[1].c_str(), &info) != 0) {
+    throw ConfigError(data, "Provided CGI Interpreter does not exist");
+  }
+  if (!S_ISREG(info.st_mode)) {
+    throw ConfigError(data, "Value is not a file");
+  }
+  if (!(info.st_mode & S_IXUSR)) {
+    throw ConfigError(data, "File is not executable");
+  }
+  servers.back().locations.back().cgi_interpreter = cgi_int[1];
+}
+
+void Config::setRedirect(const ParsingData& data) {
+  const std::vector<std::string> redir(data.tokens);
+  if (redir.size() != 3 || redir[1].empty() || redir[2].empty() || redir[2][0] != '/') {
+    throw ConfigError(data, "A valid response code and path must be specified");
+  }
+  if (redir[1] != "301" && redir[1] != "302") {
+    throw ConfigError(data, "Invalid Response Code");
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
+  if (redir[2].find_first_not_of(allowed) != redir[2].npos) {
+    throw ConfigError(data, "Invalid characters in path");
+  }
+  size_t dot = redir[2].find_first_of('.');
+  if (dot != redir[2].npos) {
+    std::string extension = redir[2].substr(dot + 1);
+    if (extension.find_first_of('.') != extension.npos) {
+      throw ConfigError(". is only valid for a file extension");
+    }
+  }
+  servers.back().locations.back().redirect = std::make_pair(std::atoi(redir[1].c_str()), redir[2]);
+}
+
+void Config::verifyRequiredData() {
+  if (mime_types.empty()) {
+    setDefaultMime();
+  }
+  if (servers.empty()) {
+    throw ConfigError("No servers defined in config file");
+  }
+  for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
+    if (s->port == 0) {
+      throw ConfigError("A port must be specified for each server");
+    }
+    if (s->host.empty()) {
+      throw ConfigError("A host must be specified for each server");
+    }
+    if (s->locations.empty()) {
+      throw ConfigError("At least one location block is required for each server");
+    }
+    for (std::vector<LocationData>::const_iterator l = s->locations.begin();
+         l != s->locations.end(); ++l) {
+      // Path always required - presence guaranteed by parsing
+      if (l->allowed_methods.empty()) {
+        throw ConfigError("Location: " + l->path +
+                          "\nAllowed_methods must be specified for each location");
+      }
+      // Redirect only requires path, allowed methods and redirect
+      if (l->redirect.first != 0) {
+        continue;
+      }
+      // If one cgi field is present, the other must be
+      if (!l->cgi_extension.empty() && l->cgi_interpreter.empty()) {
+        throw ConfigError("Location: " + l->path +
+                          ": cgi extension specified without cgi interpreter");
+      }
+      if (l->cgi_extension.empty() && !l->cgi_interpreter.empty()) {
+        throw ConfigError("Location: " + l->path +
+                          ": cgi_interpreter specified without cgi extension");
+      }
+      // Root required if not redirect
+      if (l->root.empty()) {
+        throw ConfigError("Location: " + l->path +
+                          ": root must be specified for all non-redirect locations");
+      }
+    }
+  }
 }
 
 void Config::setDefaultMime() {
@@ -382,130 +528,4 @@ void Config::setDefaultMime() {
   mime_types[".zip"] = "application/zip";
   mime_types[".tar"] = "application/x-tar";
   mime_types[".gz"] = "application/gzip";
-}
-
-bool Config::parseMime(const std::vector<std::string>& tokens, std::string& line, int& line_n) {
-  size_t divide = tokens[0].find_first_of("/");
-  if (tokens.size() == 1 || divide == tokens[0].npos || divide == 0 ||
-      divide == tokens[0].length() - 1) {
-    throw ConfigError(line_n, line, "Invalid Mime Directive");
-  }
-  for (size_t i = 1; i < tokens.size(); ++i) {
-    mime_types["." + tokens[i]] = tokens[0];
-  }
-  return true;
-}
-
-bool Config::parseServer(const std::vector<std::string>& tokens, const std::string& line,
-                         std::vector<std::string>& processed, int& line_n) {
-  if (findToken(processed, tokens[0])) {
-    throw ConfigError(line_n, line, "Duplicate Server Directive");
-  }
-  // FIX THIS
-  if (tokens.size() > 2) {
-    return false;
-  }
-  if (tokens[0] == "listen" && validatePort(tokens[1])) {
-    servers.back().port = std::atoi(tokens[1].c_str());
-  }
-  else if (tokens[0] == "host" && validateHost(tokens[1])) {
-    servers.back().host = tokens[1];
-  }
-  else if (tokens[0] == "client_max_body_size" && validateBodySize(tokens[1])) {
-    servers.back().client_body_max = std::atol(tokens[1].c_str());
-  }
-  else if (tokens[0].compare(0, 11, "error_page_") == 0 && validateErrorPage(tokens)) {
-    servers.back().errors[std::atoi(tokens[0].substr(11).c_str())] = tokens[1];
-  }
-  else {
-    throw ConfigError(line_n, line, "Invalid Server Directive");
-  }
-  processed.push_back(tokens[0]);
-  return true;
-}
-
-bool Config::parseLocation(const std::vector<std::string>& tokens, const std::string& line,
-                           std::vector<std::string>& processed, int& line_n) {
-  if (findToken(processed, tokens[0])) {
-    throw ConfigError(line_n, line, "Duplicate Location Directive");
-  }
-  if (tokens[0] == "location" && validatePath(tokens)) {
-    servers.back().locations.back().path = tokens[1];
-  }
-  else if (tokens[0] == "allowed_methods" && validateMethods(tokens)) {
-    servers.back().locations.back().allowed_methods.assign(tokens.begin() + 1, tokens.end());
-  }
-  else if (tokens[0] == "root" && validateRoot(tokens)) {
-    servers.back().locations.back().root = tokens[1];
-  }
-  else if (tokens[0] == "index" && validateIndex(tokens)) {
-    servers.back().locations.back().index = tokens[1];
-  }
-  else if (tokens[0] == "autoindex" && validateAutoIndex(tokens)) {
-    servers.back().locations.back().autoindex = tokens[1] == "true";
-  }
-  else if (tokens[0] == "upload_path" && validateUploadPath(tokens)) {
-    servers.back().locations.back().upload_path = tokens[1];
-  }
-  else if (tokens[0] == "cgi_extension" && validateCgiExtension(tokens)) {
-    servers.back().locations.back().cgi_extension = tokens[1];
-  }
-  else if (tokens[0] == "cgi_interpreter" && validateCgiInterpreter(tokens)) {
-    servers.back().locations.back().cgi_interpreter = tokens[1];
-  }
-  else if (tokens[0] == "redirect" && validateRedirect(tokens)) {
-    servers.back().locations.back().redirect =
-        std::make_pair(std::atoi(tokens[1].c_str()), tokens[2]);
-  }
-  else {
-    throw ConfigError(line_n, line, "Invalid Location Directive");
-  }
-  processed.push_back(tokens[0]);
-  return true;
-}
-
-void Config::verifyRequiredData() {
-  if (mime_types.empty()) {
-    setDefaultMime();
-  }
-  if (servers.empty()) {
-    throw ConfigError("No servers defined in config file");
-  }
-  for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
-    if (s->port == 0) {
-      throw std::runtime_error("A port must be provided for each server");
-    }
-    if (s->host.empty()) {
-      throw std::runtime_error("A host must be provided for each server");
-    }
-    if (s->locations.empty()) {
-      throw std::runtime_error("At least one location block is required for each server");
-    }
-    for (std::vector<LocationData>::const_iterator l = s->locations.begin();
-         l != s->locations.end(); ++l) {
-      // Path always required - presence guaranteed by parsing
-      if (l->allowed_methods.empty()) {
-        throw std::runtime_error("Location: " + l->path +
-                                 ": allowed_methods must be provided for each location");
-      }
-      // Redirect only requires path, allowed methods and redirect
-      if (l->redirect.first != 0) {
-        continue;
-      }
-      // If one cgi field is present, the other must be
-      if (!l->cgi_extension.empty() && l->cgi_interpreter.empty()) {
-        throw std::runtime_error("Location: " + l->path +
-                                 ": cgi extension provided without cgi interpreter");
-      }
-      if (l->cgi_extension.empty() && !l->cgi_interpreter.empty()) {
-        throw std::runtime_error("Location: " + l->path +
-                                 ": cgi_interpreter provided without cgi extension");
-      }
-      // Root required if not redirect
-      if (l->root.empty()) {
-        throw std::runtime_error("Location: " + l->path +
-                                 ": root must be provided for all non-redirect locations");
-      }
-    }
-  }
 }
