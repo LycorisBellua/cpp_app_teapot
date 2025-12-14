@@ -1,10 +1,13 @@
 #include "../include/Config.hpp"
-#include "../include/Debug.hpp"
 
 /* ---------- CONSTRUCTORS / DESTRUCTOR ---------- */
-Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {}
+Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {
+  Log::info("Config File: " + conf_path);
+}
 
-Config::Config(const std::string& conf) : conf_path(conf) {}
+Config::Config(const std::string& conf) : conf_path(conf) {
+  Log::info("Config File: " + conf_path);
+}
 
 Config::~Config() {}
 
@@ -14,12 +17,14 @@ Config::ParsingData::ParsingData(const std::string& conf_file)
 /* ---------- EXCEPTION ---------- */
 Config::ConfigError::ConfigError(const std::string msg) {
   err_msg = "Config File Error:\n" + msg;
+  Log::error(err_msg);
 }
 
 Config::ConfigError::ConfigError(const ParsingData& data, const std::string msg) {
   std::stringstream num;
   num << data.line_number;
   err_msg = "Config File Error: " + msg + "\nLine " + num.str() + ": " + data.line;
+  Log::error(err_msg);
 }
 
 Config::ConfigError::~ConfigError() throw() {}
@@ -62,63 +67,23 @@ void Config::parse() {
   }
   while (std::getline(data.infile, data.line, '\n')) {
     ++data.line_number;
-
     data.tokens = tokenizeLine(data.line);
     if (data.tokens.empty()) {
-      continue;
+      continue;  // Skip empty lines
     }
-
-    // Not in any block. Either open Server/Mime block, end file or error
-    if (data.state == NONE) {
-      data.state = validateBlockOpen(data);
-      if (data.state == SERVER) {
-        servers.push_back(ServerData());
-        data.server_processed.clear();
-        continue;
-      }
-      else if (data.state == MIME) {
-        continue;
-      }
-      else if (data.state == NONE && validateBlockClose(data)) {
+    switch (data.state) {
+      case NONE:
+        handleNoBlock(data);
         break;
-      }
-      else {
-        throw ConfigError(data, "Invalid line");
-      }
-    }
-
-    // Close mime block or parse mime value
-    if (data.state == MIME) {
-      if (validateBlockClose(data)) {
-        data.state = NONE;
-        continue;
-      }
-      parseMime(data);
-    }
-
-    // Close server block, open location block, or parse server value
-    else if (data.state == SERVER) {
-      if (validateBlockClose(data)) {
-        data.state = NONE;
-        continue;
-      }
-      if (validateBlockOpen(data) == LOCATION) {
-        data.state = LOCATION;
-        servers.back().locations.push_back(LocationData());
-        data.location_processed.clear();
-      }
-      else {
-        parseServer(data);
-      }
-    }
-
-    // Close location block or parse location value
-    if (data.state == LOCATION) {
-      if (validateBlockClose(data)) {
-        data.state = SERVER;
-        continue;
-      }
-      parseLocation(data);
+      case MIME:
+        handleMimeBlock(data);
+        break;
+      case SERVER:
+        handleServerBlock(data);
+        break;
+      case LOCATION:
+        handleLocationBlock(data);
+        break;
     }
   }
   verifyRequiredData();
@@ -136,7 +101,49 @@ const std::vector<ServerData>& Config::getServers() const {
   return this->servers;
 }
 
-bool Config::parseMime(ParsingData& data) {
+void Config::handleNoBlock(ParsingData& data) {
+  data.state = validateBlockOpen(data);
+  if (data.state == SERVER) {
+    servers.push_back(ServerData());
+    data.server_processed.clear();
+  }
+  else if (data.state != MIME) {
+    throw ConfigError(data, "Invalid Line");
+  }
+}
+
+void Config::handleMimeBlock(ParsingData& data) {
+  if (validateBlockClose(data)) {
+    data.state = NONE;
+    return;
+  }
+  parseMime(data);
+}
+
+void Config::handleServerBlock(ParsingData& data) {
+  if (validateBlockClose(data)) {
+    data.state = NONE;
+    return;
+  }
+  if (validateBlockOpen(data) == LOCATION) {
+    data.state = LOCATION;
+    servers.back().locations.push_back(LocationData());
+    data.location_processed.clear();
+    parseLocation(data);
+    return;
+  }
+  parseServer(data);
+}
+
+void Config::handleLocationBlock(ParsingData& data) {
+  if (validateBlockClose(data)) {
+    data.state = SERVER;
+    return;
+  }
+  parseLocation(data);
+}
+
+void Config::parseMime(ParsingData& data) {
   size_t divide = data.tokens[0].find_first_of("/");
   if (data.tokens.size() == 1 || divide == data.tokens[0].npos || divide == 0 ||
       divide == data.tokens[0].length() - 1) {
@@ -145,7 +152,6 @@ bool Config::parseMime(ParsingData& data) {
   for (size_t i = 1; i < data.tokens.size(); ++i) {
     mime_types["." + data.tokens[i]] = data.tokens[0];
   }
-  return true;
 }
 
 Config::ServerDirective Config::strToServerDirective(const ParsingData& data) {
@@ -161,7 +167,7 @@ Config::ServerDirective Config::strToServerDirective(const ParsingData& data) {
   return it != types_map.end() ? it->second : INVALID;
 }
 
-bool Config::parseServer(ParsingData& data) {
+void Config::parseServer(ParsingData& data) {
   if (findToken(data.server_processed, data.tokens[0])) {
     throw ConfigError(data, "Duplicate Server Directive");
   }
@@ -182,7 +188,6 @@ bool Config::parseServer(ParsingData& data) {
       throw ConfigError(data, "Invalid Server Directive");
   }
   data.server_processed.push_back(data.tokens[0]);
-  return true;
 }
 
 Config::LocationDirective Config::strToLocationDirective(const ParsingData& data) {
@@ -203,7 +208,7 @@ Config::LocationDirective Config::strToLocationDirective(const ParsingData& data
   return it != types_map.end() ? it->second : INVLD;
 }
 
-bool Config::parseLocation(ParsingData& data) {
+void Config::parseLocation(ParsingData& data) {
   if (findToken(data.location_processed, data.tokens[0])) {
     throw ConfigError(data, "Duplicate Location Directive");
   }
@@ -239,7 +244,6 @@ bool Config::parseLocation(ParsingData& data) {
       throw ConfigError(data, "Invalid Location Directive");
   }
   data.location_processed.push_back(data.tokens[0]);
-  return true;
 }
 
 Config::ParseState Config::validateBlockOpen(ParsingData& data) {
@@ -519,7 +523,7 @@ void Config::verifyRequiredData() {
          l != s->locations.end(); ++l) {
       // Path always required - presence guaranteed by parsing
       if (l->allowed_methods.empty()) {
-        throw ConfigError("Location: " + l->path +
+        throw ConfigError("Location " + l->path +
                           "\nAllowed_methods must be specified for each location");
       }
       // Redirect only requires path, allowed methods and redirect
@@ -528,20 +532,21 @@ void Config::verifyRequiredData() {
       }
       // If one cgi field is present, the other must be
       if (!l->cgi_extension.empty() && l->cgi_interpreter.empty()) {
-        throw ConfigError("Location: " + l->path +
+        throw ConfigError("Location " + l->path +
                           ": cgi extension specified without cgi interpreter");
       }
       if (l->cgi_extension.empty() && !l->cgi_interpreter.empty()) {
-        throw ConfigError("Location: " + l->path +
+        throw ConfigError("Location " + l->path +
                           ": cgi_interpreter specified without cgi extension");
       }
       // Root required if not redirect
       if (l->root.empty()) {
-        throw ConfigError("Location: " + l->path +
+        throw ConfigError("Location " + l->path +
                           ": root must be specified for all non-redirect locations");
       }
     }
   }
+  Log::info("Config file succesfully parsed: " + conf_path);
 }
 
 void Config::setDefaultMime() {
@@ -565,4 +570,5 @@ void Config::setDefaultMime() {
   mime_types[".zip"] = "application/zip";
   mime_types[".tar"] = "application/x-tar";
   mime_types[".gz"] = "application/gzip";
+  Log::info("Using default mime types");
 }

@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "../include/Log.hpp"  // IWYU pragma: keep
 #include "../include/ServerData.hpp"
 #include "./webserv.hpp"  // IWYU pragma: keep
 
@@ -66,15 +67,20 @@ class Config {
   Config& operator=(const Config&);
 
   // Top Level Parsing
-  bool parseMime(ParsingData&);
+  void handleNoBlock(ParsingData&);
+  void handleMimeBlock(ParsingData&);
+  void handleServerBlock(ParsingData&);
+  void handleLocationBlock(ParsingData&);
+
+  void parseMime(ParsingData&);
 
   enum ServerDirective { PORT, HOST, BODY, ERR, INVALID };
   ServerDirective strToServerDirective(const ParsingData&);
-  bool parseServer(ParsingData&);
+  void parseServer(ParsingData&);
 
   enum LocationDirective { LOC, MET, ROOT, IND, AUTOIND, UPLOAD, CGI_EXT, CGI_INT, REDIR, INVLD };
   LocationDirective strToLocationDirective(const ParsingData&);
-  bool parseLocation(ParsingData&);
+  void parseLocation(ParsingData&);
 
   // Block Open/Close
   Config::ParseState validateBlockOpen(ParsingData&);

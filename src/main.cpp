@@ -3,6 +3,7 @@
 
 #include "../include/Config.hpp"
 #include "../include/Debug.hpp"
+#include "../include/Log.hpp"
 #include "../include/webserv.hpp"
 
 namespace {
@@ -19,8 +20,10 @@ namespace {
 }
 
 int main(int argc, char** argv) {
+  Log::info("Webserv started");
+
   if (argc > 2) {
-    std::cerr << "Error: Provide only one configuration file\n";
+    Log::errorPrint("Error: Too many launch arguments");
     return 1;
   }
 
