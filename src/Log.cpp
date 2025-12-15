@@ -30,7 +30,7 @@ namespace Log {
 
   void errorPrint(const std::string& msg) {
     std::cerr << msg << std::endl;
-    error(msg);
+    return error(msg);
   }
 
   void info(const std::string& msg) {
@@ -39,6 +39,6 @@ namespace Log {
 
   void infoPrint(const std::string& msg) {
     std::cout << msg << std::endl;
-    info(msg);
+    return info(msg);
   }
 }

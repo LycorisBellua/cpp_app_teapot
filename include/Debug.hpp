@@ -1,10 +1,11 @@
 #pragma once
 
-#include <cstdlib>
+#include <cstdlib>   // IWYU pragma: keep
 #include <iostream>  // IWYU pragma: keep
 
 #include "Colors.hpp"  // IWYU pragma: keep
 #include "Config.hpp"
+#include "Router.hpp"
 
 typedef std::map<std::string, std::string>::const_iterator mime_it;
 typedef std::vector<ServerData>::const_iterator serv_it;
@@ -13,5 +14,5 @@ typedef std::vector<LocationData>::const_iterator loc_it;
 typedef std::vector<std::string>::const_iterator met_it;
 
 void debugPrintConfig(const Config& conf);
-void debugPrintConfig(const ConfigData& conf);
+void debugPrintConfig(const Router& conf);
 void debugPrintLn(std::string msg);

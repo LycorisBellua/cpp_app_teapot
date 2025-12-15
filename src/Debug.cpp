@@ -64,9 +64,9 @@ void debugPrintConfig(const Config& conf) {
   }
 }
 
-void debugPrintConfig(const ConfigData& conf) {
-  const std::map<std::string, std::string>& mime = conf.mime;
-  const std::vector<ServerData>& servers = conf.servers;
+void debugPrintConfig(const Router& router) {
+  const std::map<std::string, std::string>& mime = router.getMime();
+  const std::vector<ServerData>& servers = router.getServers();
 
   std::cout << BLUE BOLD << "MIME Types:\n" << RESET;
   for (mime_it it = mime.begin(); it != mime.end(); ++it) {

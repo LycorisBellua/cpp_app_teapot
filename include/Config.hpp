@@ -4,7 +4,7 @@
 
 #include <algorithm>  // IWYU pragma: keep
 #include <cerrno>     // IWYU pragma: keep
-#include <cstdlib>
+#include <cstdlib>    // IWYU pragma: keep
 #include <exception>  // IWYU pragma: keep
 #include <fstream>    // IWYU pragma: keep
 #include <iostream>   // IWYU pragma: keep
@@ -21,7 +21,9 @@ class Config {
  public:
   Config();
   Config(const std::string&);
+  Config(const Config&);
   ~Config();
+  Config& operator=(const Config&);
 
   void parse();
 
@@ -32,8 +34,8 @@ class Config {
  private:
   // Member Data
   const std::string conf_path;
-  std::map<std::string, std::string> mime_types;
   std::vector<ServerData> servers;
+  std::map<std::string, std::string> mime_types;
 
   // Parsing State
   enum ParseState { NONE, MIME, SERVER, LOCATION };
@@ -61,10 +63,6 @@ class Config {
    private:
     std::string err_msg;
   };
-
-  // OCF Requirements
-  Config(const Config&);
-  Config& operator=(const Config&);
 
   // Top Level Parsing
   void handleNoBlock(ParsingData&);

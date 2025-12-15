@@ -1,22 +1,26 @@
-#include <cstdlib>
 #include <iostream>
 
 #include "../include/Config.hpp"
-#include "../include/Debug.hpp"
 #include "../include/Log.hpp"
+#include "../include/Router.hpp"
 #include "../include/webserv.hpp"
 
 namespace {
-  ConfigData getConfig(const std::string& conf_file) {
+
+  Router getRouter(const std::string& conf_file) {
+    std::vector<ServerData> servers;
+    std::map<std::string, std::string> mime;
     try {
       Config conf(conf_file);
       conf.parse();
-      return ConfigData(conf.getServers(), conf.getMime());
+      servers = conf.getServers();
+      mime = conf.getMime();
     } catch (const std::exception& e) {
-      std::cerr << e.what() << std::endl;
-      std::exit(EXIT_FAILURE);
+      std::cerr << e.what() << "\n";
     }
+    return Router(servers, mime);
   }
+
 }
 
 int main(int argc, char** argv) {
@@ -27,6 +31,5 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  const ConfigData conf = getConfig(argc == 1 ? DEFAULT_CONFIG_FILE_PATH : argv[1]);
-  debugPrintConfig(conf);
+  Router router(getRouter(argc == 2 ? argv[1] : DEFAULT_CONFIG_FILE_PATH));
 }

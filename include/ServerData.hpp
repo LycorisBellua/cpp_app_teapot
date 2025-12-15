@@ -18,6 +18,9 @@ struct LocationData {
   std::pair<int, std::string> redirect;
 
   LocationData();
+  LocationData(const LocationData&);
+  ~LocationData();
+  LocationData& operator=(const LocationData&);
 };
 
 struct ServerData {
@@ -28,10 +31,7 @@ struct ServerData {
   std::vector<LocationData> locations;
 
   ServerData();
-};
-
-struct ConfigData {
-  std::vector<ServerData> servers;
-  std::map<std::string, std::string> mime;
-  ConfigData(const std::vector<ServerData>&, const std::map<std::string, std::string>&);
+  ServerData(const ServerData&);
+  ~ServerData();
+  ServerData& operator=(const ServerData&);
 };

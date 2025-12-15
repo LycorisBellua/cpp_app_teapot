@@ -9,7 +9,19 @@ Config::Config(const std::string& conf) : conf_path(conf) {
   Log::info("Config File: " + conf_path);
 }
 
+Config::Config(const Config& src)
+    : conf_path(src.conf_path), servers(src.servers), mime_types(src.mime_types) {}
+
 Config::~Config() {}
+
+Config& Config::operator=(const Config& src) {
+  if (this != &src) {
+    // Can't overwrite const conf_path
+    this->servers = src.servers;
+    this->mime_types = src.mime_types;
+  }
+  return *this;
+}
 
 Config::ParsingData::ParsingData(const std::string& conf_file)
     : infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE) {}
