@@ -1,6 +1,14 @@
 #include "../include/Debug.hpp"
 
-void debugPrintConfig(const Config& conf) {
+namespace {
+  typedef std::map<std::string, std::string>::const_iterator mime_it;
+  typedef std::vector<ServerData>::const_iterator serv_it;
+  typedef std::map<int, std::string>::const_iterator err_it;
+  typedef std::vector<LocationData>::const_iterator loc_it;
+  typedef std::vector<std::string>::const_iterator met_it;
+}
+
+void Debug::PrintConfig(const Config& conf) {
   const std::map<std::string, std::string>& mime = conf.getMime();
   const std::vector<ServerData>& servers = conf.getServers();
 
@@ -64,7 +72,7 @@ void debugPrintConfig(const Config& conf) {
   }
 }
 
-void debugPrintConfig(const Router& router) {
+void Debug::PrintConfig(const Router& router) {
   const std::map<std::string, std::string>& mime = router.getMime();
   const std::vector<ServerData>& servers = router.getServers();
 
@@ -127,6 +135,6 @@ void debugPrintConfig(const Router& router) {
     ++server_number;
   }
 }
-void debugPrintLn(std::string msg) {
+void Debug::PrintLn(std::string msg) {
   std::cout << RED << msg << RESET << std::endl;
 }

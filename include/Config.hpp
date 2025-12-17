@@ -15,17 +15,11 @@
 
 #include "../include/Log.hpp"  // IWYU pragma: keep
 #include "../include/ServerData.hpp"
-#include "./webserv.hpp"  // IWYU pragma: keep
 
 class Config {
  public:
-  Config();
   Config(const std::string&);
-  Config(const Config&);
   ~Config();
-  Config& operator=(const Config&);
-
-  void parse();
 
   const std::string& getPath() const;
   const std::map<std::string, std::string>& getMime() const;
@@ -36,6 +30,11 @@ class Config {
   const std::string conf_path;
   std::vector<ServerData> servers;
   std::map<std::string, std::string> mime_types;
+
+  // OCF Requirements
+  Config();
+  Config(const Config&);
+  Config& operator=(const Config&);
 
   // Parsing State
   enum ParseState { NONE, MIME, SERVER, LOCATION };
@@ -65,6 +64,7 @@ class Config {
   };
 
   // Top Level Parsing
+  void parse();
   void handleNoBlock(ParsingData&);
   void handleMimeBlock(ParsingData&);
   void handleServerBlock(ParsingData&);
@@ -72,7 +72,7 @@ class Config {
 
   void parseMime(ParsingData&);
 
-  enum ServerDirective { PORT, HOST, BODY, ERR, INVALID };
+  enum ServerDirective { PORT, HOST, NAME, BODY, ERR, INVALID };
   ServerDirective strToServerDirective(const ParsingData&);
   void parseServer(ParsingData&);
 
@@ -87,6 +87,7 @@ class Config {
   // Validate and set
   void setPort(const ParsingData&);
   void setHost(const ParsingData&);
+  void setName(const ParsingData&);
   void setBodySize(const ParsingData&);
   void setErrorPage(const ParsingData&);
   void setPath(const ParsingData&);
@@ -101,5 +102,8 @@ class Config {
 
   // Final Verification
   void verifyRequiredData();
+  void verifyServer(const ServerData&) const;
+  void verifyLocation(const LocationData&) const;
+  void verifyVirtualHosts() const;
   void setDefaultMime();
 };

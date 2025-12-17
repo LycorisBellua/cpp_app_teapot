@@ -6,7 +6,6 @@ class Router {
  public:
   Router(const std::vector<ServerData>&, const std::map<std::string, std::string>&);
   Router(const Router&);
-  Router& operator=(const Router&);
   ~Router();
 
   const std::vector<ServerData>& getServers() const;
@@ -18,4 +17,5 @@ class Router {
   std::map<std::string, std::string> mime;
 
   // OCF Requirements
+  Router& operator=(const Router&);
 };

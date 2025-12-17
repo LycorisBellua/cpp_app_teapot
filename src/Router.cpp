@@ -6,14 +6,6 @@ Router::Router(const std::vector<ServerData>& s, const std::map<std::string, std
 
 Router::Router(const Router& src) : servers(src.servers), mime(src.mime) {}
 
-Router& Router::operator=(const Router& src) {
-  if (this != &src) {
-    this->servers = src.servers;
-    this->mime = src.mime;
-  }
-  return *this;
-}
-
 Router::~Router() {}
 
 /* ---------- Getters ---------- */

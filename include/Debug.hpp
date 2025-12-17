@@ -7,12 +7,8 @@
 #include "Config.hpp"
 #include "Router.hpp"
 
-typedef std::map<std::string, std::string>::const_iterator mime_it;
-typedef std::vector<ServerData>::const_iterator serv_it;
-typedef std::map<int, std::string>::const_iterator err_it;
-typedef std::vector<LocationData>::const_iterator loc_it;
-typedef std::vector<std::string>::const_iterator met_it;
-
-void debugPrintConfig(const Config& conf);
-void debugPrintConfig(const Router& conf);
-void debugPrintLn(std::string msg);
+namespace Debug {
+  void PrintConfig(const Config& conf);
+  void PrintConfig(const Router& conf);
+  void PrintLn(std::string msg);
+}

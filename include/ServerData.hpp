@@ -26,6 +26,7 @@ struct LocationData {
 struct ServerData {
   int port;
   std::string host;
+  std::string name;
   size_t client_body_max;
   std::map<int, std::string> errors;
   std::vector<LocationData> locations;

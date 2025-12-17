@@ -1,27 +1,12 @@
 #include "../include/Config.hpp"
 
 /* ---------- CONSTRUCTORS / DESTRUCTOR ---------- */
-Config::Config() : conf_path(DEFAULT_CONFIG_FILE_PATH) {
-  Log::info("Config File: " + conf_path);
-}
-
 Config::Config(const std::string& conf) : conf_path(conf) {
   Log::info("Config File: " + conf_path);
+  parse();
 }
-
-Config::Config(const Config& src)
-    : conf_path(src.conf_path), servers(src.servers), mime_types(src.mime_types) {}
 
 Config::~Config() {}
-
-Config& Config::operator=(const Config& src) {
-  if (this != &src) {
-    // Can't overwrite const conf_path
-    this->servers = src.servers;
-    this->mime_types = src.mime_types;
-  }
-  return *this;
-}
 
 Config::ParsingData::ParsingData(const std::string& conf_file)
     : infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE) {}
@@ -47,6 +32,11 @@ const char* Config::ConfigError::what() const throw() {
 
 /* ---------- HELPER FUNCTIONS ---------- */
 namespace {
+
+  typedef std::vector<ServerData>::const_iterator server_it;
+  typedef std::vector<LocationData>::const_iterator location_it;
+  typedef std::string::const_iterator string_it;
+
   std::vector<std::string> tokenizeLine(std::string line) {
     size_t comment_start = line.find_first_of("#");
     if (comment_start != line.npos) {
@@ -72,6 +62,18 @@ namespace {
 }
 
 /* ---------- CLASS MEMBER METHODS ---------- */
+const std::string& Config::getPath() const {
+  return this->conf_path;
+}
+
+const std::map<std::string, std::string>& Config::getMime() const {
+  return this->mime_types;
+}
+
+const std::vector<ServerData>& Config::getServers() const {
+  return this->servers;
+}
+
 void Config::parse() {
   ParsingData data(conf_path);
   if (!data.infile.is_open()) {
@@ -99,18 +101,6 @@ void Config::parse() {
     }
   }
   verifyRequiredData();
-}
-
-const std::string& Config::getPath() const {
-  return this->conf_path;
-}
-
-const std::map<std::string, std::string>& Config::getMime() const {
-  return this->mime_types;
-}
-
-const std::vector<ServerData>& Config::getServers() const {
-  return this->servers;
 }
 
 void Config::handleNoBlock(ParsingData& data) {
@@ -172,6 +162,7 @@ Config::ServerDirective Config::strToServerDirective(const ParsingData& data) {
   if (types_map.empty()) {
     types_map["listen"] = PORT;
     types_map["host"] = HOST;
+    types_map["server_name"] = NAME;
     types_map["client_max_body_size"] = BODY;
     types_map["error_page_"] = ERR;
   }
@@ -189,6 +180,9 @@ void Config::parseServer(ParsingData& data) {
       break;
     case HOST:
       setHost(data);
+      break;
+    case NAME:
+      setName(data);
       break;
     case BODY:
       setBodySize(data);
@@ -333,6 +327,43 @@ void Config::setHost(const ParsingData& data) {
     throw ConfigError(data, "Invalid IP address");
   }
   servers.back().host = host[1];
+}
+
+void Config::setName(const ParsingData& data) {
+  const std::string& name = data.tokens[1];
+  if (name.length() == 0) {
+    throw ConfigError(data, "Server name cannot be empty");
+  }
+  if (name.length() > 253) {
+    throw ConfigError(data, "Server name too long (max: 253 characters)");
+  }
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-.");
+  if (name.find_first_not_of(allowed) != name.npos) {
+    throw ConfigError(data, "Server name may contain alphanumeric characters and '-' and '.'");
+  }
+  if (name[0] == '-' || name[0] == '.' || name[name.length() - 1] == '-' ||
+      name[name.length() - 1] == '.') {
+    throw ConfigError(data, "Server name cannot begin or end with '-' or '.'");
+  }
+  int count = 0;
+  for (string_it it = name.begin(); it != name.end(); ++it) {
+    if (*it == '.') {
+      if ((it + 1) != name.end() && *(it + 1) == '.') {
+        throw ConfigError(data, "Server name must not have consecutive '.'");
+      }
+      if (count > 63 || count == 0) {
+        throw ConfigError(data, "Each label must be between 1 and 63 characters");
+      }
+      count = 0;
+    }
+    else {
+      ++count;
+    }
+  }
+  if (count > 63 || count == 0) {
+    throw ConfigError(data, "Each label must be between 1 and 63 characters");
+  }
+  servers.back().name = name;
 }
 
 void Config::setBodySize(const ParsingData& data) {
@@ -521,44 +552,68 @@ void Config::verifyRequiredData() {
   if (servers.empty()) {
     throw ConfigError("No servers defined in config file");
   }
-  for (std::vector<ServerData>::const_iterator s = servers.begin(); s != servers.end(); ++s) {
-    if (s->port == 0) {
-      throw ConfigError("A port must be specified for each server");
+
+  for (server_it srv = servers.begin(); srv != servers.end(); ++srv) {
+    verifyServer(*srv);
+    for (location_it loc = srv->locations.begin(); loc != srv->locations.end(); ++loc) {
+      verifyLocation(*loc);
     }
-    if (s->host.empty()) {
-      throw ConfigError("A host must be specified for each server");
-    }
-    if (s->locations.empty()) {
-      throw ConfigError("At least one location block is required for each server");
-    }
-    for (std::vector<LocationData>::const_iterator l = s->locations.begin();
-         l != s->locations.end(); ++l) {
-      // Path always required - presence guaranteed by parsing
-      if (l->allowed_methods.empty()) {
-        throw ConfigError("Location " + l->path +
-                          "\nAllowed_methods must be specified for each location");
-      }
-      // Redirect only requires path, allowed methods and redirect
-      if (l->redirect.first != 0) {
-        continue;
-      }
-      // If one cgi field is present, the other must be
-      if (!l->cgi_extension.empty() && l->cgi_interpreter.empty()) {
-        throw ConfigError("Location " + l->path +
-                          ": cgi extension specified without cgi interpreter");
-      }
-      if (l->cgi_extension.empty() && !l->cgi_interpreter.empty()) {
-        throw ConfigError("Location " + l->path +
-                          ": cgi_interpreter specified without cgi extension");
-      }
-      // Root required if not redirect
-      if (l->root.empty()) {
-        throw ConfigError("Location " + l->path +
-                          ": root must be specified for all non-redirect locations");
+  }
+
+  verifyVirtualHosts();
+  Log::info("Config file succesfully parsed: " + conf_path);
+}
+
+void Config::verifyServer(const ServerData& srv) const {
+  if (srv.port == 0) {
+    throw ConfigError("A port must be specified for each server");
+  }
+  if (srv.host.empty()) {
+    throw ConfigError("A host must be specified for each server");
+  }
+  if (srv.locations.empty()) {
+    throw ConfigError("At least one location block is required for each server");
+  }
+}
+
+void Config::verifyLocation(const LocationData& loc) const {
+  // Redirect only requires path, allowed methods and redirect
+  if (loc.redirect.first != 0) {
+    return;
+  }
+  // If one cgi field is present, the other must be
+  if (!loc.cgi_extension.empty() && loc.cgi_interpreter.empty()) {
+    throw ConfigError("Location " + loc.path + ": cgi extension specified without cgi interpreter");
+  }
+  if (loc.cgi_extension.empty() && !loc.cgi_interpreter.empty()) {
+    throw ConfigError("Location " + loc.path + ": cgi_interpreter specified without cgi extension");
+  }
+  // Root required if not redirect
+  if (loc.root.empty()) {
+    throw ConfigError("Location " + loc.path +
+                      ": root must be specified for all non-redirect locations");
+  }
+}
+
+void Config::verifyVirtualHosts() const {
+  for (server_it current = servers.begin(); current != servers.end(); ++current) {
+    for (server_it next = current + 1; next != servers.end(); ++next) {
+      if (next->port == current->port) {
+        const std::string& current_name = current->name;
+        const std::string& next_name = next->name;
+        std::stringstream port_number;
+        port_number << current->port;
+        if (current_name.length() == 0 || next_name.length() == 0) {
+          throw ConfigError("Multiple servers using port " + port_number.str() +
+                            ". Server names must be specified to use virtual hosts");
+        }
+        if (current_name == next_name) {
+          throw ConfigError("Multiple servers on port " + port_number.str() +
+                            ". Unique names are required for virtual hosting");
+        }
       }
     }
   }
-  Log::info("Config file succesfully parsed: " + conf_path);
 }
 
 void Config::setDefaultMime() {
