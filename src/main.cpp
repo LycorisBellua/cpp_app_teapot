@@ -15,6 +15,12 @@ int main(int argc, char **argv)
 	std::cout << "Debug: The path to the config file is " << path_config
 		<< std::endl;
 
-	Server server;
+	/*
+		TODO
+		- Parse the config file.
+		- Pass the config struct as argument to the Server class.
+	*/
+
+	Server server(0);
 	return 0;
 }

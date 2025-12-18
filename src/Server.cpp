@@ -1,63 +1,88 @@
 #include "Server.hpp"
 #include <iostream>
 #include <sys/socket.h>
-#include <netinet/in.h>
 #include <sys/epoll.h>
 #include <unistd.h>
 
-Server::Server()
+Server::Server(int tmp_config)
+	: addr_(), max_events_(64), fd_listen_(-1), fd_epoll_(-1)
 {
-	/* Create socket */
-	int fd_server = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd_server < 0)
-	{
-		std::cerr << "Error: Server: socket failed" << std::endl;
+	/*
+		TODO
+		- Pass the config struct as argument.
+	*/
+	(void)tmp_config;
+
+	if (!create_socket() || !bind_socket_to_port(8080)
+		|| !listen_for_clients(10) || !init_event_loop() || !run_event_loop())
 		return;
-	}
+}
 
-	/* Bind socket to a port */
-	const int PORT = 8080;
-	struct sockaddr_in addr = {};
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr.sin_port = htons(PORT);
-	if (bind(fd_server, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+Server::~Server()
+{
+	close(fd_epoll_);
+	close(fd_listen_);
+}
+
+bool Server::create_socket()
+{
+	fd_listen_ = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd_listen_ < 0)
 	{
-		std::cerr << "Error: Server: bind failed" << std::endl;
-		return;
+		std::cerr << "Error: Server: create_socket" << std::endl;
+		return false;
 	}
+	return true;
+}
 
-	/* Listen for incoming connections */
-	int max_connections_before_refuse = 10;
-	if (listen(fd_server, max_connections_before_refuse) < 0)
+bool Server::bind_socket_to_port(int port)
+{
+	addr_.sin_family = AF_INET;
+	addr_.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr_.sin_port = htons(port);
+	if (bind(fd_listen_, (struct sockaddr *)&addr_, sizeof(addr_)) < 0)
 	{
-		std::cerr << "Error: Server: listen failed" << std::endl;
-		return;
+		std::cerr << "Error: Server: bind_socket_to_port" << std::endl;
+		return false;
 	}
-	//--------------------------------------------------------------------------
+	return true;
+}
 
-	int ep_fd = epoll_create(1);
+bool Server::listen_for_clients(int queue_length) const
+{
+	if (listen(fd_listen_, queue_length) < 0)
+	{
+		std::cerr << "Error: Server: listen_for_clients" << std::endl;
+		return false;
+	}
+	return true;
+}
 
+bool Server::init_event_loop()
+{
+	fd_epoll_ = epoll_create(1);
 	struct epoll_event ev;
 	ev.events = EPOLLIN;
-	ev.data.fd = fd_server;
-	if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd_server, &ev))
+	ev.data.fd = fd_listen_;
+	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_listen_, &ev))
 	{
-		std::cerr << "Error: Server: epoll_ctl failed to add fd_server"
-			<< std::endl;
-		return;
+		std::cerr << "Error: Server: init_event_loop" << std::endl;
+		return false;
 	}
+	return true;
+}
 
-	const int MAX_EVENTS = 64;
-	struct epoll_event events[MAX_EVENTS];
-
+bool Server::run_event_loop() const
+{
+	struct epoll_event events[max_events_];
+	int timeout_ms = 5000;
 	while (1)
 	{
-		int n = epoll_wait(ep_fd, events, MAX_EVENTS, 5000);
+		int n = epoll_wait(fd_epoll_, events, max_events_, timeout_ms);
 		if (n < 0)
 		{
-			std::cerr << "Error: Server: epoll_wait failed" << std::endl;
-			return;
+			std::cerr << "Error: Server: run_event_loop: epoll_wait" << std::endl;
+			return false;
 		}
 		/*
 			TODO?
@@ -69,28 +94,13 @@ Server::Server()
 		for (int i = 0; i < n; ++i)
 		{
 			int fd = events[i].data.fd;
-			uint32_t e = events[i].events;
-			bool can_read = e & EPOLLIN;
-			bool can_write = e & EPOLLOUT;
-
-			if (fd == fd_server)
+			if (fd == fd_listen_)
 			{
-				/* Accept next connection */
-				int addrlen = sizeof(addr);
-				int fd_client = accept(fd_server, (struct sockaddr *)&addr,
-					(socklen_t *)&addrlen);
-				if (fd_client < 0)
-				{
-					std::cerr << "Error: Server: accept failed" << std::endl;
-					return ;
-				}
-
-				struct epoll_event cev;
-				cev.events = EPOLLIN | EPOLLOUT;
-				cev.data.fd = fd_client;
-				epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd_client, &cev);
+				if (!accept_new_connection())
+					return false;
 				continue;
 			}
+
 			/*
 				TODO
 				- I check for writing within the reading condition, because 
@@ -101,18 +111,35 @@ Server::Server()
 				- If the request takes too long to happen, once the timeout is 
 				reached remove the idle client connection.
 			*/
+			uint32_t e = events[i].events;
+			bool can_read = e & EPOLLIN;
+			bool can_write = e & EPOLLOUT;
 			if (can_read)
 			{
 				/* Receive data */
-				char buffer[30000] = {0};
-				ssize_t nread = read(fd, buffer, sizeof(buffer));
-				if (nread <= 0)
+				/*
+					TODO
+					- Currently, I fetch the request in its entirety before 
+					parsing it. I need to parse each line as I go, and also to 
+					check whether the header or overall size is too big, as the 
+					config file can specify such a limit.
+				*/
+				std::string request;
+				char buffer[10];
+				ssize_t nread;
+				while ((nread = read(fd, buffer, sizeof(buffer))) > 0)
+				{
+					request.append(buffer, nread);
+					if (request.find("\r\n\r\n") != std::string::npos)
+						break;
+				}
+				if (nread < 0 || request.empty())
 				{
 					close(fd);
-					epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL);
+					epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
 					continue;
 				}
-				std::cout << buffer << std::endl;
+				std::cout << request << std::endl;
 
 				if (can_write)
 				{
@@ -126,28 +153,27 @@ Server::Server()
 					write(fd, response.c_str(), response.length());
 					std::cout << "--- Response sent ---" << std::endl;
 					close(fd);
-					epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL);
+					epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
 				}
 			}
 		}
 	}
-
-	close(ep_fd);
+	return true;
 }
 
-Server::Server(const Server& other)
+bool Server::accept_new_connection() const
 {
-	(void)other;
-}
-
-Server::~Server()
-{
-}
-
-Server& Server::operator=(const Server& other)
-{
-	if (this != &other)
+	int addrlen = sizeof(addr_);
+	int fd_client = accept(fd_listen_, (struct sockaddr *)&addr_,
+		(socklen_t *)&addrlen);
+	if (fd_client < 0)
 	{
+		std::cerr << "Error: Server: accept_new_connection" << std::endl;
+		return false;
 	}
-	return *this;
+	struct epoll_event cev;
+	cev.events = EPOLLIN | EPOLLOUT;
+	cev.data.fd = fd_client;
+	epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_client, &cev);
+	return true;
 }
