@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 
 Server::Server()
@@ -10,7 +11,7 @@ Server::Server()
 	int fd_server = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd_server < 0)
 	{
-		std::cerr << "Error: Server: Socket failed" << std::endl;
+		std::cerr << "Error: Server: socket failed" << std::endl;
 		return;
 	}
 
@@ -22,7 +23,7 @@ Server::Server()
 	addr.sin_port = htons(PORT);
 	if (bind(fd_server, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		std::cerr << "Error: Server: Bind failed" << std::endl;
+		std::cerr << "Error: Server: bind failed" << std::endl;
 		return;
 	}
 
@@ -30,54 +31,64 @@ Server::Server()
 	int max_connections_before_refuse = 10;
 	if (listen(fd_server, max_connections_before_refuse) < 0)
 	{
-		std::cerr << "Error: Server: Listen failed" << std::endl;
-		return ;
+		std::cerr << "Error: Server: listen failed" << std::endl;
+		return;
 	}
 	//--------------------------------------------------------------------------
 
-	fd_set master_fds;
-	FD_ZERO(&master_fds);
-	FD_SET(fd_server, &master_fds);
-	int max_fd = fd_server;
+	int ep_fd = epoll_create(1);
+
+	struct epoll_event ev;
+	ev.events = EPOLLIN;
+	ev.data.fd = fd_server;
+	if (epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd_server, &ev))
+	{
+		std::cerr << "Error: Server: epoll_ctl failed to add fd_server"
+			<< std::endl;
+		return;
+	}
+
+	const int MAX_EVENTS = 64;
+	struct epoll_event events[MAX_EVENTS];
 
 	while (1)
 	{
-		struct timeval tv = { 5, 0 };
-		fd_set read_fds = master_fds;
-		fd_set write_fds = master_fds;
-		FD_CLR(fd_server, &write_fds);
-		int res_select = select(max_fd + 1, &read_fds, &write_fds, NULL, &tv);
-		if (res_select < 0)
+		int n = epoll_wait(ep_fd, events, MAX_EVENTS, 5000);
+		if (n < 0)
 		{
-			std::cerr << "Error: Server: Select failed" << std::endl;
-			return ;
+			std::cerr << "Error: Server: epoll_wait failed" << std::endl;
+			return;
 		}
 		/*
 			TODO?
-			If `select` returns 0, it means that nothing happened and the 
+			If `epoll_wait` returns 0, it means that nothing happened and the 
 			timer had time to run out. There's no point in running the loop 
 			then, unless it's to close idle connections.
 		*/
-		for (int fd = 0; fd <= max_fd; ++fd)
+
+		for (int i = 0; i < n; ++i)
 		{
-			bool can_read = FD_ISSET(fd, &read_fds);
-			bool can_write = FD_ISSET(fd, &write_fds);
+			int fd = events[i].data.fd;
+			uint32_t e = events[i].events;
+			bool can_read = e & EPOLLIN;
+			bool can_write = e & EPOLLOUT;
+
 			if (fd == fd_server)
 			{
-				if (can_read)
+				/* Accept next connection */
+				int addrlen = sizeof(addr);
+				int fd_client = accept(fd_server, (struct sockaddr *)&addr,
+					(socklen_t *)&addrlen);
+				if (fd_client < 0)
 				{
-					/* Accept next connection */
-					int addrlen = sizeof(addr);
-					int fd_client = accept(fd_server, (struct sockaddr *)&addr,
-							(socklen_t *)&addrlen);
-					if (fd_client < 0)
-					{
-						std::cerr << "Error: Server: Accept failed" << std::endl;
-						return ;
-					}
-					FD_SET(fd_client, &master_fds);
-					max_fd = std::max(max_fd, fd_client);
+					std::cerr << "Error: Server: accept failed" << std::endl;
+					return ;
 				}
+
+				struct epoll_event cev;
+				cev.events = EPOLLIN | EPOLLOUT;
+				cev.data.fd = fd_client;
+				epoll_ctl(ep_fd, EPOLL_CTL_ADD, fd_client, &cev);
 				continue;
 			}
 			/*
@@ -94,11 +105,11 @@ Server::Server()
 			{
 				/* Receive data */
 				char buffer[30000] = {0};
-				long read_amount = read(fd, buffer, 30000);
-				if (read_amount <= 0)
+				ssize_t nread = read(fd, buffer, sizeof(buffer));
+				if (nread <= 0)
 				{
 					close(fd);
-					FD_CLR(fd, &master_fds);
+					epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL);
 					continue;
 				}
 				std::cout << buffer << std::endl;
@@ -114,14 +125,14 @@ Server::Server()
 						"Hello world!";
 					write(fd, response.c_str(), response.length());
 					std::cout << "--- Response sent ---" << std::endl;
-
-					/* Close the connection */
 					close(fd);
-					FD_CLR(fd, &master_fds);
+					epoll_ctl(ep_fd, EPOLL_CTL_DEL, fd, NULL);
 				}
 			}
 		}
 	}
+
+	close(ep_fd);
 }
 
 Server::Server(const Server& other)
