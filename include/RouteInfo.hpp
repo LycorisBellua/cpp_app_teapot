@@ -5,11 +5,22 @@
 
 #include "../include/ServerData.hpp"
 
-struct RouteInfo {
+struct RouteResponse {
   int errcode;
   std::string full_path;
   std::string mime_type;
   size_t client_body_max;
-  std::map<int, std::string>* error_pages;
-  LocationData* location;
+  const std::map<int, std::string>* error_pages;
+  const LocationData* location;
+  RouteResponse();
+};
+
+struct RouteRequest {
+  const int port;
+  const std::string host;
+  const std::string uri;
+  const std::string method;
+  RouteRequest();
+  RouteRequest(int port, const std::string& host, const std::string& uri,
+               const std::string& method);
 };

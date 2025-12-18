@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../include/RouteInfo.hpp"
 #include "../include/ServerData.hpp"
 
 class Router {
@@ -10,6 +11,7 @@ class Router {
 
   const std::vector<ServerData>& getServers() const;
   const std::map<std::string, std::string>& getMime() const;
+  const RouteResponse getRoute(const RouteRequest& request) const;
 
  private:
   // Class Data
@@ -18,4 +20,7 @@ class Router {
 
   // OCF Requirements
   Router& operator=(const Router&);
+
+  const ServerData* getServer(int, const std::string&) const;
+  const LocationData* getLocation(const std::vector<LocationData>&, const std::string&) const;
 };
