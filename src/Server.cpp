@@ -14,7 +14,7 @@ Server::Server()
 		return;
 	}
 
-	/* Bind socket to a port (isn't it supposed to be 80?) */
+	/* Bind socket to a port */
 	const int PORT = 8080;
 	struct sockaddr_in addr = {};
 	addr.sin_family = AF_INET;
@@ -33,73 +33,95 @@ Server::Server()
 		std::cerr << "Error: Server: Listen failed" << std::endl;
 		return ;
 	}
+	//--------------------------------------------------------------------------
 
-	int addrlen = sizeof(addr);
-	// This is the smallest legal response. You must leave a blank line between 
-	// the header and the body.
-	//std::string hello = "HTTP/1.1 200 OK\nContent-Type: text/plain\n"
-	//	"Content-Length: 12\n\nHello world!";
-	//std::string hello = "HTTP/1.1 200 OK\nContent-Type: text/plain\n"
-	//	"\nHello world!";
-	//std::string hello = "HTTP/1.1 200 OK\n\nHello world!";
-	//std::string hello = "HTTP/1.1 200 OK\n\n";
-	//std::string hello = "HTTP/1.1 200 OK\n";
-	//std::string hello = "HTTP/1.1 200 OK";
-	std::string hello = "HTTP/1.1 200";
-	while(1)
+	fd_set master_fds;
+	FD_ZERO(&master_fds);
+	FD_SET(fd_server, &master_fds);
+	int max_fd = fd_server;
+
+	while (1)
 	{
-		/* Accept next connection */
-		std::cout << "\n+++++++ Waiting for new connection ++++++++\n"
-			<< std::endl;
-		int fd_client = accept(fd_server, (struct sockaddr *)&addr,
-			(socklen_t *)&addrlen);
-		if (fd_client < 0)
+		struct timeval tv = { 5, 0 };
+		fd_set read_fds = master_fds;
+		fd_set write_fds = master_fds;
+		FD_CLR(fd_server, &write_fds);
+		int res_select = select(max_fd + 1, &read_fds, &write_fds, NULL, &tv);
+		if (res_select < 0)
 		{
-			std::cerr << "Error: Server: Accept failed" << std::endl;
+			std::cerr << "Error: Server: Select failed" << std::endl;
 			return ;
 		}
+		/*
+			TODO?
+			If `select` returns 0, it means that nothing happened and the 
+			timer had time to run out. There's no point in running the loop 
+			then, unless it's to close idle connections.
+		*/
+		for (int fd = 0; fd <= max_fd; ++fd)
+		{
+			bool can_read = FD_ISSET(fd, &read_fds);
+			bool can_write = FD_ISSET(fd, &write_fds);
+			if (fd == fd_server)
+			{
+				if (can_read)
+				{
+					/* Accept next connection */
+					int addrlen = sizeof(addr);
+					int fd_client = accept(fd_server, (struct sockaddr *)&addr,
+							(socklen_t *)&addrlen);
+					if (fd_client < 0)
+					{
+						std::cerr << "Error: Server: Accept failed" << std::endl;
+						return ;
+					}
+					FD_SET(fd_client, &master_fds);
+					max_fd = std::max(max_fd, fd_client);
+				}
+				continue;
+			}
+			/*
+				TODO
+				- I check for writing within the reading condition, because 
+				otherwise reading wouldn't happen. In the real version, I will 
+				have to check for reading and writing separately, and set a 
+				condition to let me know that I have received the request, 
+				because otherwise there's nothing to write of course.
+				- If the request takes too long to happen, once the timeout is 
+				reached remove the idle client connection.
+			*/
+			if (can_read)
+			{
+				/* Receive data */
+				char buffer[30000] = {0};
+				long read_amount = read(fd, buffer, 30000);
+				if (read_amount <= 0)
+				{
+					close(fd);
+					FD_CLR(fd, &master_fds);
+					continue;
+				}
+				std::cout << buffer << std::endl;
 
-		/* Send and receive data */
-		char buffer[30000] = {0};
-		long read_amount = read(fd_client, buffer, 30000);
-		(void)read_amount;
-		std::cout << buffer << std::endl;
-		write(fd_client, hello.c_str(), hello.length());
-		std::cout << "------------------Hello message sent-------------------"
-			<< std::endl;
+				if (can_write)
+				{
+					/* Send data */
+					std::string response = 
+						"HTTP/1.1 200 OK\r\n"
+						"Content-Type: text/plain\r\n"
+						"Content-Length: 12\r\n"
+						"\r\n"
+						"Hello world!";
+					write(fd, response.c_str(), response.length());
+					std::cout << "--- Response sent ---" << std::endl;
 
-		/* Close the connection */
-		close(fd_client);
+					/* Close the connection */
+					close(fd);
+					FD_CLR(fd, &master_fds);
+				}
+			}
+		}
 	}
-	/*
-		EXAMPLE OF WHAT THE CLIENT SENDS
-
-		GET /index.html HTTP/1.1
-		Host: localhost:8080
-		Connection: keep-alive
-		Cache-Control: max-age=0
-		sec-ch-ua: "Chromium";v="142", "Google Chrome";v="142", "Not_A Brand";v="99"
-		sec-ch-ua-mobile: ?0
-		sec-ch-ua-platform: "Linux"
-		Upgrade-Insecure-Requests: 1
-		User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36
-		Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng;q=0.8,application/signed-exchange;v=b3;q=0.7
-		Sec-Fetch-Site: none
-		Sec-Fetch-Mode: navigate
-		Sec-Fetch-User: ?1
-		Sec-Fetch-Dest: document
-		Accept-Encoding: gzip, deflate, br, zstd
-		Accept-Language: fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7,ja-JP;q=0.6,ja;q=0.5
-
-		- For the sake of simplicity, you can only consider the first line in 
-		the Request Headers (the method line).
-		- If the file exists and the client has permission to access it, then 
-		read the file and paste it within the Response as the body.
-		- Don't forget to indicate the correct Content-Type value.
-		- Count the body's length and indicate it with Content-Length, or don't 
-		and the client will read until EOF.
-		- Whether you could fetch the file or not, give the correct Status Code.
-	*/
 }
 
 Server::Server(const Server& other)
