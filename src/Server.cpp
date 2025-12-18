@@ -72,7 +72,7 @@ bool Server::init_event_loop()
 	return true;
 }
 
-bool Server::run_event_loop() const
+bool Server::run_event_loop()
 {
 	struct epoll_event events[max_events_];
 	int timeout_ms = 5000;
@@ -116,34 +116,31 @@ bool Server::run_event_loop() const
 			bool can_write = e & EPOLLOUT;
 			if (can_read)
 			{
-				/* Receive data */
 				/*
 					TODO
 					- Currently, I fetch the request in its entirety before 
 					parsing it. I need to parse each line as I go, and also to 
-					check whether the header or overall size is too big, as the 
-					config file can specify such a limit.
+					check whether the body is too long (the config file has a 
+					property about that).
 				*/
-				std::string request;
-				char buffer[10];
+				Client c = clients_[fd];
+				char buffer[1024];
 				ssize_t nread;
 				while ((nread = read(fd, buffer, sizeof(buffer))) > 0)
 				{
-					request.append(buffer, nread);
-					if (request.find("\r\n\r\n") != std::string::npos)
+					c.req_buffer.append(buffer, nread);
+					if (c.req_buffer.find("\r\n\r\n") != std::string::npos)
 						break;
 				}
-				if (nread < 0 || request.empty())
+				if (nread < 0 || c.req_buffer.empty())
 				{
-					close(fd);
-					epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
+					close_connection(fd);
 					continue;
 				}
-				std::cout << request << std::endl;
+				c.last_activity = std::time(0);
 
 				if (can_write)
 				{
-					/* Send data */
 					std::string response = 
 						"HTTP/1.1 200 OK\r\n"
 						"Content-Type: text/plain\r\n"
@@ -151,9 +148,8 @@ bool Server::run_event_loop() const
 						"\r\n"
 						"Hello world!";
 					write(fd, response.c_str(), response.length());
-					std::cout << "--- Response sent ---" << std::endl;
-					close(fd);
-					epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
+					c.last_activity = std::time(0);
+					/**/close_connection(fd);
 				}
 			}
 		}
@@ -161,7 +157,7 @@ bool Server::run_event_loop() const
 	return true;
 }
 
-bool Server::accept_new_connection() const
+bool Server::accept_new_connection()
 {
 	int addrlen = sizeof(addr_);
 	int fd_client = accept(fd_listen_, (struct sockaddr *)&addr_,
@@ -175,5 +171,18 @@ bool Server::accept_new_connection() const
 	cev.events = EPOLLIN | EPOLLOUT;
 	cev.data.fd = fd_client;
 	epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_client, &cev);
+	std::map<int, Client>::iterator old_elem = clients_.find(fd_client);
+	if (old_elem != clients_.end())
+		clients_.erase(old_elem);
+	struct Client c = {};
+	c.last_activity = std::time(0);
+	clients_.insert(std::pair<int, Client>(fd_client, c));
 	return true;
+}
+
+void Server::close_connection(int fd)
+{
+	close(fd);
+	epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
+	clients_.erase(fd);
 }
