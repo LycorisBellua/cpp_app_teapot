@@ -12,10 +12,9 @@ class Server
 		~Server();
 	
 	private:
-		struct sockaddr_in addr_;
-		const int max_events_;
 		int fd_listen_;
 		int fd_epoll_;
+		struct sockaddr_in addr_;
 		std::map<int, Client> clients_;
 
 		Server();
@@ -27,6 +26,9 @@ class Server
 		bool run_event_loop();
 		bool accept_new_connection();
 		void close_connection(int fd);
+		void close_idle_connections(int idle_timeout_sec);
+		void send_response(int fd, struct Client& c);
+		std::string compose_response(const struct Client& c) const;
 };
 
 #endif
