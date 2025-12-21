@@ -29,6 +29,8 @@ class Server
 		void close_idle_connections(int idle_timeout_sec);
 		void send_response(int fd, struct Client& c);
 		std::string compose_response(const struct Client& c) const;
+
+		static size_t find_end_of_line(const std::string& str);
 };
 
 #endif

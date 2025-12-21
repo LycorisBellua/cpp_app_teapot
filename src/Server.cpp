@@ -114,7 +114,6 @@ bool Server::run_event_loop()
 			Client c = clients_[fd];
 			if (can_read && !c.req_fully_parsed)
 			{
-				/**/
 				/*
 					TODO
 					- Currently, I fetch the request in its entirety before 
@@ -123,27 +122,50 @@ bool Server::run_event_loop()
 					property about that).
 					- Within the reading loop, if more request data is needed, 
 					and it takes too long to arrive, drop the connection. 1 sec 
-					max is good. But ideally it's not 1 sec in between reading 
-					activity, it's 1 second for the entire request.
+					max is good. But ideally the timeout is not in between 
+					reading activities, it's a timeout for the entire request.
+
+					TO PARSE
+					- `GET /path/file.html HTTP/1.1\r\n`
+						-> GET, POST, DELETE, HEAD
+					- `Host: example.com:8080\r\n`
+						-> Optional if HTTP/1.0
+					- (Optional) `Content-Type: text/plain\r\n`
+						-> If no Content-Type, default to `text/plain`
+					- `Content-Length: 15\r\n` | `Transfer-Encoding: chunked\r\n`
+					- (Optional) `Expect: 100-continue`
+					- (Optional) `Connection: close` | `Connection: keep-alive`
+					- `\r\n`
+					- Optional Body
 				*/
+				/**/
 				char buffer[1024];
 				ssize_t nread;
-				while ((nread = read(fd, buffer, sizeof(buffer))) > 0)
+				while (!c.header_parsed
+					&& (nread = read(fd, buffer, sizeof(buffer))) > 0)
 				{
 					c.req_buffer.append(buffer, nread);
-					if (c.req_buffer.find("\r\n\r\n") != std::string::npos)
-						break;
+					size_t end;
+					while (!c.header_parsed
+						&& (end = find_end_of_line(c.req_buffer)) != std::string::npos)
+					{
+						std::string line = c.req_buffer.substr(0, end);
+						c.req_buffer.erase(0, end + 2);
+						if (line.empty()) // Blank line found CRLF
+							c.header_parsed = true;
+						std::cout << "[" << line.length() << "]" << line << std::endl;
+					}
 				}
-				if (nread < 0 || c.req_buffer.empty())
+				if (!c.header_parsed)
 				{
 					close_connection(fd);
 					continue;
 				}
 				c.last_activity = std::time(0);
+				c.header_parsed = false;
 				c.req_fully_parsed = true;
 				/**/
 			}
-
 			if (can_write && c.req_fully_parsed)
 				send_response(fd, c);
 		}
@@ -223,4 +245,11 @@ std::string Server::compose_response(const struct Client& c) const
 		"\r\n"
 		"Hello world!";
 	return response;
+}
+
+size_t Server::find_end_of_line(const std::string& str)
+{
+	size_t crlf = str.find("\r\n");
+	size_t lf = str.find("\n");
+	return std::min(crlf, lf);
 }
