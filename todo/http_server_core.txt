@@ -22,17 +22,13 @@ way, like by a CGI script. It's different from the GET method in that:
 	handle the data being sent,
 	* the response is normally program output and not a static file.
 
-- Be strict in what you send, and tolerant with what you receive:
-	* Even though the standard says that header lines should end with CRLF 
-	(\r\n), someone might use a single LF (\n) instead, so accept either.
-	* Make sure your response's header ends with a blank line (still CRLF) even 
-	without a body.
-	* The three fields in the initial line should be separated by a single 
-	space, but someone might use several spaces or tabs. Accept any number of 
-	spaces and tabs between these fields.
-	* A header must end with a CRLF line, even if there's no body. Otherwise, 
-	the other machine may wait indefinitely or close the connection as 
-	malformed.
+- Header lines (req or res) must end with CRLF (\r\n).
+- A header (req or res) must end with a blank line (CRLF on its own), even if 
+there's no body. Otherwise, the other machine may wait indefinitely or close 
+the connection as malformed.
+- The three fields of the request's initial line should be separated by a 
+single space, but someone might use several spaces or tabs. Accept any number 
+of spaces and tabs between these fields.
 
 - The "Host" header line is required in HTTP/1.1. Parse it to know who the 
 request is intended for. It indicates not only the domain but the port. For 
@@ -196,32 +192,6 @@ Allow: GET, POST
 	they will not break.
 
 --------------------------------------------------------------------------------
---------------------------------------------------------------------------------
-
-1. Initialize TCP server sockets
-
-- Create listening sockets
-- Set non-blocking
-- Bind to addresses/ports
-- Call `listen()`
-
---------------------------------------------------------------------------------
-
-2. Implement epoll loop
-
-- Create epoll structure
-- Add server sockets to epoll
-- Handle readable/writable events
-- Manage multiple clients
-
---------------------------------------------------------------------------------
-
-3. Accept new client connections
-
-- Accept on readable server socket
-- Set client socket non-blocking
-- Store client FD + connection state
-
 --------------------------------------------------------------------------------
 
 4. Close connections on disconnect

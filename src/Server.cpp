@@ -139,22 +139,21 @@ bool Server::run_event_loop()
 					- Optional Body
 				*/
 				/**/
-				char buffer[1024];
-				ssize_t nread;
-				while (!c.header_parsed
-					&& (nread = read(fd, buffer, sizeof(buffer))) > 0)
+				while (!c.header_parsed)
 				{
-					c.req_buffer.append(buffer, nread);
 					size_t end;
 					while (!c.header_parsed
-						&& (end = find_end_of_line(c.req_buffer)) != std::string::npos)
+						&& (end = c.req_buffer.find("\r\n")) != std::string::npos)
 					{
 						std::string line = c.req_buffer.substr(0, end);
 						c.req_buffer.erase(0, end + 2);
 						if (line.empty()) // Blank line found CRLF
 							c.header_parsed = true;
 						std::cout << "[" << line.length() << "]" << line << std::endl;
+						// TODO: Test with a non-chunked body (POST request)
 					}
+					if (!c.header_parsed && !read_more_request_data(fd, c))
+						break;
 				}
 				if (!c.header_parsed)
 				{
@@ -191,7 +190,7 @@ bool Server::accept_new_connection()
 	std::map<int, Client>::iterator old_elem = clients_.find(fd_client);
 	if (old_elem != clients_.end())
 		clients_.erase(old_elem);
-	struct Client c = {};
+	Client c = {};
 	c.last_activity = std::time(0);
 	clients_.insert(std::pair<int, Client>(fd_client, c));
 	return true;
@@ -207,7 +206,7 @@ void Server::close_connection(int fd)
 void Server::close_idle_connections(int idle_timeout_sec)
 {
 	std::time_t now = std::time(0);
-	std::map<int, struct Client>::iterator it = clients_.begin();
+	std::map<int, Client>::iterator it = clients_.begin();
 	while (it != clients_.end())
 	{
 		if (now - it->second.last_activity < idle_timeout_sec)
@@ -221,7 +220,18 @@ void Server::close_idle_connections(int idle_timeout_sec)
 	}
 }
 
-void Server::send_response(int fd, struct Client& c)
+bool Server::read_more_request_data(int fd, Client& c)
+{
+	char buffer[1024];
+	ssize_t nread = read(fd, buffer, sizeof(buffer));
+	if (nread < 0)
+		return false;
+	else if (nread > 0)
+		c.req_buffer.append(buffer, nread);
+	return true;
+}
+
+void Server::send_response(int fd, Client& c)
 {
 	std::string response = compose_response(c);
 	write(fd, response.c_str(), response.length());
@@ -229,7 +239,7 @@ void Server::send_response(int fd, struct Client& c)
 	c.req_fully_parsed = false;
 }
 
-std::string Server::compose_response(const struct Client& c) const
+std::string Server::compose_response(const Client& c) const
 {
 	/*
 		TODO
@@ -245,11 +255,4 @@ std::string Server::compose_response(const struct Client& c) const
 		"\r\n"
 		"Hello world!";
 	return response;
-}
-
-size_t Server::find_end_of_line(const std::string& str)
-{
-	size_t crlf = str.find("\r\n");
-	size_t lf = str.find("\n");
-	return std::min(crlf, lf);
 }

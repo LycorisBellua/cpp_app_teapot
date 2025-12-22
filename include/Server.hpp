@@ -27,10 +27,9 @@ class Server
 		bool accept_new_connection();
 		void close_connection(int fd);
 		void close_idle_connections(int idle_timeout_sec);
-		void send_response(int fd, struct Client& c);
-		std::string compose_response(const struct Client& c) const;
-
-		static size_t find_end_of_line(const std::string& str);
+		bool read_more_request_data(int fd, Client& c);
+		void send_response(int fd, Client& c);
+		std::string compose_response(const Client& c) const;
 };
 
 #endif
