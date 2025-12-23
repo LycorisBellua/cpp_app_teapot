@@ -79,6 +79,9 @@ to add them if the client wants them to be part of the body, otherwise they
 don't hurt because it's only whitespaces, so they'd be void space in between 
 requests.
 
+The name of a header line is case insensitive, but the value might be case 
+sensitive depending on the situation.
+
 ----- START LINE ---------------------------------------------------------------
 
 If the request is not formatted properly, return "400 Bad Request".

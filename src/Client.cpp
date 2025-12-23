@@ -69,7 +69,7 @@ std::string Client::extract_line(std::string& str, size_t end)
 	return line;
 }
 
-std::vector<std::string> Client::split_at_whitespaces(const std::string& str)
+std::vector<std::string> Client::split_at_whitespace(const std::string& str)
 {
 	std::vector<std::string> tokens;
 	std::istringstream iss(str);
@@ -77,6 +77,33 @@ std::vector<std::string> Client::split_at_whitespaces(const std::string& str)
 	while (iss >> token)
 		tokens.push_back(token);
 	return tokens;
+}
+
+std::vector<std::string> Client::split_at_colon(const std::string& str)
+{
+	std::vector<std::string> tokens;
+	std::istringstream iss(str);
+	std::string token;
+	while (std::getline(iss, token, ':'))
+		tokens.push_back(tolowercase(trim_whitespaces(token)));
+	return tokens;
+}
+
+std::string Client::trim_whitespaces(const std::string& str)
+{
+    size_t first = str.find_first_not_of(" \t\n\v\f\r");
+    if (first == std::string::npos)
+        return str;
+    size_t last = str.find_last_not_of(" \t\n\v\f\r");
+    return str.substr(first, last - first + 1);
+}
+
+std::string Client::tolowercase(const std::string& str)
+{
+	std::string res = str;
+	for (size_t i = 0; i < res.length(); ++i)
+		res[i] = std::tolower(static_cast<unsigned char>(res[i]));
+	return res;
 }
 
 bool Client::is_recognized_method(const std::string& str)
@@ -108,7 +135,7 @@ bool Client::parse_header()
 			}
 			else if (!start_line_found)
 			{
-				std::vector<std::string> tokens = split_at_whitespaces(line);
+				std::vector<std::string> tokens = split_at_whitespace(line);
 				if (tokens.size() != 3)
 					status_ = 400;
 				else
@@ -128,19 +155,27 @@ bool Client::parse_header()
 				/*
 					TODO: Parse ordinary header line
 
-					- If the name isn't recogized, just ignore it.
-					- If it's recognized, and the value warrants a 400, change 
-					the status code. Otherwise only set the status code if it 
-					was 0.
+					- Split at colon. We need exactly two elements. Except if 
+					it's "Host", due to the port.
+						-> Status code 400.
+					- In each element, remove leading and trailing whitespaces.
+					- The first element is the name. If you don't recognize it, 
+					ignore the line.
+					- If the value is odd, which status code to return?
+						-> If need be, set the status code to 400.
+						-> If you want another status code, only set it if it 
+						was still 0, otherwise leave it alone.
 				*/
+				std::vector<std::string> tokens = split_at_colon(line);
+				if (tokens.size() < 2
+					|| (tokens[0] != "host" && tokens.size() > 2))
+					status_ = 400;
 			}
-
-
-
 			/*
 				TODO
-				- `GET /path/file.html HTTP/1.1\r\n`
-					-> GET, POST, DELETE, HEAD
+				- If anything is missing, set the appropriate status code.
+				- If it's all good, also set the appropriate status code.
+
 				- `Host: example.com:8080\r\n`
 					-> Optional if HTTP/1.0
 				- (Optional) `Content-Type: text/plain\r\n`

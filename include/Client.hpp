@@ -39,8 +39,11 @@ class Client
 
 		static size_t find_end_of_line(const std::string& str);
 		static std::string extract_line(std::string& str, size_t end);
-		static std::vector<std::string> split_at_whitespaces
-			(const std::string& str);
+		static std::vector<std::string> split_at_whitespace(const std::string& 
+			str);
+		static std::vector<std::string> split_at_colon(const std::string& str);
+		static std::string trim_whitespaces(const std::string& str);
+		static std::string tolowercase(const std::string& str);
 		static bool is_recognized_method(const std::string& str);
 		static bool is_recognized_version(const std::string& str);
 
