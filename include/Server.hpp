@@ -10,7 +10,7 @@ class Server
 	public:
 		Server(int tmp_config);
 		~Server();
-	
+
 	private:
 		int fd_listen_;
 		int fd_epoll_;

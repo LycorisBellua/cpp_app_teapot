@@ -25,6 +25,7 @@ class Client
 		std::string req_buffer_;
 		bool header_parsed_;
 		bool body_parsed_;
+		int status_;
 		std::string method_;
 		std::string uri_;
 		std::string version_;
@@ -40,6 +41,9 @@ class Client
 		static std::string extract_line(std::string& str, size_t end);
 		static std::vector<std::string> split_at_whitespaces
 			(const std::string& str);
+		static bool is_recognized_method(const std::string& str);
+		static bool is_recognized_version(const std::string& str);
+
 		bool parse_header();
 		bool parse_body();
 		bool read_more_request_data();

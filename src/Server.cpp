@@ -6,9 +6,16 @@
 
 Server::Server(int tmp_config) : fd_listen_(-1), fd_epoll_(-1), addr_()
 {
+	versions_.push_back("HTTP/1.0");
+	versions_.push_back("HTTP/1.1");
+	methods_.push_back("HEAD");
+	methods_.push_back("GET");
+	methods_.push_back("POST");
+	methods_.push_back("DELETE");
+
 	/*
 		TODO
-		- Pass the config struct as argument.
+		- Pass the config struct as argument to the constructor.
 	*/
 	int port = 8080;
 	int queue_length = 10;
@@ -28,6 +35,8 @@ Server::~Server()
 	close(fd_epoll_);
 	close(fd_listen_);
 }
+
+/* Private (Instance) ------------------------------------------------------- */
 
 bool Server::create_socket()
 {

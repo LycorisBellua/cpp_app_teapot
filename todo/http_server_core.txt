@@ -22,10 +22,32 @@ request.
 Do not send chunked responses, and you must always specify Content-Length.
 
 Stick to status codes that HTTP/1.0 recognizes:
-	- 2xx: 200, 201, 202, 204
-	- 3xx: 301, 302, 304
-	- 4xx: 400, 401, 403, 404
-	- 5xx: 500, 501, 502, 503
+	"200 OK"
+	"201 Created"
+	"202 Accepted"
+	"204 No Content"
+	"301 Moved Permanently"
+	"302 Moved Temporarily"
+	"304 Not Modified"
+	"400 Bad Request"
+	"401 Unauthorized"
+	"403 Forbidden"
+	"404 Not Found"
+	"500 Internal Server Error"
+	"501 Not Implemented"
+	"502 Bad Gateway"
+	"503 Service Unavailable"
+
+Here are 4 other status codes that I use outside of HTTP/1.0:
+	* "405 Method Not Allowed", to replace with "403 Forbidden".
+	* "505 HTTP Version Not Supported" could have been replaced with "501 Not 
+	Implemented", but if we don't recognize the version then we don't even know 
+	that the client is HTTP/1.0. Therefore, use the status code which makes for 
+	the version of your server.
+	* Related to the "Expect 100 Continue" feature, which doesn't even exist in 
+	HTTP/1.0, so it's fine:
+		"100 Continue"
+		"417 Expectation Failed"
 
 ----- WHITESPACES AND CRLF -----------------------------------------------------
 
@@ -69,7 +91,7 @@ Otherwise:
 	header line to list the allowed methods, such as `Allow: GET, POST`.
 	* If the method is not recognized, return "501 Not Implemented". It works 
 	for both methods that exist in the standard but you don't implement, and 
-	those which don't exist at all.
+	those which don't exist at all. Also return the "Allow" line.
 
 - For the URI:
 	* If the resource is not found it's "404 Not Found".

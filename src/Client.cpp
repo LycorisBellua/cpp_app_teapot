@@ -32,6 +32,7 @@ void Client::reset_req_data()
 {
 	header_parsed_ = false;
 	body_parsed_ = false;
+	status_ = 0;
 	method_ = std::string();
 	uri_ = std::string();
 	version_ = std::string();
@@ -78,12 +79,20 @@ std::vector<std::string> Client::split_at_whitespaces(const std::string& str)
 	return tokens;
 }
 
+bool Client::is_recognized_method(const std::string& str)
+{
+	return str == "GET" || str == "HEAD" || str == "POST" || str == "DELETE";
+}
+
+bool Client::is_recognized_version(const std::string& str)
+{
+	return str == "HTTP/1.0" || str == "HTTP/1.1";
+}
+
 /* Private (Instance) ------------------------------------------------------- */
 
 bool Client::parse_header()
 {
-	//TODO: Delete this output line:
-	/**/std::cout << "-----------------------" << std::endl;
 	bool start_line_found = false;
 	while (!header_parsed_)
 	{
@@ -101,36 +110,35 @@ bool Client::parse_header()
 			{
 				std::vector<std::string> tokens = split_at_whitespaces(line);
 				if (tokens.size() != 3)
-				{
-					// TODO: Error: Wrong number of arguments
-				}
+					status_ = 400;
 				else
 				{
 					method_ = tokens[0];
 					uri_ = tokens[1];
 					version_ = tokens[2];
-					// TODO: Parse these values. Are they correct?
-					// Do they impact the rest of the header?
-					/*
-						TODO
-
-					*/
+					if (is_recognized_method(method_))
+						status_ = 501;
+					else if (is_recognized_version(version_))
+						status_ = 505;
 				}
 				start_line_found = true;
 			}
 			else
 			{
-				// TODO: Parse ordinary header line
+				/*
+					TODO: Parse ordinary header line
+
+					- If the name isn't recogized, just ignore it.
+					- If it's recognized, and the value warrants a 400, change 
+					the status code. Otherwise only set the status code if it 
+					was 0.
+				*/
 			}
 
 
 
 			/*
 				TODO
-				- Actually parse each line as you go, instead of only printing 
-				them.
-
-				TO PARSE
 				- `GET /path/file.html HTTP/1.1\r\n`
 					-> GET, POST, DELETE, HEAD
 				- `Host: example.com:8080\r\n`
