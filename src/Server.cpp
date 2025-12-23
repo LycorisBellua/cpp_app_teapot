@@ -112,60 +112,15 @@ bool Server::run_event_loop()
 			bool can_read = events[i].events & EPOLLIN;
 			bool can_write = events[i].events & EPOLLOUT;
 			Client c = clients_[fd];
-			if (can_read && !c.req_fully_parsed)
+			if (can_read && !c.get_is_parsed())
 			{
-				/*
-					TODO
-					- Currently, I fetch the request in its entirety before 
-					parsing it. I need to parse each line as I go, and also to 
-					check whether the body is too long (the config file has a 
-					property about that).
-					- Within the reading loop, if more request data is needed, 
-					and it takes too long to arrive, drop the connection. 1 sec 
-					max is good. But ideally the timeout is not in between 
-					reading activities, it's a timeout for the entire request.
-
-					TO PARSE
-					- `GET /path/file.html HTTP/1.1\r\n`
-						-> GET, POST, DELETE, HEAD
-					- `Host: example.com:8080\r\n`
-						-> Optional if HTTP/1.0
-					- (Optional) `Content-Type: text/plain\r\n`
-						-> If no Content-Type, default to `text/plain`
-					- `Content-Length: 15\r\n` | `Transfer-Encoding: chunked\r\n`
-					- (Optional) `Expect: 100-continue`
-					- (Optional) `Connection: close` | `Connection: keep-alive`
-					- `\r\n`
-					- Optional Body
-				*/
-				/**/
-				while (!c.header_parsed)
-				{
-					size_t end;
-					while (!c.header_parsed
-						&& (end = c.req_buffer.find("\r\n")) != std::string::npos)
-					{
-						std::string line = c.req_buffer.substr(0, end);
-						c.req_buffer.erase(0, end + 2);
-						if (line.empty()) // Blank line found CRLF
-							c.header_parsed = true;
-						std::cout << "[" << line.length() << "]" << line << std::endl;
-						// TODO: Test with a non-chunked body (POST request)
-					}
-					if (!c.header_parsed && !read_more_request_data(fd, c))
-						break;
-				}
-				if (!c.header_parsed)
+				if (!c.parse_request())
 				{
 					close_connection(fd);
 					continue;
 				}
-				c.last_activity = std::time(0);
-				c.header_parsed = false;
-				c.req_fully_parsed = true;
-				/**/
 			}
-			if (can_write && c.req_fully_parsed)
+			if (can_write && c.get_is_parsed())
 				send_response(fd, c);
 		}
 		close_idle_connections(idle_timeout_sec);
@@ -190,9 +145,7 @@ bool Server::accept_new_connection()
 	std::map<int, Client>::iterator old_elem = clients_.find(fd_client);
 	if (old_elem != clients_.end())
 		clients_.erase(old_elem);
-	Client c = {};
-	c.last_activity = std::time(0);
-	clients_.insert(std::pair<int, Client>(fd_client, c));
+	clients_.insert(std::pair<int, Client>(fd_client, Client(fd_client)));
 	return true;
 }
 
@@ -209,7 +162,7 @@ void Server::close_idle_connections(int idle_timeout_sec)
 	std::map<int, Client>::iterator it = clients_.begin();
 	while (it != clients_.end())
 	{
-		if (now - it->second.last_activity < idle_timeout_sec)
+		if (now - it->second.get_last_activity() < idle_timeout_sec)
 			++it;
 		else
 		{
@@ -220,30 +173,19 @@ void Server::close_idle_connections(int idle_timeout_sec)
 	}
 }
 
-bool Server::read_more_request_data(int fd, Client& c)
-{
-	char buffer[1024];
-	ssize_t nread = read(fd, buffer, sizeof(buffer));
-	if (nread < 0)
-		return false;
-	else if (nread > 0)
-		c.req_buffer.append(buffer, nread);
-	return true;
-}
-
-void Server::send_response(int fd, Client& c)
+void Server::send_response(int fd, Client& c) const
 {
 	std::string response = compose_response(c);
 	write(fd, response.c_str(), response.length());
-	c.last_activity = std::time(0);
-	c.req_fully_parsed = false;
+	c.reset_req_data();
+	c.update_last_activity();
 }
 
 std::string Server::compose_response(const Client& c) const
 {
 	/*
 		TODO
-		- The Client struct containing all the parsed data is required for this 
+		- The Client class containing all the parsed data is required for this 
 		function to be written.
 		- Compose the response.
 	*/

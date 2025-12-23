@@ -27,8 +27,7 @@ class Server
 		bool accept_new_connection();
 		void close_connection(int fd);
 		void close_idle_connections(int idle_timeout_sec);
-		bool read_more_request_data(int fd, Client& c);
-		void send_response(int fd, Client& c);
+		void send_response(int fd, Client& c) const;
 		std::string compose_response(const Client& c) const;
 };
 

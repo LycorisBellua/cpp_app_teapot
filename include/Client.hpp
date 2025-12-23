@@ -1,20 +1,49 @@
+#ifndef CLIENT_HPP
+# define CLIENT_HPP
+
 #include <string>
+#include <vector>
 #include <ctime>
 
-struct Client
+class Client
 {
-	std::time_t last_activity;
-	std::string req_buffer;
-	bool header_parsed;
-	bool req_fully_parsed;
-	std::string method;
-	std::string path;
-	std::string version;
-	std::string host;
-	std::string content_type;
-	std::string content_length;
-	bool chunked;
-	bool expect_100;
-	bool close_connection;
-	std::string body;
+	public:
+		Client();
+		Client(int fd);
+
+		std::time_t get_last_activity() const;
+		bool get_is_parsed() const;
+
+		void update_last_activity();
+		void reset_req_data();
+		bool parse_request();
+
+	private:
+		int fd_;
+		std::time_t last_activity_;
+		std::time_t req_start_;
+		std::string req_buffer_;
+		bool header_parsed_;
+		bool body_parsed_;
+		std::string method_;
+		std::string uri_;
+		std::string version_;
+		std::string host_;
+		std::string content_type_;
+		std::string content_length_;
+		bool chunked_;
+		bool expect_100_;
+		bool close_connection_;
+		std::string body_;
+
+		static size_t find_end_of_line(const std::string& str);
+		static std::string extract_line(std::string& str, size_t end);
+		static std::vector<std::string> split_at_whitespaces
+			(const std::string& str);
+		bool parse_header();
+		bool parse_body();
+		bool read_more_request_data();
+		bool is_request_too_slow() const;
 };
+
+#endif
