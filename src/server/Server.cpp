@@ -14,58 +14,58 @@ Server::Server(int tmp_config) : fd_listen_(-1), fd_epoll_(-1), addr_()
 	int queue_length = 10;
 	(void)tmp_config;
 
-	if (!create_socket()
-		|| !bind_socket_to_port(port)
-		|| !listen_for_clients(queue_length)
-		|| !init_event_loop()
-		|| !run_event_loop())
+	if (!createSocket()
+		|| !bindSocketToPort(port)
+		|| !listenForClients(queue_length)
+		|| !initEventLoop()
+		|| !runEventLoop())
 		return;
 }
 
 Server::~Server()
 {
-	close_idle_connections(0);
+	closeIdleConnections(0);
 	close(fd_epoll_);
 	close(fd_listen_);
 }
 
 /* Private (Instance) ------------------------------------------------------- */
 
-bool Server::create_socket()
+bool Server::createSocket()
 {
 	fd_listen_ = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd_listen_ < 0)
 	{
-		std::cerr << "Error: Server: create_socket" << std::endl;
+		std::cerr << "Error: Server: createSocket" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool Server::bind_socket_to_port(int port)
+bool Server::bindSocketToPort(int port)
 {
 	addr_.sin_family = AF_INET;
 	addr_.sin_addr.s_addr = htonl(INADDR_ANY);
 	addr_.sin_port = htons(port);
 	if (bind(fd_listen_, (struct sockaddr *)&addr_, sizeof(addr_)) < 0)
 	{
-		std::cerr << "Error: Server: bind_socket_to_port" << std::endl;
+		std::cerr << "Error: Server: bindSocketToPort" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool Server::listen_for_clients(int queue_length) const
+bool Server::listenForClients(int queue_length) const
 {
 	if (listen(fd_listen_, queue_length) < 0)
 	{
-		std::cerr << "Error: Server: listen_for_clients" << std::endl;
+		std::cerr << "Error: Server: listenForClients" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool Server::init_event_loop()
+bool Server::initEventLoop()
 {
 	fd_epoll_ = epoll_create(1);
 	struct epoll_event ev;
@@ -73,13 +73,13 @@ bool Server::init_event_loop()
 	ev.data.fd = fd_listen_;
 	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_listen_, &ev))
 	{
-		std::cerr << "Error: Server: init_event_loop" << std::endl;
+		std::cerr << "Error: Server: initEventLoop" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool Server::run_event_loop()
+bool Server::runEventLoop()
 {
 	/*
 		TODO
@@ -98,7 +98,7 @@ bool Server::run_event_loop()
 		int n = epoll_wait(fd_epoll_, events, max_events, epoll_timeout_ms);
 		if (n < 0)
 		{
-			std::cerr << "Error: Server: run_event_loop: epoll_wait"
+			std::cerr << "Error: Server: runEventLoop: epoll_wait"
 				<< std::endl;
 			return false;
 		}
@@ -107,37 +107,37 @@ bool Server::run_event_loop()
 			int fd = events[i].data.fd;
 			if (fd == fd_listen_)
 			{
-				if (!accept_new_connection())
+				if (!acceptNewConnection())
 					return false;
 				continue;
 			}
 			bool can_read = events[i].events & EPOLLIN;
 			bool can_write = events[i].events & EPOLLOUT;
 			Client c = clients_[fd];
-			if (can_read && !c.get_is_parsed())
+			if (can_read && !c.getIsParsed())
 			{
-				if (!c.parse_request())
+				if (!c.parseRequest())
 				{
-					close_connection(fd);
+					closeConnection(fd);
 					continue;
 				}
 			}
-			if (can_write && c.get_is_parsed())
-				send_response(fd, c);
+			if (can_write && c.getIsParsed())
+				sendResponse(fd, c);
 		}
-		close_idle_connections(idle_timeout_sec);
+		closeIdleConnections(idle_timeout_sec);
 	}
 	return true;
 }
 
-bool Server::accept_new_connection()
+bool Server::acceptNewConnection()
 {
 	int addrlen = sizeof(addr_);
 	int fd_client = accept(fd_listen_, (struct sockaddr *)&addr_,
 		(socklen_t *)&addrlen);
 	if (fd_client < 0)
 	{
-		std::cerr << "Error: Server: accept_new_connection" << std::endl;
+		std::cerr << "Error: Server: acceptNewConnection" << std::endl;
 		return false;
 	}
 	struct epoll_event cev;
@@ -151,39 +151,39 @@ bool Server::accept_new_connection()
 	return true;
 }
 
-void Server::close_connection(int fd)
+void Server::closeConnection(int fd)
 {
 	close(fd);
 	epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
 	clients_.erase(fd);
 }
 
-void Server::close_idle_connections(int idle_timeout_sec)
+void Server::closeIdleConnections(int idle_timeout_sec)
 {
 	std::time_t now = std::time(0);
 	std::map<int, Client>::iterator it = clients_.begin();
 	while (it != clients_.end())
 	{
-		if (now - it->second.get_last_activity() < idle_timeout_sec)
+		if (now - it->second.getLastActivity() < idle_timeout_sec)
 			++it;
 		else
 		{
 			std::map<int, Client>::iterator to_erase = it;
 			++it;
-			close_connection(to_erase->first);
+			closeConnection(to_erase->first);
 		}
 	}
 }
 
-void Server::send_response(int fd, Client& c) const
+void Server::sendResponse(int fd, Client& c) const
 {
-	std::string response = compose_response(c);
+	std::string response = composeResponse(c);
 	write(fd, response.c_str(), response.length());
-	c.reset_req_data();
-	c.update_last_activity();
+	c.resetRequestData();
+	c.updateLastActivity();
 }
 
-std::string Server::compose_response(const Client& c) const
+std::string Server::composeResponse(const Client& c) const
 {
 	/*
 		TODO

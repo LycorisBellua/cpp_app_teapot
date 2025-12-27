@@ -164,13 +164,33 @@ boundary is ambiguous if pipelining is expected.
 ----- HOST ---------------------------------------------------------------------
 
 The "Host" header line is required in HTTP/1.1. Parse it to know who the 
-request is intended for. It indicates not only the domain but the port. For 
-example, `www.host1.com:80`. Of course, if there's no port, interpret it as 80.
+request is intended for. It indicates not only the domain name but also the 
+port. It must not be written with the absolute path ("http://domain.com/path"), 
+it only gives the domain name.
 
-Accept abolute URLs. Both of these initial request lines are valid:
-	- "GET /path/file.html HTTP/1.1"
-	- "GET http://www.somehost.com/path/file.html HTTP/1.1"
-The "Host" header line is still required though.
+A domain name is made of labels separated by dots (.). Each label must be 1-63 
+characters long, only contain alphanumerical characters, or hyphens ('-') if 
+they don't start or end a label.
+
+Then, after the domain name can an optional port be specified (domain:port). If 
+there's none, then interpret it as 80. It's an integer value between 0 and 
+65535 and the leading zeroes are ignored.
+
+As for the start line's URI, it's typically in origin form ("/path"), but it 
+can also be written in the absolute form ("http://domain.com/path"). Accept 
+both, but the Host header has authority, and it is still required in HTTP/1.1.
+
+If the URI uses the absolute form, and there's a mismatch with the Host header, 
+you can either ignore this mismatch, issue a warning and still proceed, or you 
+can even reject the connection. This is indeed suspicious behavior and might 
+indicate an attack.
+
+As for HTTP/1.0, the URI being in origin form, the Host header not being 
+present, and the server using virtual hosting (= having different hosts), 
+fallback to a default host. It's either one explicitly set as default, or it's 
+simply the first host.
+
+If the host indicated in the request doesn't exist, you can return 404.
 
 ----- CHUNKED TRANSFER ENCODING ------------------------------------------------
 

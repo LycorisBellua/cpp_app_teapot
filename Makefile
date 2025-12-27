@@ -1,5 +1,5 @@
 CC = c++
-CFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude -g# -fsanitize=address
+CFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude -Iinclude/server -g# -fsanitize=address
 LDFLAGS =
 NAME = webserv
 DIR_OBJ = build
