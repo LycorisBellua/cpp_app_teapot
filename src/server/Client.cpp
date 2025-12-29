@@ -1,7 +1,7 @@
 #include "Client.hpp"
 #include "Host.hpp"
+#include "Helper.hpp"
 #include <iostream>
-#include <sstream>
 #include <unistd.h>
 
 Client::Client() : fd_(-1), req_buffer_(""), header_parsed_(false),
@@ -31,25 +31,11 @@ void Client::updateLastActivity()
 	last_activity_ = std::time(0);
 }
 
-void Client::resetRequestData()
+bool Client::parseRequest()
 {
 	header_parsed_ = false;
 	body_parsed_ = false;
-	req_.status = 0;
-	req_.method = std::string();
-	req_.uri = std::string();
-	req_.version = std::string();
-	req_.host = std::string();
-	req_.content_type = std::string();
-	req_.content_length = 0;
-	req_.chunked = false;
-	req_.expect_100 = false;
-	req_.close_connection = false;
-	req_.body = std::string();
-}
-
-bool Client::parseRequest()
-{
+	req_.resetRequestData();
 	req_start_ = std::time(0);
 	bool success = parseHeader() && parseBody();
 	updateLastActivity();
@@ -72,67 +58,15 @@ std::string Client::extractLine(std::string& str, size_t end)
 	return line;
 }
 
-std::vector<std::string> Client::splitAtWhitespace(const std::string& str)
-{
-	std::vector<std::string> tokens;
-	std::istringstream iss(str);
-	std::string token;
-	while (iss >> token)
-		tokens.push_back(token);
-	return tokens;
-}
-
-std::vector<std::string> Client::splitAtColon(const std::string& str)
-{
-	std::vector<std::string> tokens;
-	std::istringstream iss(str);
-	std::string token;
-	while (std::getline(iss, token, ':'))
-		tokens.push_back(tolowercase(trimWhitespaces(token)));
-	return tokens;
-}
-
-std::string Client::trimWhitespaces(const std::string& str)
-{
-    size_t first = str.find_first_not_of(" \t\n\v\f\r");
-    if (first == std::string::npos)
-        return str;
-    size_t last = str.find_last_not_of(" \t\n\v\f\r");
-    return str.substr(first, last - first + 1);
-}
-
-std::string Client::tolowercase(const std::string& str)
-{
-	std::string res = str;
-	for (size_t i = 0; i < res.length(); ++i)
-		res[i] = std::tolower(static_cast<unsigned char>(res[i]));
-	return res;
-}
-
-bool Client::isRecognizedMethod(const std::string& str)
-{
-	return str == "GET" || str == "HEAD" || str == "POST" || str == "DELETE";
-}
-
-bool Client::isRecognizedVersion(const std::string& str)
-{
-	return str == "HTTP/1.0" || str == "HTTP/1.1";
-}
-
 /* Private (Instance) ------------------------------------------------------- */
 
 bool Client::parseHeader()
 {
-	bool start_line_found = false;
-	bool host_header_found = false;
-	bool content_length_header_found = false;
-	bool transfer_encoding_header_found = false;
-	bool expect_header_found = false;
-	bool connection_header_found = false;
-	while (!header_parsed_)
+	bool start_line_found;
+	while (!header_parsed_ && req_.getStatus() != 400)
 	{
 		size_t end;
-		while (!header_parsed_
+		while (!header_parsed_ && req_.getStatus() != 400
 				&& (end = findEndOfLine(req_buffer_)) != std::string::npos)
 		{
 			std::string line = extractLine(req_buffer_, end);
@@ -143,123 +77,43 @@ bool Client::parseHeader()
 			}
 			else if (!start_line_found)
 			{
-				std::vector<std::string> tokens = splitAtWhitespace(line);
-				if (tokens.size() != 3)
-					req_.status = 400;
-				else
-				{
-					req_.method = tokens[0];
-					req_.uri = tokens[1];
-					req_.version = tokens[2];
-					if (!Host::parseUri(req_.uri, req_.host, req_.port))
-						req_.status = 400;
-					if (!isRecognizedMethod(req_.method))
-						req_.status = 501;
-					else if (!isRecognizedVersion(req_.version))
-						req_.status = 505;
-				}
 				start_line_found = true;
+				req_.parseStartLine(Helper::splitAtWhitespace(line));
 			}
-			else if (req_.status != 400)
+			else
 			{
-				std::vector<std::string> tokens = splitAtColon(line);
-				if (tokens[0] == "host")
-				{
-					host_header_found = true;
-					if (tokens.size() != 2 && tokens.size() != 3)
-						req_.status = 400;
-					else
-					{
-						req_.host = tokens[1];
-						req_.port = Host::parsePort(tokens.size() == 2 ? ""
-							: tokens[2], "http");
-						if (!Host::isValidDomain(req_.host) || req_.port < 0)
-							req_.status = 400;
-					}
-				}
-				else if (tokens.size() != 2)
-					req_.status = 400;
-				else if (tokens[0] == "content-type")
-				{
-					if (!req_.content_type.empty())
-						req_.status = 400;
-					// TODO: Parse Content-Type
-				}
-				else if (tokens[0] == "content-length")
-				{
-					if (content_length_header_found
-						|| transfer_encoding_header_found)
-						req_.status = 400;
-					content_length_header_found = true;
-					// TODO: Parse Content-Length
-				}
-				else if (tokens[0] == "transfer-encoding")
-				{
-					if (content_length_header_found
-						|| transfer_encoding_header_found)
-						req_.status = 400;
-					transfer_encoding_header_found = true;
-					// TODO: Parse Transfer-Encoding
-				}
-				else if (tokens[0] == "expect")
-				{
-					if (expect_header_found)
-						req_.status = 400;
-					expect_header_found = true;
-					// TODO: Parse Expect
-				}
-				else if (tokens[0] == "connection")
-				{
-					if (connection_header_found)
-						req_.status = 400;
-					connection_header_found = true;
-					// TODO: Parse Connection
-				}
+				std::vector<std::string> tokens = Helper::splitAtFirstColon
+					(line, true);
+				/**/std::cout << "HEADER: " << tokens[0] << std::endl;
+				if (Helper::insensitiveCmp(tokens[0], "Host"))
+					req_.parseHostHeader(tokens[1]);
+				else if (Helper::insensitiveCmp(tokens[0], "Content-Type"))
+					req_.parseContentTypeHeader(tokens[1]);
+				else if (Helper::insensitiveCmp(tokens[0], "Content-Length"))
+					req_.parseContentLengthHeader(tokens[1]);
+				else if (Helper::insensitiveCmp(tokens[0], "Transfer-Encoding"))
+					req_.parseTransferEncodingHeader(tokens[1]);
+				else if (Helper::insensitiveCmp(tokens[0], "Expect"))
+					req_.parseExpectHeader(tokens[1]);
+				else if (Helper::insensitiveCmp(tokens[0], "Connection"))
+					req_.parseConnectionHeader(tokens[1]);
 			}
-					/*
-						TODO: Parse ordinary header line
-						- Each header must appear only once.
-							-> 400.
-						- The first element is the name. If you don't recognize 
-						it, ignore the line.
-						- If the value is odd, which status code to return?
-							-> If need be, set the status code to 400.
-							-> If you want another status code, only set it if 
-							it was still 0, otherwise leave it alone.
-					*/
-			/*
-				TODO
-				- If anything is missing, set the appropriate status code.
-				- If it's all good, also set the appropriate status code.
-
-				- [x] "Host" is optional if HTTP/1.0.
-				- [ ] (Optional) `Content-Type: text/plain`.
-						-> If no Content-Type, default to `text/plain`.
-				- [ ] `Content-Length: 15` | `Transfer-Encoding: chunked`.
-						-> Only one or the other. Both means 400.
-				- [ ] (Optional) `Expect: 100-continue`.
-				- [ ] (Optional) `Connection: close` | `Connection: keep-alive`.
-				- `\r\n`.
-				- Optional Body.
-			*/
-			(void)host_header_found;
-			/**/std::cout << "[" << line.length() << "]" << line << std::endl;
 		}
 		if (!header_parsed_ && !readMoreRequestData())
 			break;
 	}
-	return header_parsed_;
-
+	/**/std::cout << "STATUS CODE: " << req_.getStatus() << std::endl;
 	/*
 		TODO
-		- Use the config struct to tell whether the host and port are valid. If 
-		these values are set, but they do not match anything we have in store, 
-		then return 404.
-		- If the values are not set (empty string and 0 for the port), then use 
-		the default host. If no default host had been indicated by the config 
-		file, then use the first host.
-		- Note that a port of -1 is invalid. Do not proceed. If unset, it's 0.
+		- Test that 400 is returned if a header (that I recognize and therefore 
+		don't ignore) appears more than once.
+		- Test all headers, even to put a space in between the domain and port 
+		within the Host header value.
 	*/
+	if (!header_parsed_)
+		return false;
+	req_.postReadingHeaderCheck();
+	return true;
 }
 
 bool Client::parseBody()
@@ -267,9 +121,8 @@ bool Client::parseBody()
 	/*
 		TODO
 		- Test with a POST request (non-chunked).
-		- Check whether the body is too long (the config file has a property 
-		about that).
-		- Handle chunked body.
+		- Handle chunked body, and check whether the chunked body is too long 
+		(the config file has a property about that).
 		- Once you handle chunked requests, use the intra's testers to check 
 		your implementation.
 	*/

@@ -80,7 +80,8 @@ don't hurt because it's only whitespaces, so they'd be void space in between
 requests.
 
 The name of a header line is case insensitive, but the value might be case 
-sensitive depending on the situation.
+sensitive depending on the situation. Also, about the start line, only the HTTP 
+version is case insensitive.
 
 ----- START LINE ---------------------------------------------------------------
 

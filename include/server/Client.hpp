@@ -16,7 +16,6 @@ class Client
 		bool getIsParsed() const;
 
 		void updateLastActivity();
-		void resetRequestData();
 		bool parseRequest();
 
 	private:
@@ -30,13 +29,8 @@ class Client
 
 		static size_t findEndOfLine(const std::string& str);
 		static std::string extractLine(std::string& str, size_t end);
-		static std::vector<std::string> splitAtWhitespace(const std::string& 
+		static std::vector<std::string> splitAtFirstColon(const std::string&
 			str);
-		static std::vector<std::string> splitAtColon(const std::string& str);
-		static std::string trimWhitespaces(const std::string& str);
-		static std::string tolowercase(const std::string& str);
-		static bool isRecognizedMethod(const std::string& str);
-		static bool isRecognizedVersion(const std::string& str);
 
 		bool parseHeader();
 		bool parseBody();

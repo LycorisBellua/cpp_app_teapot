@@ -1,13 +1,13 @@
 #include "Host.hpp"
-#include <sstream>
+#include "Helper.hpp"
 
-bool Host::parseUri(std::string& uri, std::string& host, int& port)
+bool Host::parseUri(std::string& uri, std::string& domain, int& port)
 {
 	if (uri.empty())
 		return false;
 	else if (isOriginForm(uri))
 		return true;
-	return processAbsoluteForm(uri, host, port);
+	return processAbsoluteForm(uri, domain, port);
 }
 
 bool Host::isValidDomain(const std::string& domain)
@@ -39,13 +39,10 @@ int Host::parsePort(const std::string& port, const std::string& scheme)
 {
 	if (port.empty())
 		return scheme == "http" ? 80 : scheme == "https" ? 443 : -1;
-	int nbr_port = -1;
-	std::istringstream iss(port);
-	char extra;
-	if (!(iss >> nbr_port) || (iss >> extra) || nbr_port < 0
-		|| nbr_port > 65535)
-		nbr_port = -1;
-	return nbr_port;
+	int nbr;
+	if (!Helper::stringToUnsignedNbr(port, nbr) || nbr > 65535)
+		return -1;
+	return nbr;
 }
 
 /* Private ------------------------------------------------------------------ */
@@ -62,20 +59,20 @@ bool Host::isOriginForm(const std::string& uri)
 	return true;
 }
 
-bool Host::processAbsoluteForm(std::string& uri, std::string& host, int& port)
+bool Host::processAbsoluteForm(std::string& uri, std::string& domain, int& port)
 {
 	std::string scheme;
 	std::string path;
-	std::string domain;
+	std::string domain_name;
 	std::string str_port;
 	if (!setScheme(uri, scheme) || !setPath(uri, scheme, path)
-		|| !setDomainAndPort(uri, scheme, domain, str_port))
+		|| !setDomainAndPort(uri, scheme, domain_name, str_port))
 		return false;
 	int nbr_port = parsePort(str_port, scheme);
 	if (nbr_port < 0)
 		return false;
 	uri = path;
-	host = domain;
+	domain = domain_name;
 	port = nbr_port;
 	return true;
 }
