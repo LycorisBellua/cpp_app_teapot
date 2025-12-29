@@ -62,7 +62,7 @@ std::string Client::extractLine(std::string& str, size_t end)
 
 bool Client::parseHeader()
 {
-	bool start_line_found;
+	bool start_line_found = false;
 	while (!header_parsed_ && req_.getStatus() != 400)
 	{
 		size_t end;
@@ -84,7 +84,6 @@ bool Client::parseHeader()
 			{
 				std::vector<std::string> tokens = Helper::splitAtFirstColon
 					(line, true);
-				/**/std::cout << "HEADER: " << tokens[0] << std::endl;
 				if (Helper::insensitiveCmp(tokens[0], "Host"))
 					req_.parseHostHeader(tokens[1]);
 				else if (Helper::insensitiveCmp(tokens[0], "Content-Type"))
@@ -99,12 +98,22 @@ bool Client::parseHeader()
 					req_.parseConnectionHeader(tokens[1]);
 			}
 		}
-		if (!header_parsed_ && !readMoreRequestData())
+		if (!header_parsed_ && req_.getStatus() != 400
+			&& !readMoreRequestData())
 			break;
 	}
-	/**/std::cout << "STATUS CODE: " << req_.getStatus() << std::endl;
 	/*
 		TODO
+		- Returning false does close the connection without sending a response. 
+		If the status code is 400, we want to return a response. The only time 
+		where we just abort is if the client itself closed the connection 
+		(which is noticed when `read` returns 0) or on timeout.
+		- Otherwise, of course the body isn't parsed if the status code is 400. 
+		Or maybe if the status is set, even?
+	*/
+	/*
+		TODO
+		- Test that the status code isn't set if unrecognized headers are used.
 		- Test that 400 is returned if a header (that I recognize and therefore 
 		don't ignore) appears more than once.
 		- Test all headers, even to put a space in between the domain and port 
@@ -136,13 +145,11 @@ bool Client::readMoreRequestData()
 		return false;
 	char buffer[1024];
 	ssize_t nread = read(fd_, buffer, sizeof(buffer));
-	if (nread < 0)
-	{
-		std::cerr << "Error: Client: readMoreRequestData" << std::endl;
+	if (!nread) // Client closed the connection
 		return false;
-	}
 	else if (nread > 0)
 		req_buffer_.append(buffer, nread);
+	// `nread < 0` -> Not an error / Currently nothing to read, try again later
 	return true;
 }
 

@@ -1,8 +1,9 @@
 #include "Server.hpp"
 #include <iostream>
+#include <unistd.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
-#include <unistd.h>
 
 Server::Server(int tmp_config) : fd_listen_(-1), fd_epoll_(-1), addr_()
 {
@@ -36,7 +37,13 @@ bool Server::createSocket()
 	fd_listen_ = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd_listen_ < 0)
 	{
-		std::cerr << "Error: Server: createSocket" << std::endl;
+		std::cerr << "Error: Server: createSocket: socket" << std::endl;
+		return false;
+	}
+	else if (fcntl(fd_listen_, F_SETFL, O_NONBLOCK) < 0)
+	{
+		close(fd_listen_);
+		std::cerr << "Error: Server: createSocket: fcntl" << std::endl;
 		return false;
 	}
 	return true;
@@ -138,6 +145,12 @@ bool Server::acceptNewConnection()
 	if (fd_client < 0)
 	{
 		std::cerr << "Error: Server: acceptNewConnection" << std::endl;
+		return false;
+	}
+	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
+	{
+		close(fd_client);
+		std::cerr << "Error: Server: acceptNewConnection: fcntl" << std::endl;
 		return false;
 	}
 	struct epoll_event cev;

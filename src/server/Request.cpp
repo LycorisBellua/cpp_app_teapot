@@ -100,7 +100,7 @@ void Request::parseStartLine(const std::vector<std::string>& tokens)
 		version_ = Helper::touppercase(tokens[2]);
 		if (!Host::parseUri(uri_, domain_, port_))
 			status_ = 400;
-		if (!isRecognizedMethod(method_))
+		else if (!isRecognizedMethod(method_))
 			status_ = 501;
 		else if (!isRecognizedVersion(version_))
 			status_ = 505;
@@ -187,7 +187,7 @@ void Request::parseExpectHeader(const std::string value)
 		expect_header_found_ = true;
 		if (Helper::insensitiveCmp(value, "100-continue"))
 			does_expect_100_ = true;
-		else
+		else if (!status_)
 			status_ = 417;
 	}
 }
