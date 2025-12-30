@@ -33,12 +33,7 @@ LocationData& LocationData::operator=(const LocationData& src) {
 ServerData::ServerData() : port(0), client_body_max(1000000) {}
 
 ServerData::ServerData(const ServerData& src)
-    : port(src.port),
-      host(src.host),
-      name(src.name),
-      client_body_max(src.client_body_max),
-      errors(src.errors),
-      locations(src.locations) {}
+    : port(src.port), host(src.host), name(src.name), client_body_max(src.client_body_max), errors(src.errors), locations(src.locations) {}
 
 ServerData::~ServerData() {}
 

@@ -21,6 +21,5 @@ struct RouteRequest {
   const std::string uri;
   const std::string method;
   RouteRequest();
-  RouteRequest(int port, const std::string& host, const std::string& uri,
-               const std::string& method);
+  RouteRequest(int port, const std::string& host, const std::string& uri, const std::string& method);
 };

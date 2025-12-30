@@ -8,8 +8,7 @@ Config::Config(const std::string& conf) : conf_path(conf) {
 
 Config::~Config() {}
 
-Config::ParsingData::ParsingData(const std::string& conf_file)
-    : infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE) {}
+Config::ParsingData::ParsingData(const std::string& conf_file) : infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE) {}
 
 /* ---------- EXCEPTION ---------- */
 Config::ConfigError::ConfigError(const std::string msg) {
@@ -147,8 +146,7 @@ void Config::handleLocationBlock(ParsingData& data) {
 
 void Config::parseMime(ParsingData& data) {
   size_t divide = data.tokens[0].find_first_of("/");
-  if (data.tokens.size() == 1 || divide == data.tokens[0].npos || divide == 0 ||
-      divide == data.tokens[0].length() - 1) {
+  if (data.tokens.size() == 1 || divide == data.tokens[0].npos || divide == 0 || divide == data.tokens[0].length() - 1) {
     throw ConfigError(data, "Invalid Mime Directive");
   }
   for (size_t i = 1; i < data.tokens.size(); ++i) {
@@ -260,15 +258,12 @@ Config::ParseState Config::validateBlockOpen(ParsingData& data) {
     open_states["server"] = std::make_pair(SERVER, 0);
     open_states["location"] = std::make_pair(LOCATION, 1);
   }
-  std::map<std::string, std::pair<ParseState, int> >::const_iterator it =
-      open_states.find(tokens[0]);
-  if (it == open_states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") ||
-      (tokens.size() == 3 && tokens[2] != "{")) {
+  std::map<std::string, std::pair<ParseState, int> >::const_iterator it = open_states.find(tokens[0]);
+  if (it == open_states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{")) {
     return NONE;
   }
   if (it->second.second != data.nest_level) {
-    throw ConfigError(data,
-                      "Can't open " + tokens[0] + " block here. Ensure previous blocks are closed");
+    throw ConfigError(data, "Can't open " + tokens[0] + " block here. Ensure previous blocks are closed");
   }
   ++data.nest_level;
   return it->second.first;
@@ -287,8 +282,7 @@ void Config::setPort(const ParsingData& data) {
   if (port.size() != 2 || port[1].empty()) {
     throw ConfigError(data, "One listen port must be specified per server");
   }
-  if (port[1].length() == 0 || port[1].length() > 5 ||
-      port[1].find_first_not_of("1234567890") != port[1].npos) {
+  if (port[1].length() == 0 || port[1].length() > 5 || port[1].find_first_not_of("1234567890") != port[1].npos) {
     throw ConfigError(data, "Port value must be a number from 1-65535");
   }
   int port_number = std::atoi(port[1].c_str());
@@ -307,8 +301,7 @@ void Config::setHost(const ParsingData& data) {
     servers.back().host = host[1];
     return;
   }
-  if (host[1].find_first_not_of("1234567890.") != host[1].npos || host[1].length() < 7 ||
-      host[1].length() > 15) {
+  if (host[1].find_first_not_of("1234567890.") != host[1].npos || host[1].length() < 7 || host[1].length() > 15) {
     throw ConfigError(data, "Invalid Host Value");
   }
   std::istringstream address(host[1]);
@@ -341,8 +334,7 @@ void Config::setName(const ParsingData& data) {
   if (name.find_first_not_of(allowed) != name.npos) {
     throw ConfigError(data, "Server name may contain alphanumeric characters and '-' and '.'");
   }
-  if (name[0] == '-' || name[0] == '.' || name[name.length() - 1] == '-' ||
-      name[name.length() - 1] == '.') {
+  if (name[0] == '-' || name[0] == '.' || name[name.length() - 1] == '-' || name[name.length() - 1] == '.') {
     throw ConfigError(data, "Server name cannot begin or end with '-' or '.'");
   }
   int count = 0;
@@ -406,7 +398,7 @@ void Config::setErrorPage(const ParsingData& data) {
 }
 
 void Config::setPath(const ParsingData& data) {
-  const std::vector<std::string>& path = data.tokens;
+  std::vector<std::string> path = data.tokens;
   if (path.size() != 3 || path[1].empty()) {
     throw ConfigError(data, "One path must be specified per location");
   }
@@ -416,6 +408,9 @@ void Config::setPath(const ParsingData& data) {
   std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
   if (path[1].find_first_not_of(allowed) != path[1].npos || path[1].find("//") != path[1].npos) {
     throw ConfigError(data, "Invalid Path");
+  }
+  if (path[1].length() > 1 && path[1][path[1].length() - 1] == '/') {
+    path[1] = path[1].substr(0, path[1].length() - 1);
   }
   servers.back().locations.back().path = path[1];
 }
@@ -475,8 +470,7 @@ void Config::setIndex(const ParsingData& data) {
 
 void Config::setAutoIndex(const ParsingData& data) {
   const std::vector<std::string>& autoindex = data.tokens;
-  if (autoindex.size() != 2 || autoindex[1].empty() ||
-      (autoindex[1] != "true" && autoindex[1] != "false")) {
+  if (autoindex.size() != 2 || autoindex[1].empty() || (autoindex[1] != "true" && autoindex[1] != "false")) {
     throw ConfigError(data, "A single 'true' or 'false' must be specified");
   }
   servers.back().locations.back().autoindex = autoindex[1] == "true";
@@ -590,8 +584,7 @@ void Config::verifyLocation(const LocationData& loc) const {
   }
   // Root required if not redirect
   if (loc.root.empty()) {
-    throw ConfigError("Location " + loc.path +
-                      ": root must be specified for all non-redirect locations");
+    throw ConfigError("Location " + loc.path + ": root must be specified for all non-redirect locations");
   }
 }
 
@@ -604,12 +597,10 @@ void Config::verifyVirtualHosts() const {
         std::stringstream port_number;
         port_number << current->port;
         if (current_name.length() == 0 || next_name.length() == 0) {
-          throw ConfigError("Multiple servers using port " + port_number.str() +
-                            ". Server names must be specified to use virtual hosts");
+          throw ConfigError("Multiple servers using port " + port_number.str() + ". Server names must be specified to use virtual hosts");
         }
         if (current_name == next_name) {
-          throw ConfigError("Multiple servers on port " + port_number.str() +
-                            ". Unique names are required for virtual hosting");
+          throw ConfigError("Multiple servers on port " + port_number.str() + ". Unique names are required for virtual hosting");
         }
       }
     }

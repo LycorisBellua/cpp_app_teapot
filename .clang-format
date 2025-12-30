@@ -5,7 +5,7 @@ AllowShortIfStatementsOnASingleLine: false
 DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Left
-ColumnLimit: 100
+ColumnLimit: 150
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterFunction: false

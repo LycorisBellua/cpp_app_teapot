@@ -27,5 +27,14 @@ namespace {
 int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
-  Debug::PrintConfig(router);
+
+  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name5", "/uploads%2Fnew/%74%65%73%74%2Ej%70g?query", "GET"));
+  Debug::PrintRouteResponse(response);
+
+  std::set<std::pair<std::string, int> > ports = router.getPorts();
+  typedef std::set<std::pair<std::string, int> >::const_iterator ports_it;
+  std::cout << BOLD << "\nAddress/Port Pairs\n" << RESET;
+  for (ports_it p = ports.begin(); p != ports.end(); ++p) {
+    std::cout << "Address: " << p->first << "  Port: " << p->second << "\n";
+  }
 }

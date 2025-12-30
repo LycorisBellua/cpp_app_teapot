@@ -8,7 +8,8 @@
 #include "Router.hpp"
 
 namespace Debug {
-  void PrintConfig(const Config& conf);
-  void PrintConfig(const Router& conf);
+  void PrintConfig(const Config&);
+  void PrintConfig(const Router&);
+  void PrintRouteResponse(const RouteResponse&);
   void PrintLn(std::string msg);
 }

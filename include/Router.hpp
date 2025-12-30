@@ -1,5 +1,12 @@
 #pragma once
 
+#include <algorithm>  // IWYU pragma: keep
+#include <cstdlib>
+#include <set>
+#include <sstream>  // IWYU pragma: keep
+#include <string>
+
+#include "../include/Log.hpp"  // IWYU pragma: keep
 #include "../include/RouteInfo.hpp"
 #include "../include/ServerData.hpp"
 
@@ -10,17 +17,35 @@ class Router {
   ~Router();
 
   const std::vector<ServerData>& getServers() const;
-  const std::map<std::string, std::string>& getMime() const;
+  const std::set<std::pair<std::string, int> > getPorts() const;
   const RouteResponse getRoute(const RouteRequest& request) const;
 
  private:
   // Class Data
-  std::vector<ServerData> servers;
-  std::map<std::string, std::string> mime;
+  const std::vector<ServerData> servers;
+  const std::map<std::string, std::string> mime;
 
   // OCF Requirements
   Router& operator=(const Router&);
 
-  const ServerData* getServer(int, const std::string&) const;
-  const LocationData* getLocation(const std::vector<LocationData>&, const std::string&) const;
+  // Exception Class
+  class RouterError : public std::exception {
+   public:
+    RouterError(const std::string);
+    RouterError(const std::string& msg, const RouteRequest& request);
+    ~RouterError() throw();
+    const char* what() const throw();
+
+   private:
+    std::string err_msg;
+  };
+
+  const ServerData* getServer(const RouteRequest&) const;
+  const LocationData* getLocation(const std::vector<LocationData>&, const std::string&, const RouteRequest&) const;
+  const std::string getMime(const std::string&) const;
+
+  std::string decodeUri(const RouteRequest&) const;
+  std::string normalizePath(const std::string&, const RouteRequest&) const;
+  void validMethod(const RouteRequest&, const LocationData*) const;
+  const RouteResponse errorReturn(int, const ServerData*) const;
 };
