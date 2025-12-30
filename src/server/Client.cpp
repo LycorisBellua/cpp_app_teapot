@@ -4,15 +4,15 @@
 #include <iostream>
 #include <unistd.h>
 
-Client::Client() : fd_(-1), req_buffer_(""), header_parsed_(false),
-	body_parsed_(false)
+Client::Client() : fd_(-1), req_buffer_("")
 {
+	resetParsingData();
 	updateLastActivity();
 }
 
-Client::Client(int fd) : fd_(fd), req_buffer_(""), header_parsed_(false),
-	body_parsed_(false)
+Client::Client(int fd) : fd_(fd), req_buffer_("")
 {
+	resetParsingData();
 	updateLastActivity();
 }
 
@@ -21,9 +21,9 @@ std::time_t Client::getLastActivity() const
 	return last_activity_;
 }
 
-bool Client::getIsParsed() const
+bool Client::isFullyParsed() const
 {
-	return header_parsed_ && body_parsed_;
+	return body_end_found_;
 }
 
 void Client::updateLastActivity()
@@ -31,15 +31,25 @@ void Client::updateLastActivity()
 	last_activity_ = std::time(0);
 }
 
+void Client::resetParsingData()
+{
+	start_line_found_ = false;
+	end_line_found_ = false;
+	body_end_found_ = false;
+	req_.resetRequestData();
+}
+
 bool Client::parseRequest()
 {
-	header_parsed_ = false;
-	body_parsed_ = false;
-	req_.resetRequestData();
-	req_start_ = std::time(0);
-	bool success = parseHeader() && parseBody();
-	updateLastActivity();
-	return success;
+	if (isFullyParsed())
+		return true;
+	else if (!readMoreRequestData())
+		return false;
+	parseHeader();
+	parseBody();
+	if (body_end_found_)
+		updateLastActivity();
+	return true;
 }
 
 /* Private (Static) --------------------------------------------------------- */
@@ -60,89 +70,8 @@ std::string Client::extractLine(std::string& str, size_t end)
 
 /* Private (Instance) ------------------------------------------------------- */
 
-bool Client::parseHeader()
-{
-	bool start_line_found = false;
-	while (!header_parsed_ && req_.getStatus() != 400)
-	{
-		size_t end;
-		while (!header_parsed_ && req_.getStatus() != 400
-				&& (end = findEndOfLine(req_buffer_)) != std::string::npos)
-		{
-			std::string line = extractLine(req_buffer_, end);
-			if (line.empty())
-			{
-				if (start_line_found)
-					header_parsed_ = true;
-			}
-			else if (!start_line_found)
-			{
-				start_line_found = true;
-				req_.parseStartLine(Helper::splitAtWhitespace(line));
-			}
-			else
-			{
-				std::vector<std::string> tokens = Helper::splitAtFirstColon
-					(line, true);
-				if (Helper::insensitiveCmp(tokens[0], "Host"))
-					req_.parseHostHeader(tokens[1]);
-				else if (Helper::insensitiveCmp(tokens[0], "Content-Type"))
-					req_.parseContentTypeHeader(tokens[1]);
-				else if (Helper::insensitiveCmp(tokens[0], "Content-Length"))
-					req_.parseContentLengthHeader(tokens[1]);
-				else if (Helper::insensitiveCmp(tokens[0], "Transfer-Encoding"))
-					req_.parseTransferEncodingHeader(tokens[1]);
-				else if (Helper::insensitiveCmp(tokens[0], "Expect"))
-					req_.parseExpectHeader(tokens[1]);
-				else if (Helper::insensitiveCmp(tokens[0], "Connection"))
-					req_.parseConnectionHeader(tokens[1]);
-			}
-		}
-		if (!header_parsed_ && req_.getStatus() != 400
-			&& !readMoreRequestData())
-			break;
-	}
-	/*
-		TODO
-		- Returning false does close the connection without sending a response. 
-		If the status code is 400, we want to return a response. The only time 
-		where we just abort is if the client itself closed the connection 
-		(which is noticed when `read` returns 0) or on timeout.
-		- Otherwise, of course the body isn't parsed if the status code is 400. 
-		Or maybe if the status is set, even?
-	*/
-	/*
-		TODO
-		- Test that the status code isn't set if unrecognized headers are used.
-		- Test that 400 is returned if a header (that I recognize and therefore 
-		don't ignore) appears more than once.
-		- Test all headers, even to put a space in between the domain and port 
-		within the Host header value.
-	*/
-	if (!header_parsed_)
-		return false;
-	req_.postReadingHeaderCheck();
-	return true;
-}
-
-bool Client::parseBody()
-{
-	/*
-		TODO
-		- Test with a POST request (non-chunked).
-		- Handle chunked body, and check whether the chunked body is too long 
-		(the config file has a property about that).
-		- Once you handle chunked requests, use the intra's testers to check 
-		your implementation.
-	*/
-	body_parsed_ = true;
-	return body_parsed_;
-}
-
 bool Client::readMoreRequestData()
 {
-	if (isRequestTooSlow())
-		return false;
 	char buffer[1024];
 	ssize_t nread = read(fd_, buffer, sizeof(buffer));
 	if (!nread) // Client closed the connection
@@ -153,20 +82,71 @@ bool Client::readMoreRequestData()
 	return true;
 }
 
-bool Client::isRequestTooSlow() const
+void Client::parseHeader()
 {
 	/*
 		TODO
-		- Check that the timeout actually works by sending in a slow request. 
-		Because the browser is too fast to trigger it.
-		- Also, which error should the response contain to express a request 
-		timeout?
+		- Test that the status code isn't set if unrecognized headers are used.
+		- Test that 400 is returned if a header (that I recognize and therefore 
+		don't ignore) appears more than once.
+		- Test all headers, even to put a space in between the domain and port 
+		within the Host header value.
 	*/
-	std::time_t now = std::time(0);
-	if (now - req_start_ > 5)
+	size_t eol;
+	while (!end_line_found_
+		&& (eol = findEndOfLine(req_buffer_)) != std::string::npos)
 	{
-		std::cerr << "Error: Client: Request timeout" << std::endl;
-		return true;
+		std::string line = extractLine(req_buffer_, eol);
+		if (line.empty())
+		{
+			if (start_line_found_)
+				end_line_found_ = true;
+		}
+		else if (!start_line_found_)
+		{
+			start_line_found_ = true;
+			updateLastActivity();
+			req_.parseStartLine(Helper::splitAtWhitespace(line));
+		}
+		else
+		{
+			std::vector<std::string> tokens = Helper::splitAtFirstColon
+				(line, true);
+			if (Helper::insensitiveCmp(tokens[0], "Host"))
+				req_.parseHostHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Content-Type"))
+				req_.parseContentTypeHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Content-Length"))
+				req_.parseContentLengthHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Transfer-Encoding"))
+				req_.parseTransferEncodingHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Expect"))
+				req_.parseExpectHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Connection"))
+				req_.parseConnectionHeader(tokens[1]);
+		}
+		if (req_.getStatus() == 400)
+			end_line_found_ = true;
 	}
-	return false;
+	if (end_line_found_)
+		req_.postReadingHeaderCheck();
+}
+
+void Client::parseBody()
+{
+	if (!end_line_found_)
+		return;
+	if (req_.getStatus() || (!req_.getContentLength() && !req_.getIsChunked()))
+	{
+		body_end_found_ = true;
+		return;
+	}
+	/*
+		TODO
+		- Test with a POST request (non-chunked).
+		- Handle chunked body, and check whether the chunked body is too long 
+		(the config file has a property about that).
+		- Once you handle chunked requests, use the intra's testers to check 
+		your implementation.
+	*/
 }

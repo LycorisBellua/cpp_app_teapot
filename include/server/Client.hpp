@@ -13,18 +13,19 @@ class Client
 		Client(int fd);
 
 		std::time_t getLastActivity() const;
-		bool getIsParsed() const;
+		bool isFullyParsed() const;
 
 		void updateLastActivity();
+		void resetParsingData();
 		bool parseRequest();
 
 	private:
 		int fd_;
 		std::time_t last_activity_;
-		std::time_t req_start_;
+		bool start_line_found_;
+		bool end_line_found_;
+		bool body_end_found_;
 		std::string req_buffer_;
-		bool header_parsed_;
-		bool body_parsed_;
 		Request req_;
 
 		static size_t findEndOfLine(const std::string& str);
@@ -32,10 +33,9 @@ class Client
 		static std::vector<std::string> splitAtFirstColon(const std::string&
 			str);
 
-		bool parseHeader();
-		bool parseBody();
 		bool readMoreRequestData();
-		bool isRequestTooSlow() const;
+		void parseHeader();
+		void parseBody();
 };
 
 #endif

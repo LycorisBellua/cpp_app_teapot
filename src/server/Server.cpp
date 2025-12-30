@@ -121,15 +121,12 @@ bool Server::runEventLoop()
 			bool can_read = events[i].events & EPOLLIN;
 			bool can_write = events[i].events & EPOLLOUT;
 			Client c = clients_[fd];
-			if (can_read && !c.getIsParsed())
+			if (can_read && !c.isFullyParsed() && !c.parseRequest())
 			{
-				if (!c.parseRequest())
-				{
-					closeConnection(fd);
-					continue;
-				}
+				closeConnection(fd);
+				continue;
 			}
-			if (can_write && c.getIsParsed())
+			if (can_write && c.isFullyParsed())
 				sendResponse(fd, c);
 		}
 		closeIdleConnections(idle_timeout_sec);
@@ -192,6 +189,7 @@ void Server::sendResponse(int fd, Client& c) const
 {
 	std::string response = composeResponse(c);
 	write(fd, response.c_str(), response.length());
+	c.resetParsingData();
 	c.updateLastActivity();
 }
 

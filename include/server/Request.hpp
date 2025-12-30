@@ -34,6 +34,8 @@ struct Request
 		void postReadingHeaderCheck();
 
 	private:
+		bool start_line_found_;
+		bool end_line_found_;
 		int status_;
 		std::string method_;
 		std::string uri_;

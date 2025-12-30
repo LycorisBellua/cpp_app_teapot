@@ -69,6 +69,8 @@ std::string Request::getBody() const
 
 void Request::resetRequestData()
 {
+	start_line_found_ = false;
+	end_line_found_ = false;
 	status_ = 0;
 	method_ = "";
 	uri_ = "";
