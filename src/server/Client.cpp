@@ -150,34 +150,53 @@ void Client::parseBody()
 			- Handle the chunked body.
 			- Check whether the chunked body is too long (the config file has a 
 			property about that).
-
-			Example of chunked request (body is "0123456789abcde"):
-			```
-			POST /upload HTTP/1.1\r\n
-			Host: example.com\r\n
-			Content-Type: text/plain\r\n
-			Transfer-Encoding: chunked\r\n
-			\r\n
-			A\r\n
-			0123456789\r\n
-			5\r\n
-			abcde\r\n
-			0;note="final chunk"\r\n
-			X-Checksum: sha256:abcd1234\r\n
-			X-Meta: part=7\r\n
-			\r\n
-			```
-
-			Each chunk is prefaced with the byte size in hex format. This value 
-			can be followed by a semicolon, and extra parameters. Ignore 
-			everything in between the byte size value and CRLF.
-
-			A final size line of 0 is given at the end to indicate that the 
-			chunks have all been sent.
-
-			In between this final size line and the final CRLF line, trailer 
-			lines can be found. Ignore them.
 		*/
-		//body_end_found_ = true;
+		bool size_zero_found = false; // TODO: should be var in req_
+		bool is_size_line = true; // TODO: should be var in req_
+		size_t chunk_size = 0; // TODO: should be var in req_
+		while (!body_end_found_)
+		{
+			if (is_size_line)
+			{
+				size_t eol = findEndOfLine(req_buffer_);
+				if (eol == std::string::npos)
+					break;
+				std::string line = Helper::extractLine(req_buffer_, eol, true);
+				if (line.empty())
+				{
+					body_end_found_ = true;
+					if (!size_zero_found)
+						req_.setStatus(400);
+				}
+				else if (!size_zero_found)
+				{
+					size_t size_end = std::min(line.find(';'), line.length());
+					std::string size = Helper::extractLine(line, size_end,
+						false);
+					(void)size;// TODO: Use `size` (hex) to set `chunk_size`.
+					if (!chunk_size)
+						size_zero_found = true;
+					else
+						is_size_line = false;
+				}
+			}
+			else if (!size_zero_found)
+			{
+				if (req_buffer_.length() <= chunk_size)
+					break;
+				if (req_buffer_.find("\r\n", chunk_size) != chunk_size
+					&& req_buffer_.find("\n", chunk_size) != chunk_size)
+					req_.setStatus(400);
+				else
+				{
+					std::string chunk = Helper::extractLine(req_buffer_,
+						chunk_size, true);
+					req_.appendToBody(chunk);
+				}
+				is_size_line = true;
+			}
+			if (req_.getStatus() == 400)
+				body_end_found_ = true;
+		}
 	}
 }
