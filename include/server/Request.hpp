@@ -22,7 +22,9 @@ struct Request
 		bool getShouldCloseConnection() const;
 		std::string getBody() const;
 
-		void resetRequestData();
+		void outputData() const;
+		void setStatus(int value);
+		void resetData();
 
 		void parseStartLine(const std::vector<std::string>& tokens);
 		void parseHostHeader(const std::string value);

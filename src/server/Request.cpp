@@ -1,10 +1,11 @@
 #include "Request.hpp"
 #include "Host.hpp"
 #include "Helper.hpp"
+#include <iostream>
 
 Request::Request()
 {
-	resetRequestData();
+	resetData();
 }
 
 int Request::getStatus() const
@@ -67,7 +68,38 @@ std::string Request::getBody() const
 	return body_;
 }
 
-void Request::resetRequestData()
+void Request::outputData() const
+{
+	std::cout << std::boolalpha;
+	std::cout << "Status: " << getStatus() << std::endl;
+	std::cout << "Method: " << getMethod() << std::endl;
+	std::cout << "URI: " << getURI() << std::endl;
+	std::cout << "Version: " << getVersion() << std::endl;
+	std::cout << "Domain: " << getDomain() << std::endl;
+	std::cout << "Port: " << getPort() << std::endl;
+	std::cout << "Content Type: " << getContentType() << std::endl;
+	std::cout << "Content Length: " << getContentLength() << std::endl;
+	std::cout << "Is Chunked: " << getIsChunked() << std::endl;
+	std::cout << "Does Expect 100: " << getDoesExpect100() << std::endl;
+	std::cout << "Should Close Connection: " << getShouldCloseConnection()
+		<< std::endl;
+	std::cout << std::noboolalpha;
+	std::cout << "Body: " << getBody() << std::endl;
+}
+
+void Request::setStatus(int value)
+{
+	if (version_ == "HTTP/1.0" && value == 405)
+		value = 403;
+	if (value == 100 || value == 200 || value == 201 || value == 202
+		|| value == 204 || value == 301 || value == 302 || value == 304
+		|| value == 400 || value == 401 || value == 403 || value == 404
+		|| value == 405 || value == 500 || value == 501 || value == 502
+		|| value == 503)
+		status_ = value;
+}
+
+void Request::resetData()
 {
 	start_line_found_ = false;
 	end_line_found_ = false;

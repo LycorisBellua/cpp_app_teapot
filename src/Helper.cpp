@@ -14,19 +14,24 @@ std::vector<std::string> Helper::splitAtFirstColon(const std::string& str,
 	bool trim)
 {
 	std::vector<std::string> tokens;
-	std::istringstream iss(str);
-	std::string token;
-	if (std::getline(iss, token, ':'))
+	size_t colon = str.find(':');
+	if (colon == std::string::npos)
 	{
-		if (trim)
-			token = Helper::trimWhitespaces(token);
-		tokens.push_back(token);
+		std::string token = !trim ? str : Helper::trimWhitespaces(str);
+		if (token.length())
+			tokens.push_back(token);
 	}
-	if (iss >> token)
+	else
 	{
+		std::string token1 = str.substr(0, colon);
+		std::string token2 = str.substr(colon + 1);
 		if (trim)
-			token = Helper::trimWhitespaces(token);
-		tokens.push_back(token);
+		{
+			token1 = Helper::trimWhitespaces(token1);
+			token2 = Helper::trimWhitespaces(token2);
+		}
+		tokens.push_back(token1);
+		tokens.push_back(token2);
 	}
 	return tokens;
 }
@@ -35,7 +40,7 @@ std::string Helper::trimWhitespaces(const std::string& str)
 {
     size_t first = str.find_first_not_of(" \t\n\v\f\r");
     if (first == std::string::npos)
-        return str;
+        return std::string();
     size_t last = str.find_last_not_of(" \t\n\v\f\r");
     return str.substr(first, last - first + 1);
 }

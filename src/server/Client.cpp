@@ -36,7 +36,7 @@ void Client::resetParsingData()
 	start_line_found_ = false;
 	end_line_found_ = false;
 	body_end_found_ = false;
-	req_.resetRequestData();
+	req_.resetData();
 }
 
 bool Client::parseRequest()
@@ -84,14 +84,6 @@ bool Client::readMoreRequestData()
 
 void Client::parseHeader()
 {
-	/*
-		TODO
-		- Test that the status code isn't set if unrecognized headers are used.
-		- Test that 400 is returned if a header (that I recognize and therefore 
-		don't ignore) appears more than once.
-		- Test all headers, even to put a space in between the domain and port 
-		within the Host header value.
-	*/
 	size_t eol;
 	while (!end_line_found_
 		&& (eol = findEndOfLine(req_buffer_)) != std::string::npos)
@@ -112,7 +104,9 @@ void Client::parseHeader()
 		{
 			std::vector<std::string> tokens = Helper::splitAtFirstColon
 				(line, true);
-			if (Helper::insensitiveCmp(tokens[0], "Host"))
+			if (tokens.size() != 2 || tokens[0].empty() || tokens[1].empty())
+				req_.setStatus(400);
+			else if (Helper::insensitiveCmp(tokens[0], "Host"))
 				req_.parseHostHeader(tokens[1]);
 			else if (Helper::insensitiveCmp(tokens[0], "Content-Type"))
 				req_.parseContentTypeHeader(tokens[1]);
@@ -149,4 +143,5 @@ void Client::parseBody()
 		- Once you handle chunked requests, use the intra's testers to check 
 		your implementation.
 	*/
+	//body_end_found_ = true;
 }
