@@ -15,6 +15,8 @@ class Helper
 		static std::vector<std::string> splitAtFirstColon
 			(const std::string& str, bool trim);
 		static std::string trimWhitespaces(const std::string& str);
+		static std::string extractLine(std::string& str, size_t length,
+			bool remove_crlf);
 		static bool insensitiveCmp(const std::string& str1, const std::string&
 			str2);
 		static std::string touppercase(const std::string& str);

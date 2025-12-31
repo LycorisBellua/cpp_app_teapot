@@ -61,13 +61,6 @@ size_t Client::findEndOfLine(const std::string& str)
 	return std::min(crlf, lf);
 }
 
-std::string Client::extractLine(std::string& str, size_t end)
-{
-	std::string line = str.substr(0, end);
-	str.erase(0, end + 1 + (str[end] == '\r'));
-	return line;
-}
-
 /* Private (Instance) ------------------------------------------------------- */
 
 bool Client::readMoreRequestData()
@@ -84,11 +77,13 @@ bool Client::readMoreRequestData()
 
 void Client::parseHeader()
 {
+	if (end_line_found_)
+		return;
 	size_t eol;
 	while (!end_line_found_
 		&& (eol = findEndOfLine(req_buffer_)) != std::string::npos)
 	{
-		std::string line = extractLine(req_buffer_, eol);
+		std::string line = Helper::extractLine(req_buffer_, eol, true);
 		if (line.empty())
 		{
 			if (start_line_found_)
@@ -128,20 +123,61 @@ void Client::parseHeader()
 
 void Client::parseBody()
 {
-	if (!end_line_found_)
-		return;
-	if (req_.getStatus() || (!req_.getContentLength() && !req_.getIsChunked()))
-	{
-		body_end_found_ = true;
-		return;
-	}
 	/*
 		TODO
-		- Test with a POST request (non-chunked).
-		- Handle chunked body, and check whether the chunked body is too long 
-		(the config file has a property about that).
-		- Once you handle chunked requests, use the intra's testers to check 
-		your implementation.
+		- Test the regular body.
+		- Test the chunked body yourself, and also using intra testers.
 	*/
-	//body_end_found_ = true;
+	if (!end_line_found_)
+		return;
+	else if (req_.getStatus()
+		|| (!req_.getContentLength() && !req_.getIsChunked()))
+		body_end_found_ = true;
+	else if (!req_.getIsChunked())
+	{
+		size_t needed_len = req_.getContentLength() - req_.getBody().length();
+		size_t available_len = std::min(needed_len, req_buffer_.length());
+		std::string to_append = Helper::extractLine(req_buffer_, available_len,
+			false);
+		req_.appendToBody(to_append);
+		if (req_.getBody().length() == req_.getContentLength())
+			body_end_found_ = true;
+	}
+	else
+	{
+		/*
+			TODO
+			- Handle the chunked body.
+			- Check whether the chunked body is too long (the config file has a 
+			property about that).
+
+			Example of chunked request (body is "0123456789abcde"):
+			```
+			POST /upload HTTP/1.1\r\n
+			Host: example.com\r\n
+			Content-Type: text/plain\r\n
+			Transfer-Encoding: chunked\r\n
+			\r\n
+			A\r\n
+			0123456789\r\n
+			5\r\n
+			abcde\r\n
+			0;note="final chunk"\r\n
+			X-Checksum: sha256:abcd1234\r\n
+			X-Meta: part=7\r\n
+			\r\n
+			```
+
+			Each chunk is prefaced with the byte size in hex format. This value 
+			can be followed by a semicolon, and extra parameters. Ignore 
+			everything in between the byte size value and CRLF.
+
+			A final size line of 0 is given at the end to indicate that the 
+			chunks have all been sent.
+
+			In between this final size line and the final CRLF line, trailer 
+			lines can be found. Ignore them.
+		*/
+		//body_end_found_ = true;
+	}
 }

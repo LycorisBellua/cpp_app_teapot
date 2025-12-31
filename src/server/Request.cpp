@@ -87,18 +87,6 @@ void Request::outputData() const
 	std::cout << "Body: " << getBody() << std::endl;
 }
 
-void Request::setStatus(int value)
-{
-	if (version_ == "HTTP/1.0" && value == 405)
-		value = 403;
-	if (value == 100 || value == 200 || value == 201 || value == 202
-		|| value == 204 || value == 301 || value == 302 || value == 304
-		|| value == 400 || value == 401 || value == 403 || value == 404
-		|| value == 405 || value == 500 || value == 501 || value == 502
-		|| value == 503)
-		status_ = value;
-}
-
 void Request::resetData()
 {
 	start_line_found_ = false;
@@ -121,6 +109,23 @@ void Request::resetData()
 	connection_header_found_ = false;
 	should_close_connection_ = false;
 	body_ = "";
+}
+
+void Request::setStatus(int value)
+{
+	if (version_ == "HTTP/1.0" && value == 405)
+		value = 403;
+	if (value == 100 || value == 200 || value == 201 || value == 202
+		|| value == 204 || value == 301 || value == 302 || value == 304
+		|| value == 400 || value == 401 || value == 403 || value == 404
+		|| value == 405 || value == 500 || value == 501 || value == 502
+		|| value == 503)
+		status_ = value;
+}
+
+void Request::appendToBody(const std::string& str)
+{
+	body_.append(str);
 }
 
 void Request::parseStartLine(const std::vector<std::string>& tokens)

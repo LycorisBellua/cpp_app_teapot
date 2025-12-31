@@ -152,15 +152,13 @@ About CGI scripts, there are two ways to send data to them:
 	\r\n
 	```
 
-A GET or DELETE request shouldn't have a body, your server is allowed to reject 
-the request.
+A GET or DELETE request shouldn't have a body, so you can read it and then 
+ignore it, treating the request as if it didn't have a body.
 
 A POST request should have a body. If there's none, then the request should 
 specify "Content-Length: 0" or a Transfer-Encoding to express the same thing. 
 And if the header line is not present, then your server should assume that 
-there's no body, and that the next part of the data is a new request. In 
-practice, many servers reject the request or close the connection, because the 
-boundary is ambiguous if pipelining is expected.
+there's no body, and that the next part of the data is a new request.
 
 ----- HOST ---------------------------------------------------------------------
 
@@ -242,9 +240,6 @@ all been sent.
 
 In between this final size line and the final CRLF line, trailer lines can be 
 found. Ignore them.
-
-From subject: "Remember that for chunked requests your server needs to un-chunk 
-them, as the CGI will expect EOF as the end of the body."
 
 ----- CONNECTION PERSISTENCE ---------------------------------------------------
 

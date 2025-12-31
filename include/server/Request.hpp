@@ -23,8 +23,9 @@ struct Request
 		std::string getBody() const;
 
 		void outputData() const;
-		void setStatus(int value);
 		void resetData();
+		void setStatus(int value);
+		void appendToBody(const std::string& str);
 
 		void parseStartLine(const std::vector<std::string>& tokens);
 		void parseHostHeader(const std::string value);

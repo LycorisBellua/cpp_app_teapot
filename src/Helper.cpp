@@ -45,6 +45,21 @@ std::string Helper::trimWhitespaces(const std::string& str)
     return str.substr(first, last - first + 1);
 }
 
+std::string Helper::extractLine(std::string& str, size_t length,
+	bool remove_crlf)
+{
+	std::string line = str.substr(0, length);
+	str.erase(0, length);
+	if (remove_crlf)
+	{
+		if (str[0] == '\r' && str[1] == '\n')
+			str.erase(0, 2);
+		else if (str[0] == '\n')
+			str.erase(0, 1);
+	}
+	return line;
+}
+
 bool Helper::insensitiveCmp(const std::string& str1, const std::string& str2)
 {
 	if (str1.length() != str2.length())

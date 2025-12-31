@@ -29,9 +29,6 @@ class Client
 		Request req_;
 
 		static size_t findEndOfLine(const std::string& str);
-		static std::string extractLine(std::string& str, size_t end);
-		static std::vector<std::string> splitAtFirstColon(const std::string&
-			str);
 
 		bool readMoreRequestData();
 		void parseHeader();
