@@ -23,6 +23,7 @@ struct Request
 		std::string getBody() const;
 
 		void outputData() const;
+		std::string getStatusMsg(int status) const;
 		void resetData();
 		void setStatus(int value);
 		void appendToBody(const std::string& str);
