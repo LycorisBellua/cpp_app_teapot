@@ -2,6 +2,7 @@
 
 #include "../include/Config.hpp"
 #include "../include/Debug.hpp"
+#include "../include/Filesystem.hpp"
 #include "../include/Log.hpp"
 #include "../include/Router.hpp"
 #include "../include/webserv.hpp"
@@ -28,7 +29,7 @@ int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
 
-  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name5", "/uploads%2Fnew/%74%65%73%74%2Ej%70g?query", "GET"));
+  /*const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name5", "/uploads%2Fnew/%74%65%73%74%2Ej%70g?query", "GET"));
   Debug::PrintRouteResponse(response);
 
   std::set<std::pair<std::string, int> > ports = router.getPorts();
@@ -36,5 +37,5 @@ int main(int argc, char** argv) {
   std::cout << BOLD << "\nAddress/Port Pairs\n" << RESET;
   for (ports_it p = ports.begin(); p != ports.end(); ++p) {
     std::cout << "Address: " << p->first << "  Port: " << p->second << "\n";
-  }
+  }*/
 }
