@@ -235,7 +235,7 @@ void Request::parseContentLengthHeader(const std::string value)
 	else
 	{
 		content_length_header_found_ = true;
-		if (!Helper::stringToUnsignedNbr(value, content_length_))
+		if (!Helper::decToUnsignedNbr(value, content_length_))
 			setStatus(400);
 		/*
 			TODO

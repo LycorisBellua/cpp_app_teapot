@@ -40,7 +40,7 @@ int Host::parsePort(const std::string& port, const std::string& scheme)
 	if (port.empty())
 		return scheme == "http" ? 80 : scheme == "https" ? 443 : -1;
 	int nbr;
-	if (!Helper::stringToUnsignedNbr(port, nbr) || nbr > 65535)
+	if (!Helper::decToUnsignedNbr(port, nbr) || nbr > 65535)
 		return -1;
 	return nbr;
 }

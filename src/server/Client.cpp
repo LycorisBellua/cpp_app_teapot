@@ -173,7 +173,11 @@ void Client::parseBody()
 					size_t size_end = std::min(line.find(';'), line.length());
 					std::string size = Helper::extractLine(line, size_end,
 						false);
-					(void)size;// TODO: Use `size` (hex) to set `chunk_size`.
+					// TODO: Test function
+					if (!Helper::hexToUnsignedNbr(size, chunk_size))
+					{
+						// Function failed
+					}
 					if (!chunk_size)
 						size_zero_found = true;
 					else

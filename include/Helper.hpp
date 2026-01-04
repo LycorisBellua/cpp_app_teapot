@@ -9,7 +9,10 @@ class Helper
 {
 	public:
 		template<typename T>
-		static bool stringToUnsignedNbr(const std::string& str, T& nbr);
+		static bool decToUnsignedNbr(const std::string& str, T& nbr);
+		template<typename T>
+		static bool hexToUnsignedNbr(const std::string& str, T& nbr);
+
 		static std::vector<std::string> splitAtWhitespace(const std::string&
 			str);
 		static std::vector<std::string> splitAtFirstColon
@@ -26,7 +29,7 @@ class Helper
 };
 
 template<typename T>
-bool Helper::stringToUnsignedNbr(const std::string& str, T& nbr)
+bool Helper::decToUnsignedNbr(const std::string& str, T& nbr)
 {
 	nbr = 0;
 	if (!std::isdigit(str[0]))
@@ -34,6 +37,23 @@ bool Helper::stringToUnsignedNbr(const std::string& str, T& nbr)
 	std::istringstream iss(str);
 	char extra;
 	if (!(iss >> nbr) || (iss >> extra))
+	{
+		nbr = 0;
+		return false;
+	}
+	return true;
+}
+
+template<typename T>
+bool Helper::hexToUnsignedNbr(const std::string& str, T& nbr)
+{
+	nbr = 0;
+	if (!std::isalnum(str[0]))
+		return false;
+	std::stringstream ss;
+	ss << std::hex << str;
+	char extra;
+	if (!(ss >> nbr) || (ss >> extra))
 	{
 		nbr = 0;
 		return false;
