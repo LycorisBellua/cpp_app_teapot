@@ -1,6 +1,7 @@
 #include "../include/Filesystem.hpp"
 
 namespace {
+
   class FilesystemError : public std::exception {
    public:
     FilesystemError(const std::string& msg, const std::string& path) {
@@ -9,6 +10,7 @@ namespace {
       Log::error(err_string.str());
       err_msg = err_string.str();
     }
+    ~FilesystemError() throw() {}
     const char* what() const throw() {
       return this->err_msg.c_str();
     }
@@ -16,6 +18,8 @@ namespace {
    private:
     std::string err_msg;
   };
+
+  typedef std::set<std::string>::const_iterator fl_it;
 
   const std::set<std::string> getDirListing(const std::string& index_path) {
     std::set<std::string> dir_listing;
@@ -31,7 +35,23 @@ namespace {
   }
 
   const std::string generateIndex(const std::string& index_path) {
-    const std::set<std::string>& file_list = getDirListing(index_path);
+    std::set<std::string> file_list;
+    try {
+      file_list = getDirListing(index_path);
+    } catch (const FilesystemError& e) {
+      return "";
+    }
+    std::stringstream html;
+    html << "<!doctype html><html><head><title>Index</title></head>"
+         << "<body style=\"text-align: center\">"
+         << "<h1><strong>Index</strong></h1>";
+    for (fl_it file = file_list.begin(); file != file_list.end(); ++file) {
+      if (*file != "." && *file != "..") {
+        html << "<p><a href=" << index_path << *file << ">" << *file << "</a></p>";
+      }
+    }
+    html << "</body></html>";
+    return html.str();
   }
 }
 
@@ -68,15 +88,23 @@ namespace Filesystem {
   }
 
   const std::string serveDir(const RouteResponse& data) {
+    if (!isDir(data.full_path)) {
+      return "";
+    }
+    std::string fixed_path = data.full_path;
+    if (fixed_path[fixed_path.length() - 1] != '/') {
+      fixed_path.push_back('/');
+    }
     if (!data.location->index.empty()) {
-      std::string index_path = data.full_path + data.location->index;
+      std::string index_path = fixed_path + data.location->index;
       if (exists(index_path)) {
         return readFile(index_path);
       }
     }
     if (data.location->autoindex) {
-      return generateIndex(data.full_path);
+      return generateIndex(fixed_path);
     }
     return "";
   }
+
 }

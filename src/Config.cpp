@@ -586,6 +586,19 @@ void Config::verifyLocation(const LocationData& loc) const {
   if (loc.root.empty()) {
     throw ConfigError("Location " + loc.path + ": root must be specified for all non-redirect locations");
   }
+  /*if (!loc.upload_path.empty()) {
+    std::string uploads = loc.root;
+    if (uploads[uploads.length() - 1] != '/') {
+      uploads.push_back('/');
+    }
+    uploads += loc.upload_path;
+    if (!Filesystem::exists(uploads)) {
+      throw ConfigError("Location " + loc.path + ": specified upload path does not exist");
+    }
+    if (!Filesystem::isDir(uploads)) {
+      throw ConfigError("Location " + loc.path + ": specified upload path is not a directory");
+    }
+  }*/
 }
 
 void Config::verifyVirtualHosts() const {

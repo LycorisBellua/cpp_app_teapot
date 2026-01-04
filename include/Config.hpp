@@ -13,8 +13,9 @@
 #include <string>
 #include <vector>
 
-#include "../include/Log.hpp"  // IWYU pragma: keep
-#include "../include/ServerData.hpp"
+#include "Filesystem.hpp"  // IWYU pragma: keep
+#include "Log.hpp"         // IWYU pragma: keep
+#include "ServerData.hpp"
 
 class Config {
  public:

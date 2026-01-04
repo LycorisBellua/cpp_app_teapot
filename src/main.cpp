@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 
 #include "../include/Config.hpp"
@@ -28,14 +29,25 @@ namespace {
 int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
-
-  /*const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name5", "/uploads%2Fnew/%74%65%73%74%2Ej%70g?query", "GET"));
+  Debug::PrintConfig(router);
+  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads", "GET"));
   Debug::PrintRouteResponse(response);
 
-  std::set<std::pair<std::string, int> > ports = router.getPorts();
-  typedef std::set<std::pair<std::string, int> >::const_iterator ports_it;
-  std::cout << BOLD << "\nAddress/Port Pairs\n" << RESET;
-  for (ports_it p = ports.begin(); p != ports.end(); ++p) {
-    std::cout << "Address: " << p->first << "  Port: " << p->second << "\n";
-  }*/
+  std::cout << "\n\n";
+  Debug::PrintPorts(router.getPorts());
+
+  std::string index_html = Filesystem::serveDir(response);
+  std::ofstream index_output("/tmp/index_test.html", std::ios::trunc);
+  index_output << index_html;
+  index_output.close();
+
+  std::string error1_html = Filesystem::generateErrorPage("404 Not Found", "Requested page could not be found");
+  std::ofstream error1_output("/tmp/error1.html", std::ios::trunc);
+  error1_output << error1_html;
+  error1_output.close();
+
+  std::string error2_html = Filesystem::generateErrorPage(404, "Requested page could not be found");
+  std::ofstream error2_output("/tmp/error2.html", std::ios::trunc);
+  error2_output << error2_html;
+  error2_output.close();
 }

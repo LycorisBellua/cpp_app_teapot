@@ -11,5 +11,6 @@ namespace Debug {
   void PrintConfig(const Config&);
   void PrintConfig(const Router&);
   void PrintRouteResponse(const RouteResponse&);
+  void PrintPorts(const std::set<std::pair<std::string, int> >&);
   void PrintLn(std::string msg);
 }

@@ -7,6 +7,7 @@ namespace {
   typedef std::map<int, std::string>::const_iterator err_it;
   typedef std::vector<LocationData>::const_iterator loc_it;
   typedef std::vector<std::string>::const_iterator met_it;
+  typedef std::set<std::pair<std::string, int> >::const_iterator ports_it;
 
   void printServer(const ServerData& s) {
     std::cout << BOLD << "Port: " << RESET << s.port << "\n"
@@ -76,8 +77,7 @@ void Debug::PrintConfig(const Config& conf) {
     printServer(*s);
     size_t location_number = 0;
     for (loc_it l = s->locations.begin(); l != s->locations.end(); ++l) {
-      std::cout << BLUE BOLD << "\nSERVER " << server_number << " LOCATION " << location_number
-                << RESET << "\n";
+      std::cout << BLUE BOLD << "\nSERVER " << server_number << " LOCATION " << location_number << RESET << "\n";
       printLocation(*l);
       ++location_number;
     }
@@ -95,8 +95,7 @@ void Debug::PrintConfig(const Router& router) {
     printServer(*s);
     size_t location_number = 0;
     for (loc_it l = s->locations.begin(); l != s->locations.end(); ++l) {
-      std::cout << BLUE BOLD << "\nSERVER " << server_number << " LOCATION " << location_number
-                << RESET << "\n";
+      std::cout << BLUE BOLD << "\nSERVER " << server_number << " LOCATION " << location_number << RESET << "\n";
       printLocation(*l);
       ++location_number;
     }
@@ -116,6 +115,13 @@ void Debug::PrintRouteResponse(const RouteResponse& response) {
   printErrorPages(*response.error_pages);
   std::cout << UNDERLINE << "\nLocation\n" << RESET;
   printLocation(*response.location);
+}
+
+void Debug::PrintPorts(const std::set<std::pair<std::string, int> >& ports) {
+  std::cout << BOLD BLUE << "Port/Address Pairs\n" << RESET;
+  for (ports_it p = ports.begin(); p != ports.end(); ++p) {
+    std::cout << p->first << " " << p->second << "\n";
+  }
 }
 
 void Debug::PrintLn(std::string msg) {
