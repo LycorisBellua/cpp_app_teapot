@@ -1,0 +1,6 @@
+Normalise paths in Config:
+ -> Will allow paths to be independent of CWD when program launched
+ -> Convert root, upload_path, cgi_path and error messages to absolute values
+ -> Append missing trailing '/'
+ -> After config file is parsed, only absolute paths are used
+ -> Confirm existence of the above
