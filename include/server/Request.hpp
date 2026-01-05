@@ -26,7 +26,6 @@ struct Request
 		std::string getStatusMsg(int status) const;
 		void resetData();
 		void setStatus(int value);
-		void appendToBody(const std::string& str);
 
 		void parseStartLine(const std::vector<std::string>& tokens);
 		void parseHostHeader(const std::string value);
@@ -36,6 +35,9 @@ struct Request
 		void parseExpectHeader(const std::string value);
 		void parseConnectionHeader(const std::string value);
 		void postReadingHeaderCheck();
+		bool parseRegularBody(std::string& req_buffer);
+		bool parseChunkSize(std::string& line, size_t& chunk_size);
+		bool parseChunk(std::string& req_buffer, size_t chunk_size);
 
 	private:
 		bool start_line_found_;

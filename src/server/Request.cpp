@@ -170,11 +170,6 @@ void Request::setStatus(int value)
 		status_ = value;
 }
 
-void Request::appendToBody(const std::string& str)
-{
-	body_.append(str);
-}
-
 void Request::parseStartLine(const std::vector<std::string>& tokens)
 {
 	if (tokens.size() != 3)
@@ -310,6 +305,38 @@ void Request::postReadingHeaderCheck()
 	}
 	if (status_)
 		should_close_connection_ = true;
+}
+
+bool Request::parseRegularBody(std::string& req_buffer)
+{
+	size_t needed_len = content_length_ - body_.length();
+	size_t available_len = std::min(needed_len, req_buffer.length());
+	std::string to_append = Helper::extractLine(req_buffer, available_len,
+		false);
+	body_.append(to_append);
+	return body_.length() == content_length_;
+}
+
+bool Request::parseChunkSize(std::string& line, size_t& chunk_size)
+{
+	size_t size_end = std::min(line.find(';'), line.length());
+	std::string size = Helper::extractLine(line, size_end, false);
+	return Helper::hexToUnsignedNbr(size, chunk_size);
+}
+
+bool Request::parseChunk(std::string& req_buffer, size_t chunk_size)
+{
+	if (req_buffer.length() <= chunk_size)
+		return false;
+	else if (req_buffer.find("\r\n", chunk_size) != chunk_size
+		&& req_buffer.find("\n", chunk_size) != chunk_size)
+		setStatus(400);
+	else
+	{
+		std::string chunk = Helper::extractLine(req_buffer, chunk_size, true);
+		body_.append(chunk);
+	}
+	return true;
 }
 
 /* Private (static) --------------------------------------------------------- */

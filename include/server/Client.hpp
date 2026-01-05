@@ -25,6 +25,9 @@ class Client
 		bool start_line_found_;
 		bool end_line_found_;
 		bool body_end_found_;
+		bool size_zero_found_;
+		bool is_size_line_;
+		size_t chunk_size_;
 		std::string req_buffer_;
 		Request req_;
 
@@ -33,6 +36,7 @@ class Client
 		bool readMoreRequestData();
 		void parseHeader();
 		void parseBody();
+		bool parseChunkedBody();
 };
 
 #endif

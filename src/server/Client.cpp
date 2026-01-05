@@ -36,6 +36,9 @@ void Client::resetParsingData()
 	start_line_found_ = false;
 	end_line_found_ = false;
 	body_end_found_ = false;
+	size_zero_found_ = false;
+	is_size_line_ = true;
+	chunk_size_ = 0;
 	req_.resetData();
 }
 
@@ -125,82 +128,57 @@ void Client::parseBody()
 {
 	/*
 		TODO
+		- Request.parseChunk: Test hex function.
 		- Test the regular body.
 		- Test the chunked body yourself, and also using intra testers.
+		- Check whether the chunked body is too long (the config file has a 
+		property about that).
 	*/
-	if (!end_line_found_)
+	if (!end_line_found_ || body_end_found_)
 		return;
 	else if (req_.getStatus()
 		|| (!req_.getContentLength() && !req_.getIsChunked()))
 		body_end_found_ = true;
 	else if (!req_.getIsChunked())
+		body_end_found_ = req_.parseRegularBody(req_buffer_);
+	else
+		body_end_found_ = parseChunkedBody();
+}
+
+bool Client::parseChunkedBody()
+{
+	while (!body_end_found_)
 	{
-		size_t needed_len = req_.getContentLength() - req_.getBody().length();
-		size_t available_len = std::min(needed_len, req_buffer_.length());
-		std::string to_append = Helper::extractLine(req_buffer_, available_len,
-			false);
-		req_.appendToBody(to_append);
-		if (req_.getBody().length() == req_.getContentLength())
+		if (is_size_line_)
+		{
+			size_t eol = findEndOfLine(req_buffer_);
+			if (eol == std::string::npos)
+				break;
+			std::string line = Helper::extractLine(req_buffer_, eol, true);
+			if (line.empty())
+			{
+				body_end_found_ = true;
+				if (!size_zero_found_)
+					req_.setStatus(400);
+			}
+			else if (!size_zero_found_)
+			{
+				if (!req_.parseChunkSize(line, chunk_size_))
+					req_.setStatus(400);
+				else if (!chunk_size_)
+					size_zero_found_ = true;
+				else
+					is_size_line_ = false;
+			}
+		}
+		else if (!size_zero_found_)
+		{
+			if (!req_.parseChunk(req_buffer_, chunk_size_))
+				break;
+			is_size_line_ = true;
+		}
+		if (req_.getStatus() == 400)
 			body_end_found_ = true;
 	}
-	else
-	{
-		/*
-			TODO
-			- Handle the chunked body.
-			- Check whether the chunked body is too long (the config file has a 
-			property about that).
-		*/
-		bool size_zero_found = false; // TODO: should be var in req_
-		bool is_size_line = true; // TODO: should be var in req_
-		size_t chunk_size = 0; // TODO: should be var in req_
-		while (!body_end_found_)
-		{
-			if (is_size_line)
-			{
-				size_t eol = findEndOfLine(req_buffer_);
-				if (eol == std::string::npos)
-					break;
-				std::string line = Helper::extractLine(req_buffer_, eol, true);
-				if (line.empty())
-				{
-					body_end_found_ = true;
-					if (!size_zero_found)
-						req_.setStatus(400);
-				}
-				else if (!size_zero_found)
-				{
-					size_t size_end = std::min(line.find(';'), line.length());
-					std::string size = Helper::extractLine(line, size_end,
-						false);
-					// TODO: Test function
-					if (!Helper::hexToUnsignedNbr(size, chunk_size))
-					{
-						// Function failed
-					}
-					if (!chunk_size)
-						size_zero_found = true;
-					else
-						is_size_line = false;
-				}
-			}
-			else if (!size_zero_found)
-			{
-				if (req_buffer_.length() <= chunk_size)
-					break;
-				if (req_buffer_.find("\r\n", chunk_size) != chunk_size
-					&& req_buffer_.find("\n", chunk_size) != chunk_size)
-					req_.setStatus(400);
-				else
-				{
-					std::string chunk = Helper::extractLine(req_buffer_,
-						chunk_size, true);
-					req_.appendToBody(chunk);
-				}
-				is_size_line = true;
-			}
-			if (req_.getStatus() == 400)
-				body_end_found_ = true;
-		}
-	}
+	return body_end_found_;
 }
