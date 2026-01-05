@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <algorithm>  // IWYU pragma: keep
 #include <cerrno>     // IWYU pragma: keep
@@ -106,5 +107,6 @@ class Config {
   void verifyServer(const ServerData&) const;
   void verifyLocation(const LocationData&) const;
   void verifyVirtualHosts() const;
+  void normalisePaths();
   void setDefaultMime();
 };

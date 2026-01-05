@@ -34,7 +34,7 @@ namespace {
     return dir_listing;
   }
 
-  const std::string generateIndex(const std::string& index_path) {
+  const std::string generateIndex(const std::string& index_path, const std::string& uri_path) {
     std::set<std::string> file_list;
     try {
       file_list = getDirListing(index_path);
@@ -45,9 +45,13 @@ namespace {
     html << "<!doctype html><html><head><title>Index</title></head>"
          << "<body style=\"text-align: center\">"
          << "<h1><strong>Index</strong></h1>";
+    std::string fixed_uri_path = uri_path;
+    if (uri_path[uri_path.length() - 1] != '/') {
+      fixed_uri_path.push_back('/');
+    }
     for (fl_it file = file_list.begin(); file != file_list.end(); ++file) {
       if (*file != "." && *file != "..") {
-        html << "<p><a href=" << index_path << *file << ">" << *file << "</a></p>";
+        html << "<p><a href=" << fixed_uri_path << *file << ">" << *file << "</a></p>";
       }
     }
     html << "</body></html>";
@@ -68,6 +72,48 @@ namespace Filesystem {
       return false;
     }
     return S_ISDIR(st.st_mode);
+  }
+
+  bool isRegularFile(const std::string& path) {
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) {
+      return false;
+    }
+    return S_ISREG(st.st_mode);
+  }
+
+  bool isExecutable(const std::string& path) {
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) {
+      return false;
+    }
+    return (st.st_mode & S_IXUSR);
+  }
+
+  std::string getCurrentDir() {
+    char buffer[4096];
+    getcwd(buffer, 4096);
+    return buffer;
+  }
+
+  std::string normalisePaths(const std::string& path, std::string path_root) {
+    if (path.empty()) {
+      return path;
+    }
+    std::string normalised = path;
+    if (normalised[0] != '/') {
+      std::stringstream absolute_path;
+      absolute_path << path_root;
+      if (path_root[path_root.length() - 1] != '/') {
+        absolute_path << "/";
+      }
+      absolute_path << path;
+      normalised = absolute_path.str();
+    }
+    if (isDir(normalised) && normalised[normalised.length() - 1] != '/') {
+      normalised.push_back('/');
+    }
+    return normalised;
   }
 
   const std::string readFile(const std::string& path) {
@@ -91,18 +137,14 @@ namespace Filesystem {
     if (!isDir(data.full_path)) {
       return "";
     }
-    std::string fixed_path = data.full_path;
-    if (fixed_path[fixed_path.length() - 1] != '/') {
-      fixed_path.push_back('/');
-    }
     if (!data.location->index.empty()) {
-      std::string index_path = fixed_path + data.location->index;
+      std::string index_path = data.full_path + data.location->index;
       if (exists(index_path)) {
         return readFile(index_path);
       }
     }
     if (data.location->autoindex) {
-      return generateIndex(fixed_path);
+      return generateIndex(data.full_path, data.location->path);
     }
     return "";
   }

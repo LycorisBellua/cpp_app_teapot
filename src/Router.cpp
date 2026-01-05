@@ -104,7 +104,7 @@ const RouteResponse Router::getRoute(const RouteRequest& request) const {
     response.errcode = location->redirect.first;
     return response;
   }
-  response.full_path = location->root + path;
+  response.full_path = Filesystem::normalisePaths(location->root + path.substr(1), Filesystem::getCurrentDir());
   response.client_body_max = server->client_body_max;
   response.mime_type = getMime(path);
   logSuccess(request, response);

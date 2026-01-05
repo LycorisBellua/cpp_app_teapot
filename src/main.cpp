@@ -29,12 +29,11 @@ namespace {
 int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
-  Debug::PrintConfig(router);
+  // Debug::PrintConfig(router);
   const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads", "GET"));
   Debug::PrintRouteResponse(response);
 
   std::cout << "\n\n";
-  Debug::PrintPorts(router.getPorts());
 
   std::string index_html = Filesystem::serveDir(response);
   std::ofstream index_output("/tmp/index_test.html", std::ios::trunc);

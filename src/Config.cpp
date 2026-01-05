@@ -32,9 +32,12 @@ const char* Config::ConfigError::what() const throw() {
 /* ---------- HELPER FUNCTIONS ---------- */
 namespace {
 
-  typedef std::vector<ServerData>::const_iterator server_it;
-  typedef std::vector<LocationData>::const_iterator location_it;
+  typedef std::vector<ServerData>::const_iterator c_server_it;
+  typedef std::vector<ServerData>::iterator server_it;
+  typedef std::vector<LocationData>::const_iterator c_location_it;
+  typedef std::vector<LocationData>::iterator location_it;
   typedef std::string::const_iterator string_it;
+  typedef std::map<int, std::string>::iterator error_it;
 
   std::vector<std::string> tokenizeLine(std::string line) {
     size_t comment_start = line.find_first_of("#");
@@ -58,6 +61,7 @@ namespace {
   bool findToken(const std::vector<std::string>& processed, const std::string& token) {
     return std::find(processed.begin(), processed.end(), token) != processed.end();
   }
+
 }
 
 /* ---------- CLASS MEMBER METHODS ---------- */
@@ -100,6 +104,7 @@ void Config::parse() {
     }
   }
   verifyRequiredData();
+  normalisePaths();
 }
 
 void Config::handleNoBlock(ParsingData& data) {
@@ -389,9 +394,15 @@ void Config::setErrorPage(const ParsingData& data) {
   if (error_num.length() != 3 || error_num.find_first_not_of("1234567890") != error_num.npos) {
     throw ConfigError(data, "Invalid error number");
   }
+  if (!Filesystem::exists(errpage[1])) {
+    throw ConfigError(data, "Error page file does not exist: " + errpage[1]);
+  }
+  if (Filesystem::isDir(errpage[1])) {
+    throw ConfigError(data, "Specified error page is a directory: " + errpage[1]);
+  }
   std::ifstream errfile(errpage[1].c_str());
   if (!errfile.is_open()) {
-    throw ConfigError(data, "Invalid file");
+    throw ConfigError(data, "Can not open error page file: " + errpage[1]);
   }
   errfile.close();
   servers.back().errors[std::atoi(error_num.c_str())] = errpage[1];
@@ -438,11 +449,10 @@ void Config::setRoot(const ParsingData& data) {
   if (root.size() != 2 || root[1].empty()) {
     throw ConfigError(data, "A single root path must be specified");
   }
-  struct stat info;
-  if (stat(root[1].c_str(), &info) != 0) {
+  if (!Filesystem::exists(root[1])) {
     throw ConfigError(data, "Root directory does not exist");
   }
-  if (!S_ISDIR(info.st_mode)) {
+  if (!Filesystem::isDir(root[1])) {
     throw ConfigError(data, "Root must be a directory");
   }
   servers.back().locations.back().root = root[1];
@@ -488,6 +498,12 @@ void Config::setUploadPath(const ParsingData& data) {
   if (path[1].find("//") != path[1].npos) {
     throw ConfigError(data, "A valid upload path must not contain '//'");
   }
+  /*if (!Filesystem::exists(path[1])) {
+    throw ConfigError(data, "Upload path does not exist: " + path[1]);
+  }
+  if (!Filesystem::isDir(path[1])) {
+    throw ConfigError(data, "Upload path is not a directory: " + path[1]);
+  }*/
   servers.back().locations.back().upload_path = path[1];
 }
 
@@ -504,15 +520,14 @@ void Config::setCgiInterpreter(const ParsingData& data) {
   if (cgi_int.size() != 2 || cgi_int[1].empty()) {
     throw ConfigError(data, "One CGI Interpreter must be specified");
   }
-  struct stat info;
-  if (stat(cgi_int[1].c_str(), &info) != 0) {
+  if (!Filesystem::exists(cgi_int[1])) {
     throw ConfigError(data, "Provided CGI Interpreter does not exist");
   }
-  if (!S_ISREG(info.st_mode)) {
-    throw ConfigError(data, "Value is not a file");
+  if (!Filesystem::isRegularFile(cgi_int[1])) {
+    throw ConfigError(data, "Provided CGI Interpreter is not a file");
   }
-  if (!(info.st_mode & S_IXUSR)) {
-    throw ConfigError(data, "File is not executable");
+  if (!Filesystem::isExecutable(cgi_int[1])) {
+    throw ConfigError(data, "Provided CGI Interpreter is not executable");
   }
   servers.back().locations.back().cgi_interpreter = cgi_int[1];
 }
@@ -547,9 +562,9 @@ void Config::verifyRequiredData() {
     throw ConfigError("No servers defined in config file");
   }
 
-  for (server_it srv = servers.begin(); srv != servers.end(); ++srv) {
+  for (c_server_it srv = servers.begin(); srv != servers.end(); ++srv) {
     verifyServer(*srv);
-    for (location_it loc = srv->locations.begin(); loc != srv->locations.end(); ++loc) {
+    for (c_location_it loc = srv->locations.begin(); loc != srv->locations.end(); ++loc) {
       verifyLocation(*loc);
     }
   }
@@ -586,24 +601,11 @@ void Config::verifyLocation(const LocationData& loc) const {
   if (loc.root.empty()) {
     throw ConfigError("Location " + loc.path + ": root must be specified for all non-redirect locations");
   }
-  /*if (!loc.upload_path.empty()) {
-    std::string uploads = loc.root;
-    if (uploads[uploads.length() - 1] != '/') {
-      uploads.push_back('/');
-    }
-    uploads += loc.upload_path;
-    if (!Filesystem::exists(uploads)) {
-      throw ConfigError("Location " + loc.path + ": specified upload path does not exist");
-    }
-    if (!Filesystem::isDir(uploads)) {
-      throw ConfigError("Location " + loc.path + ": specified upload path is not a directory");
-    }
-  }*/
 }
 
 void Config::verifyVirtualHosts() const {
-  for (server_it current = servers.begin(); current != servers.end(); ++current) {
-    for (server_it next = current + 1; next != servers.end(); ++next) {
+  for (c_server_it current = servers.begin(); current != servers.end(); ++current) {
+    for (c_server_it next = current + 1; next != servers.end(); ++next) {
       if (next->port == current->port) {
         const std::string& current_name = current->name;
         const std::string& next_name = next->name;
@@ -615,6 +617,26 @@ void Config::verifyVirtualHosts() const {
         if (current_name == next_name) {
           throw ConfigError("Multiple servers on port " + port_number.str() + ". Unique names are required for virtual hosting");
         }
+      }
+    }
+  }
+}
+
+void Config::normalisePaths() {
+  std::string current_dir = Filesystem::getCurrentDir();
+  for (server_it s = servers.begin(); s != servers.end(); ++s) {
+    for (error_it e = s->errors.begin(); e != s->errors.end(); ++e) {
+      e->second = Filesystem::normalisePaths(e->second, current_dir);
+    }
+    for (location_it l = s->locations.begin(); l != s->locations.end(); ++l) {
+      if (!l->root.empty()) {
+        l->root = Filesystem::normalisePaths(l->root, current_dir);
+      }
+      if (!l->cgi_interpreter.empty()) {
+        l->cgi_interpreter = Filesystem::normalisePaths(l->cgi_interpreter, current_dir);
+      }
+      if (!l->upload_path.empty()) {
+        l->upload_path = Filesystem::normalisePaths(l->upload_path, l->root);
       }
     }
   }

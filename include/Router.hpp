@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>  // IWYU pragma: keep
-#include <cstdlib>
 #include <set>
 #include <sstream>  // IWYU pragma: keep
 #include <string>
@@ -9,6 +8,7 @@
 #include "../include/Log.hpp"  // IWYU pragma: keep
 #include "../include/RouteInfo.hpp"
 #include "../include/ServerData.hpp"
+#include "Filesystem.hpp"  // IWYU pragma: keep
 
 class Router {
  public:
