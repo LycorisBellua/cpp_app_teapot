@@ -57,6 +57,15 @@ namespace {
     html << "</body></html>";
     return html.str();
   }
+
+  const std::string generateFilename(const std::string& path) {
+    std::set<std::string> dir_listing;
+    try {
+      dir_listing = getDirListing(path);
+    } catch (const FilesystemError& e) {
+      return "";
+    }
+  }
 }
 
 namespace Filesystem {
@@ -147,6 +156,22 @@ namespace Filesystem {
       return generateIndex(data.full_path, data.location->path);
     }
     return "";
+  }
+
+  int upload(const RouteResponse& data, const std::string& body) {
+    const std::string& upload_path = data.location->upload_path;
+    const std::vector<std::string> methods = data.location->allowed_methods;
+    if (upload_path.empty() || !exists(upload_path) || !isDir(upload_path)) {
+      return 404;
+    }
+    if (std::find(methods.begin(), methods.end(), "POST") == methods.end()) {
+      return 405;
+    }
+    const std::string filename = generateFilename(upload_path);
+    if (filename.empty()) {
+      return 404;
+    }
+    return 0;
   }
 
 }

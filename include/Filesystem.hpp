@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <fstream>  // IWYU pragma: keep
 #include <set>      // IWYU pragma: keep
 #include <sstream>
@@ -21,6 +22,7 @@ namespace Filesystem {
   std::string normalisePaths(const std::string&, std::string);
   const std::string readFile(const std::string&);
   const std::string serveDir(const RouteResponse&);
+  int upload(const RouteResponse&, const std::string&);
 
   template <typename Code>
   const std::string generateErrorPage(Code code, const std::string& msg) {
