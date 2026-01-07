@@ -1,16 +1,11 @@
 #pragma once
 
-#include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <algorithm>
-#include <fstream>  // IWYU pragma: keep
-#include <set>      // IWYU pragma: keep
 #include <sstream>
 #include <string>
 
-#include "../include/RouteInfo.hpp"
 #include "Log.hpp"  // IWYU pragma: keep
 
 namespace Filesystem {
@@ -20,9 +15,6 @@ namespace Filesystem {
   bool isExecutable(const std::string&);
   std::string getCurrentDir();
   std::string normalisePaths(const std::string&, std::string);
-  const std::string readFile(const std::string&);
-  const std::string serveDir(const RouteResponse&);
-  int upload(const RouteResponse&, const std::string&);
 
   template <typename Code>
   const std::string generateErrorPage(Code code, const std::string& msg) {

@@ -4,6 +4,7 @@
 #include "../include/Config.hpp"
 #include "../include/Debug.hpp"
 #include "../include/Filesystem.hpp"
+#include "../include/Get.hpp"
 #include "../include/Log.hpp"
 #include "../include/Router.hpp"
 #include "../include/webserv.hpp"
@@ -30,12 +31,12 @@ int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
   // Debug::PrintConfig(router);
-  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads", "GET"));
+  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads/pic.jpg", "GET"));
   Debug::PrintRouteResponse(response);
 
   std::cout << "\n\n";
 
-  std::string index_html = Filesystem::serveDir(response);
+  std::string index_html = Get::index(response);
   std::ofstream index_output("/tmp/index_test.html", std::ios::trunc);
   index_output << index_html;
   index_output.close();
