@@ -1,7 +1,6 @@
 #include "Client.hpp"
 #include "Host.hpp"
 #include "Helper.hpp"
-#include <iostream>
 #include <unistd.h>
 
 Client::Client() : fd_(-1), req_buffer_("")

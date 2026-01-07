@@ -2,7 +2,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/socket.h>
 #include <sys/epoll.h>
 
 Server::Server(int tmp_config) : fd_listen_(-1), fd_epoll_(-1), addr_()

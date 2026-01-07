@@ -4,7 +4,6 @@
 #include "Request.hpp"
 #include "Response.hpp"
 #include <string>
-#include <vector>
 #include <ctime>
 
 class Client

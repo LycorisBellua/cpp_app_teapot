@@ -1,7 +1,6 @@
 #include "Request.hpp"
 #include "Host.hpp"
 #include "Helper.hpp"
-#include <iostream>
 
 Request::Request()
 {
@@ -66,25 +65,6 @@ bool Request::getShouldCloseConnection() const
 std::string Request::getBody() const
 {
 	return body_;
-}
-
-void Request::outputData() const
-{
-	std::cout << std::boolalpha;
-	std::cout << "Status: " << getStatus() << std::endl;
-	std::cout << "Method: " << getMethod() << std::endl;
-	std::cout << "URI: " << getURI() << std::endl;
-	std::cout << "Version: " << getVersion() << std::endl;
-	std::cout << "Domain: " << getDomain() << std::endl;
-	std::cout << "Port: " << getPort() << std::endl;
-	std::cout << "Content Type: " << getContentType() << std::endl;
-	std::cout << "Content Length: " << getContentLength() << std::endl;
-	std::cout << "Is Chunked: " << getIsChunked() << std::endl;
-	std::cout << "Does Expect 100: " << getDoesExpect100() << std::endl;
-	std::cout << "Should Close Connection: " << getShouldCloseConnection()
-		<< std::endl;
-	std::cout << std::noboolalpha;
-	std::cout << "Body: " << getBody() << std::endl;
 }
 
 void Request::resetData()

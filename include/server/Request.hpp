@@ -22,7 +22,6 @@ struct Request
 		bool getShouldCloseConnection() const;
 		std::string getBody() const;
 
-		void outputData() const;
 		void resetData();
 		void setStatus(int value);
 
