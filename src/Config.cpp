@@ -648,6 +648,7 @@ void Config::setDefaultMime() {
   mime_types[".css"] = "text/css";
   mime_types[".txt"] = "text/plain";
   mime_types[".xml"] = "text/xml";
+  mime_types[".py"] = "text/x-python";
   mime_types[".js"] = "text/javascript";
   mime_types[".json"] = "application/json";
   mime_types[".jpg"] = "image/jpeg";

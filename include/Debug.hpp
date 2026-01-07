@@ -5,6 +5,7 @@
 
 #include "Colors.hpp"  // IWYU pragma: keep
 #include "Config.hpp"
+#include "HttpResponse.hpp"
 #include "Router.hpp"
 
 namespace Debug {
@@ -13,4 +14,5 @@ namespace Debug {
   void PrintRouteResponse(const RouteResponse&);
   void PrintPorts(const std::set<std::pair<std::string, int> >&);
   void PrintLn(std::string msg);
+  void PrintHttpResponse(const HttpResponse&);
 }

@@ -41,11 +41,11 @@ namespace {
     return html.str();
   }
 
-  std::string file(const std::string& path) {
+  std::pair<bool, std::string> readFile(const std::string& path) {
     std::ifstream file(path.c_str(), std::ios::binary);
     if (!file) {
       Log::error("Unable to open file: " + path);
-      return "";
+      return std::make_pair(false, "");
     }
 
     file.seekg(0, std::ios::end);
@@ -55,23 +55,36 @@ namespace {
     std::string content(end, '\0');
     file.read(&content[0], end);
     file.close();
-    return content;
+    return std::make_pair(true, content);
   }
 
-  std::string index(const RouteResponse& data) {
-    if (!Filesystem::isDir(data.full_path)) {
-      return "";
+  HttpResponse handleFile(const std::string& path) {
+    if (!Filesystem::exists(path)) {
+      return HttpResponse(404, "", "Requested File Not Found");
     }
+    const std::pair<bool, std::string> filebuf = readFile(path);
+    if (!filebuf.first) {
+      return HttpResponse(403, "", "Forbidden");
+    }
+    return HttpResponse(200, filebuf.second, "");
+  }
+
+  HttpResponse handleDirectory(const RouteResponse& data) {
     if (!data.location->index.empty()) {
-      std::string index_path = data.full_path + data.location->index;
-      if (Filesystem::exists(index_path)) {
-        return file(index_path);
+      if (Filesystem::exists(data.full_path + data.location->index)) {
+        const std::pair<bool, std::string> indexbuf = readFile(data.full_path + data.location->index);
+        if (indexbuf.first) {
+          return HttpResponse(200, indexbuf.second, "");
+        }
       }
     }
     if (data.location->autoindex) {
-      return generateIndex(data.full_path, data.location->path);
+      const std::string indexbuf = generateIndex(data.full_path, data.location->path);
+      if (!indexbuf.empty()) {
+        return HttpResponse(200, indexbuf, "");
+      }
     }
-    return "";
+    return HttpResponse(403, "", "Forbidden");
   }
 
 }
@@ -79,7 +92,13 @@ namespace {
 namespace Get {
 
   HttpResponse handle(const RouteResponse& data) {
-    if (Filesystem::)
+    if (Filesystem::isDir(data.full_path)) {
+      return handleDirectory(data);
+    }
+    else if (Filesystem::isRegularFile(data.full_path)) {
+      return handleFile(data.full_path);
+    }
+    return HttpResponse(404, "", "Requested File Not Found");
   }
 
 }
