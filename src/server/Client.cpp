@@ -78,10 +78,6 @@ std::string Client::composeResponse() const
 	/*
 		TODO
 		- Compose the response.
-
-		- Except for the "100 Continue" response, all responses must include 
-		the date, and it must use Greenwich Mean Time:
-			"Date: Fri, 31 Dec 1999 23:59:59 GMT".
 	*/
 	int res_status = req_.getStatus();
 	std::string res_body = "Hello World!";
@@ -94,6 +90,7 @@ std::string Client::composeResponse() const
 		res += Response::getCRLF();
 	else
 	{
+		res += Response::getDateLine();
 		res += Response::getContentLengthLine(res_body.length());
 		if (!res_body.empty())
 			res += Response::getContentTypeLine(res_type);

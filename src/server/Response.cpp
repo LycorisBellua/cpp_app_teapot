@@ -1,7 +1,7 @@
 #include "Response.hpp"
 #include "Request.hpp"
 #include "Helper.hpp"
-#include <sstream>
+#include <ctime>
 
 /* Public (static) ---------------------------------------------------------- */
 
@@ -19,6 +19,11 @@ std::string Response::getStartLine(int status)
 	str += Request::getStatusMsg(status);
 	str += getCRLF();
 	return str;
+}
+
+std::string Response::getDateLine()
+{
+	return "Date: " + getCurrentDateGMT() + getCRLF();
 }
 
 std::string Response::getContentLengthLine(size_t length)
@@ -41,4 +46,15 @@ std::string Response::getConnectionCloseLine()
 std::string Response::getVersion()
 {
 	return "HTTP/1.1";
+}
+
+std::string Response::getCurrentDateGMT()
+{
+    std::time_t now = std::time(0);
+    std::tm *gmt = std::gmtime(&now);
+    if (!gmt)
+		return "";
+	char buffer[64] = {0};
+	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+	return buffer;
 }

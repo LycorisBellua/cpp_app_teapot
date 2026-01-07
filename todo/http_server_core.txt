@@ -1,8 +1,6 @@
------ TODO AFTER PARSING THE REQUEST -------------------------------------------
-
 [Map request to a route]
 
-- Call your mate's routing API
+- Call the routing API
 - Determine:
 	* which file to serve
 	* whether to run CGI
@@ -19,17 +17,10 @@
 
 [Build the HTTP response]
 
-- Status line
 - Headers
-- Content-Length or Transfer-Encoding
 - Body (static file, upload result, CGI output, error page, etc)
 
 [Set cookies for session management]
 
 - If session was created or modified -> send `Set-Cookie` header
 - Include any other cookies the route requires
-
-[Ports]
-
-- One port per server, and possibly different servers. It's not asked in the 
-subject, but why not.
