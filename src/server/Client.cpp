@@ -61,6 +61,7 @@ std::string Client::composeResponse() const
 	{
 		/*
 			TODO
+			- If the method is HEAD, say it's GET.
 			- Fetch the requested resource (static page or CGI), and set the 
 			status code accordingly (an error, or 200 or 201 for success).
 		*/
@@ -78,7 +79,6 @@ std::string Client::composeResponse() const
 		TODO
 		- Compose the response.
 
-		- If HEAD, no body.
 		- Except for the "100 Continue" response, all responses must include 
 		the date, and it must use Greenwich Mean Time:
 			"Date: Fri, 31 Dec 1999 23:59:59 GMT".
@@ -100,7 +100,8 @@ std::string Client::composeResponse() const
 		if (connection_close)
 			res += Response::getConnectionCloseLine();
 		res += Response::getCRLF();
-		res += res_body;
+		if (req_.getMethod() != "HEAD")
+			res += res_body;
 	}
 	return res;
 }
