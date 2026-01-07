@@ -19,6 +19,7 @@ int main(int argc, char **argv)
 		TODO
 		- Parse the config file.
 		- Pass the config struct as argument to the Server class.
+		- Use the intra testers (especially for the chunked body).
 	*/
 
 	Server server(0);

@@ -87,49 +87,6 @@ void Request::outputData() const
 	std::cout << "Body: " << getBody() << std::endl;
 }
 
-std::string Request::getStatusMsg(int status) const
-{
-	if (status == 100)
-		return "Continue";
-	else if (status == 200)
-		return "OK";
-	else if (status == 201)
-		return "Created";
-	else if (status == 202)
-		return "Accepted";
-	else if (status == 204)
-		return "No Content";
-	else if (status == 301)
-		return "Moved Permanently";
-	else if (status == 302)
-		return "Moved Temporarily";
-	else if (status == 304)
-		return "Not Modified";
-	else if (status == 400)
-		return "Bad Request";
-	else if (status == 401)
-		return "Unauthorized";
-	else if (status == 403)
-		return "Forbidden";
-	else if (status == 404)
-		return "Not Found";
-	else if (status == 405)
-		return "Method Not Allowed";
-	else if (status == 417)
-		return "Expectation Failed";
-	else if (status == 500)
-		return "Internal Server Error";
-	else if (status == 501)
-		return "Not Implemented";
-	else if (status == 502)
-		return "Bad Gateway";
-	else if (status == 503)
-		return "Service Unavailable";
-	else if (status == 505)
-		return "HTTP Version Not Supported";
-	return "";
-}
-
 void Request::resetData()
 {
 	start_line_found_ = false;
@@ -287,7 +244,7 @@ void Request::parseConnectionHeader(const std::string value)
 	}
 }
 
-void Request::postReadingHeaderCheck()
+void Request::afterHeaderCheck()
 {
 	if (version_ == "HTTP/1.1" && !host_header_found_)
 		setStatus(400);
@@ -337,6 +294,57 @@ bool Request::parseChunk(std::string& req_buffer, size_t chunk_size)
 		body_.append(chunk);
 	}
 	return true;
+}
+
+void Request::afterBodyCheck()
+{
+	if (does_expect_100_ && body_.length())
+		does_expect_100_ = false;
+}
+
+/* Public (static) ---------------------------------------------------------- */
+
+std::string Request::getStatusMsg(int status)
+{
+	if (status == 100)
+		return "Continue";
+	else if (status == 200)
+		return "OK";
+	else if (status == 201)
+		return "Created";
+	else if (status == 202)
+		return "Accepted";
+	else if (status == 204)
+		return "No Content";
+	else if (status == 301)
+		return "Moved Permanently";
+	else if (status == 302)
+		return "Moved Temporarily";
+	else if (status == 304)
+		return "Not Modified";
+	else if (status == 400)
+		return "Bad Request";
+	else if (status == 401)
+		return "Unauthorized";
+	else if (status == 403)
+		return "Forbidden";
+	else if (status == 404)
+		return "Not Found";
+	else if (status == 405)
+		return "Method Not Allowed";
+	else if (status == 417)
+		return "Expectation Failed";
+	else if (status == 500)
+		return "Internal Server Error";
+	else if (status == 501)
+		return "Not Implemented";
+	else if (status == 502)
+		return "Bad Gateway";
+	else if (status == 503)
+		return "Service Unavailable";
+	else if (status == 505)
+		return "HTTP Version Not Supported";
+	return "";
 }
 
 /* Private (static) --------------------------------------------------------- */

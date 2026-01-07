@@ -2,6 +2,7 @@
 #define CLIENT_HPP
 
 #include "Request.hpp"
+#include "Response.hpp"
 #include <string>
 #include <vector>
 #include <ctime>
@@ -18,6 +19,7 @@ class Client
 		void updateLastActivity();
 		void resetParsingData();
 		bool parseRequest();
+		std::string composeResponse() const;
 
 	private:
 		int fd_;

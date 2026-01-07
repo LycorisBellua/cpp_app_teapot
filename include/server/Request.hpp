@@ -23,7 +23,6 @@ struct Request
 		std::string getBody() const;
 
 		void outputData() const;
-		std::string getStatusMsg(int status) const;
 		void resetData();
 		void setStatus(int value);
 
@@ -34,10 +33,13 @@ struct Request
 		void parseTransferEncodingHeader(const std::string value);
 		void parseExpectHeader(const std::string value);
 		void parseConnectionHeader(const std::string value);
-		void postReadingHeaderCheck();
+		void afterHeaderCheck();
 		bool parseRegularBody(std::string& req_buffer);
 		bool parseChunkSize(std::string& line, size_t& chunk_size);
 		bool parseChunk(std::string& req_buffer, size_t chunk_size);
+		void afterBodyCheck();
+
+		static std::string getStatusMsg(int status);
 
 	private:
 		bool start_line_found_;

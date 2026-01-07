@@ -50,9 +50,59 @@ bool Client::parseRequest()
 		return false;
 	parseHeader();
 	parseBody();
-	if (body_end_found_)
+	if (isFullyParsed())
 		updateLastActivity();
 	return true;
+}
+
+std::string Client::composeResponse() const
+{
+	if (!req_.getStatus())
+	{
+		/*
+			TODO
+			- Fetch the requested resource (static page or CGI), and set the 
+			status code accordingly (an error, or 200 or 201 for success).
+		*/
+	}
+	if (req_.getStatus() != 100)
+	{
+		/*
+			TODO
+			- If the status code represents an error, an error page needs to be 
+			returned.
+		*/
+	}
+
+	/*
+		TODO
+		- Compose the response.
+
+		- If HEAD, no body.
+		- Except for the "100 Continue" response, all responses must include 
+		the date, and it must use Greenwich Mean Time:
+			"Date: Fri, 31 Dec 1999 23:59:59 GMT".
+	*/
+	int res_status = req_.getStatus();
+	std::string res_body = "Hello World!";
+	std::string res_type = "text/plain";
+	bool connection_close = req_.getShouldCloseConnection();
+	//
+	std::string res;
+	res += Response::getStartLine(res_status);
+	if (res_status == 100)
+		res += Response::getCRLF();
+	else
+	{
+		res += Response::getContentLengthLine(res_body.length());
+		if (!res_body.empty())
+			res += Response::getContentTypeLine(res_type);
+		if (connection_close)
+			res += Response::getConnectionCloseLine();
+		res += Response::getCRLF();
+		res += res_body;
+	}
+	return res;
 }
 
 /* Private (Static) --------------------------------------------------------- */
@@ -121,19 +171,11 @@ void Client::parseHeader()
 			end_line_found_ = true;
 	}
 	if (end_line_found_)
-		req_.postReadingHeaderCheck();
+		req_.afterHeaderCheck();
 }
 
 void Client::parseBody()
 {
-	/*
-		TODO
-		- Request.parseChunk: Test hex function.
-		- Test the regular body.
-		- Test the chunked body yourself, and also using intra testers.
-		- Check whether the chunked body is too long (the config file has a 
-		property about that).
-	*/
 	if (!end_line_found_ || body_end_found_)
 		return;
 	else if (req_.getStatus()
@@ -143,6 +185,8 @@ void Client::parseBody()
 		body_end_found_ = req_.parseRegularBody(req_buffer_);
 	else
 		body_end_found_ = parseChunkedBody();
+	if (body_end_found_)
+		req_.afterBodyCheck();
 }
 
 bool Client::parseChunkedBody()
@@ -175,6 +219,11 @@ bool Client::parseChunkedBody()
 		{
 			if (!req_.parseChunk(req_buffer_, chunk_size_))
 				break;
+			/*
+				TODO
+				- Check whether the chunked body is too long (the config file 
+				has a property about that).
+			*/
 			is_size_line_ = true;
 		}
 		if (req_.getStatus() == 400)

@@ -187,31 +187,8 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 
 void Server::sendResponse(int fd, Client& c) const
 {
-	std::string response = composeResponse(c);
+	std::string response = c.composeResponse();
 	write(fd, response.c_str(), response.length());
 	c.resetParsingData();
 	c.updateLastActivity();
-}
-
-std::string Server::composeResponse(const Client& c) const
-{
-	/*
-		TODO
-		- The Client class containing all the parsed data is required for this 
-		function to be written.
-		- If the status code wasn't set, use a routing function to fetch the 
-		requested resource (static page or CGI) and set the status code (e.g. 
-		200, 404...).
-		- If the status code represents an error, an error page needs to be 
-		returned.
-		- Compose the response.
-	*/
-	(void)c;
-	std::string response = 
-		"HTTP/1.1 200 OK\r\n"
-		"Content-Type: text/plain\r\n"
-		"Content-Length: 12\r\n"
-		"\r\n"
-		"Hello world!";
-	return response;
 }

@@ -12,6 +12,8 @@ class Helper
 		static bool decToUnsignedNbr(const std::string& str, T& nbr);
 		template<typename T>
 		static bool hexToUnsignedNbr(const std::string& str, T& nbr);
+		template<typename T>
+		static std::string nbrToString(T nbr);
 
 		static std::vector<std::string> splitAtWhitespace(const std::string&
 			str);
@@ -59,6 +61,15 @@ bool Helper::hexToUnsignedNbr(const std::string& str, T& nbr)
 		return false;
 	}
 	return true;
+}
+
+template<typename T>
+std::string Helper::nbrToString(T nbr)
+{
+	std::ostringstream oss;
+	if (!(oss << nbr))
+		return "";
+	return oss.str();
 }
 
 #endif

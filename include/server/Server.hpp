@@ -28,7 +28,6 @@ class Server
 		void closeConnection(int fd);
 		void closeIdleConnections(int idle_timeout_sec);
 		void sendResponse(int fd, Client& c) const;
-		std::string composeResponse(const Client& c) const;
 };
 
 #endif
