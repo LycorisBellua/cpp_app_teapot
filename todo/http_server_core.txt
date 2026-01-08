@@ -1,3 +1,31 @@
+For cookies, we need to provide a working example, and I suggest using 
+background colors. For each user session, which is expressed by cookies, the 
+HTML pages we send back will have these specific colors. Colors will be used in 
+the order of the cookies sent with the request. It could be one cookie for one 
+color, or a gradient if more cookies are used. As for cookie values that don't 
+translate to a hex code, it's okay, as we can see cookies in the browser anyway.
+
+Example with two colors (from top to bottom):
+```
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		body
+		{
+			margin: 0;
+			min-height: 100vh;
+			background: linear-gradient(#e66465, #9198e5);
+		}
+	</style>
+</head>
+<body>
+</body>
+</html>
+```
+
+--------------------------------------------------------------------------------
+
 [Map request to a route]
 
 - Call the routing API
