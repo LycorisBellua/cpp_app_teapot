@@ -3,7 +3,7 @@
 namespace {
 
   std::string getFileUrl(const std::string& filename, const RouteResponse& data) {
-    const std::string& url_path = data.location->path;
+    const std::string& url_path = data.location.path;
     if (url_path[url_path.length() - 1] == '/') {
       return url_path + filename;
     }
@@ -81,17 +81,17 @@ namespace {
 namespace Post {
 
   HttpResponse upload(const RouteResponse& data, const std::string& body) {
-    if (!uploadPathCheck(data.location->upload_path)) {
-      return HttpResponse(500, ErrorPage::get(500, *data.error_pages));
+    if (!uploadPathCheck(data.location.upload_path)) {
+      return HttpResponse(500, ErrorPage::get(500, data.error_pages));
     }
     if (!bodySizeCheck(data.client_body_max, body)) {
-      return HttpResponse(413, ErrorPage::get(413, *data.error_pages));
+      return HttpResponse(413, ErrorPage::get(413, data.error_pages));
     }
-    const std::string filename = generateFilename(data.location->upload_path);
-    const std::string filepath(data.location->upload_path + filename);
+    const std::string filename = generateFilename(data.location.upload_path);
+    const std::string filepath(data.location.upload_path + filename);
     std::ofstream output(filepath.c_str(), std::ios::binary);
     if (!writeFile(output, filepath, body)) {
-      return HttpResponse(500, ErrorPage::get(500, *data.error_pages));
+      return HttpResponse(500, ErrorPage::get(500, data.error_pages));
     }
     return HttpResponse(201, getFileUrl(filename, data));
   }

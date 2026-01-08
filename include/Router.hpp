@@ -8,6 +8,7 @@
 #include "../include/Log.hpp"  // IWYU pragma: keep
 #include "../include/RouteInfo.hpp"
 #include "../include/ServerData.hpp"
+#include "ErrorPage.hpp"   // IWYU pragma: keep
 #include "Filesystem.hpp"  // IWYU pragma: keep
 
 class Router {

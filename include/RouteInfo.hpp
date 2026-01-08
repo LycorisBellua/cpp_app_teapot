@@ -6,13 +6,15 @@
 #include "../include/ServerData.hpp"
 
 struct RouteResponse {
-  int errcode;
+  int error_code;
+  std::string error_body;
   std::string full_path;
   std::string mime_type;
   size_t client_body_max;
-  const std::map<int, std::string>* error_pages;
-  const LocationData* location;
+  std::map<int, std::string>& error_pages;
+  LocationData& location;
   RouteResponse();
+  RouteResponse(const LocationData&, const std::map<int, std::string>&);
 };
 
 struct RouteRequest {
@@ -20,6 +22,5 @@ struct RouteRequest {
   const std::string host;
   const std::string uri;
   const std::string method;
-  RouteRequest();
   RouteRequest(int port, const std::string& host, const std::string& uri, const std::string& method);
 };

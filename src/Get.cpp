@@ -29,31 +29,31 @@ namespace {
   HttpResponse handleFile(const RouteResponse& data) {
     const std::string& path = data.full_path;
     if (!Filesystem::exists(path)) {
-      return HttpResponse(404, ErrorPage::get(404, *data.error_pages));
+      return HttpResponse(404, ErrorPage::get(404, data.error_pages));
     }
     const std::pair<bool, std::string> filebuf = Filesystem::readFile(path);
     if (!filebuf.first) {
-      return HttpResponse(403, ErrorPage::get(403, *data.error_pages));
+      return HttpResponse(403, ErrorPage::get(403, data.error_pages));
     }
     return HttpResponse(200, filebuf.second);
   }
 
   HttpResponse handleDirectory(const RouteResponse& data) {
-    if (!data.location->index.empty()) {
-      if (Filesystem::exists(data.full_path + data.location->index)) {
-        const std::pair<bool, std::string> indexbuf = Filesystem::readFile(data.full_path + data.location->index);
+    if (!data.location.index.empty()) {
+      if (Filesystem::exists(data.full_path + data.location.index)) {
+        const std::pair<bool, std::string> indexbuf = Filesystem::readFile(data.full_path + data.location.index);
         if (indexbuf.first) {
           return HttpResponse(200, indexbuf.second);
         }
       }
     }
-    if (data.location->autoindex) {
-      const std::string indexbuf = generateIndex(data.full_path, data.location->path);
+    if (data.location.autoindex) {
+      const std::string indexbuf = generateIndex(data.full_path, data.location.path);
       if (!indexbuf.empty()) {
         return HttpResponse(200, indexbuf);
       }
     }
-    return HttpResponse(403, ErrorPage::get(403, *data.error_pages));
+    return HttpResponse(403, ErrorPage::get(403, data.error_pages));
   }
 
 }
@@ -67,7 +67,7 @@ namespace Get {
     else if (Filesystem::isRegularFile(data.full_path)) {
       return handleFile(data);
     }
-    return HttpResponse(404, ErrorPage::get(404, *data.error_pages));
+    return HttpResponse(404, ErrorPage::get(404, data.error_pages));
   }
 
 }

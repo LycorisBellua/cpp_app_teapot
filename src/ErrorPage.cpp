@@ -1,3 +1,4 @@
+#include "../include/Debug.hpp"
 #include "../include/ErrorPage.hpp"
 
 namespace {
@@ -55,6 +56,7 @@ namespace ErrorPage {
   }
 
   std::string get(int code) {
+    Debug::PrintLn("DEFAULT ERROR PAGE");
     return getDefaultErrorPage(code);
   }
 

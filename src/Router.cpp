@@ -1,3 +1,4 @@
+#include "../include/Debug.hpp"
 #include "../include/Router.hpp"
 
 namespace {
@@ -29,7 +30,7 @@ namespace {
     std::stringstream log_str;
     log_str << "[Router] Successfully matched request to Server/Location\n\nRequest:" << "\nPort: " << req.port << "\nHost: " << req.host
             << "\nURI: " << req.uri << "\nMethod: " << req.method << "\n\nRoute:" << "\nFull Path: " << res.full_path
-            << "\nMime Type: " << res.mime_type << "\nLocation: " << res.location->path;
+            << "\nMime Type: " << res.mime_type << "\nLocation: " << res.location.path;
     Log::info(log_str.str());
   }
 }
@@ -95,13 +96,12 @@ const RouteResponse Router::getRoute(const RouteRequest& request) const {
   try {
     validMethod(request, location);
   } catch (const RouterError& e) {
+    Debug::PrintLn("Caught here!");
     return errorReturn(405, server);
   }
-  RouteResponse response;
-  response.error_pages = &server->errors;
-  response.location = location;
+  RouteResponse response(*location, server->errors);
   if (location->redirect.first != 0) {
-    response.errcode = location->redirect.first;
+    response.error_code = location->redirect.first;
     return response;
   }
   response.full_path = Filesystem::normalisePaths(location->root + path.substr(1), Filesystem::getCurrentDir());
@@ -255,7 +255,12 @@ void Router::validMethod(const RouteRequest& req, const LocationData* location) 
 
 const RouteResponse Router::errorReturn(int code, const ServerData* srv) const {
   RouteResponse response;
-  response.errcode = code;
-  response.error_pages = srv == NULL ? NULL : &(srv->errors);
+  response.error_code = code;
+  if (!srv) {
+    response.error_body = ErrorPage::get(code);
+  }
+  else {
+    response.error_body = ErrorPage::get(code, srv->errors);
+  }
   return response;
 }

@@ -30,15 +30,19 @@ int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
   // Debug::PrintConfig(router);
-  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/Work/cpp/.clang-format", "GET"));
+  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads/laptop.jpg", "GET"));
   Debug::PrintRouteResponse(response);
+
+  std::ofstream error_file("tests/error_test.html", std::ios::binary);
+  error_file << response.error_body;
+  error_file.close();
 
   std::cout << "\n\n";
 
   HttpResponse result = Get::handle(response);
   Debug::PrintHttpResponse(result);
 
-  std::ofstream output("testfile", std::ios::binary);
+  std::ofstream output("tests/file_test", std::ios::binary);
   output << result.content;
   output.close();
 }

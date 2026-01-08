@@ -106,15 +106,16 @@ void Debug::PrintConfig(const Router& router) {
 
 void Debug::PrintRouteResponse(const RouteResponse& response) {
   std::cout << BLUE << "RouteResponse\n"
-            << RESET << BOLD << "Error Code: " << RESET << response.errcode << "\n"
+            << RESET << BOLD << "Error Code: " << RESET << response.error_code << "\n"
+            << BOLD << "Error Body: " << RESET << response.error_body << "\n"
             << BOLD << "Full Path: " << RESET << response.full_path << "\n"
             << BOLD << "Mime Type: " << RESET << response.mime_type << "\n"
             << BOLD << "Client Body Max: " << RESET << response.client_body_max << "\n\n"
             << UNDERLINE << "Error Pages\n"
             << RESET;
-  printErrorPages(*response.error_pages);
+  printErrorPages(response.error_pages);
   std::cout << UNDERLINE << "\nLocation\n" << RESET;
-  printLocation(*response.location);
+  printLocation(response.location);
 }
 
 void Debug::PrintPorts(const std::set<std::pair<std::string, int> >& ports) {
