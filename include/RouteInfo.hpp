@@ -11,8 +11,8 @@ struct RouteResponse {
   std::string full_path;
   std::string mime_type;
   size_t client_body_max;
-  std::map<int, std::string>& error_pages;
-  LocationData& location;
+  const std::map<int, std::string> error_pages;
+  const LocationData location;
   RouteResponse();
   RouteResponse(const LocationData&, const std::map<int, std::string>&);
 };
