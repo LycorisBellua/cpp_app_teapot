@@ -25,6 +25,16 @@ bool Client::isFullyParsed() const
 	return body_end_found_;
 }
 
+bool Client::isBufferEmpty() const
+{
+	return req_buffer_.empty();
+}
+
+bool Client::shouldCloseConnection() const
+{
+	return req_.getShouldCloseConnection();
+}
+
 void Client::updateLastActivity()
 {
 	last_activity_ = std::time(0);

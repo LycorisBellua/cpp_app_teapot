@@ -87,14 +87,6 @@ bool Server::initEventLoop()
 
 bool Server::runEventLoop()
 {
-	/*
-		TODO
-		- From the terminal and not the browser, check that the server can 
-		handle two requests with the same connection, instead of two separate 
-		connections being necessary. Maybe leave a debug output in 
-		`close_connection` to check how many connections were closed (which 
-		should be 1).
-	*/
 	const int max_events = 64;
 	const int epoll_timeout_ms = 1000; // 1s
 	const int idle_timeout_sec = 10;
@@ -119,8 +111,9 @@ bool Server::runEventLoop()
 			}
 			bool can_read = events[i].events & EPOLLIN;
 			bool can_write = events[i].events & EPOLLOUT;
-			Client c = clients_[fd];
-			if (can_read && !c.isFullyParsed() && !c.parseRequest())
+			Client& c = clients_[fd];
+			if ((can_read || !c.isBufferEmpty()) && !c.isFullyParsed()
+				&& !c.parseRequest())
 			{
 				closeConnection(fd);
 				continue;
@@ -184,10 +177,15 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 	}
 }
 
-void Server::sendResponse(int fd, Client& c) const
+void Server::sendResponse(int fd, Client& c)
 {
 	std::string response = c.composeResponse();
 	write(fd, response.c_str(), response.length());
-	c.resetParsingData();
-	c.updateLastActivity();
+	if (c.shouldCloseConnection())
+		closeConnection(fd);
+	else
+	{
+		c.resetParsingData();
+		c.updateLastActivity();
+	}
 }

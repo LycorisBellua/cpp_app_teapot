@@ -97,13 +97,13 @@ void Request::setStatus(int value)
 		status_ = value;
 	else if (status_)
 		return;
-
 	if (version_ == "HTTP/1.0" && value == 405)
 		value = 403;
 	if (value == 100 || value == 200 || value == 201 || value == 202
 		|| value == 204 || value == 301 || value == 302 || value == 304
 		|| value == 401 || value == 403 || value == 404 || value == 405
-		|| value == 500 || value == 501 || value == 502 || value == 503)
+		|| value == 500 || value == 501 || value == 502 || value == 503
+		|| value == 505)
 		status_ = value;
 }
 

@@ -27,7 +27,7 @@ class Server
 		bool acceptNewConnection();
 		void closeConnection(int fd);
 		void closeIdleConnections(int idle_timeout_sec);
-		void sendResponse(int fd, Client& c) const;
+		void sendResponse(int fd, Client& c);
 };
 
 #endif

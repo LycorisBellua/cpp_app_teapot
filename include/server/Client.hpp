@@ -14,6 +14,8 @@ class Client
 
 		std::time_t getLastActivity() const;
 		bool isFullyParsed() const;
+		bool isBufferEmpty() const;
+		bool shouldCloseConnection() const;
 
 		void updateLastActivity();
 		void resetParsingData();
