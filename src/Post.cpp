@@ -2,6 +2,32 @@
 
 namespace {
 
+  std::string getFileUrl(const std::string& filename, const RouteResponse& data) {
+    const std::string& url_path = data.location->path;
+    if (url_path[url_path.length() - 1] == '/') {
+      return url_path + filename;
+    }
+    else {
+      return url_path + '/' + filename;
+    }
+  }
+
+  bool writeFile(std::ofstream& output_file, const std::string& filepath, const std::string& body) {
+    if (!output_file.is_open()) {
+      Log::error("[POST] File Not Created: Could Not Open File Stream:\n" + filepath);
+    }
+    output_file.write(body.c_str(), body.size());
+    if (!output_file.good()) {
+      output_file.close();
+      remove(filepath.c_str());
+      Log::error("[POST] File Not Created: Could not write to File Stream:\n" + filepath);
+      return false;
+    }
+    output_file.close();
+    Log::info("[POST] File Created: " + filepath);
+    return true;
+  }
+
   std::string getUploadBase() {
     time_t now = time(0);
     struct tm* timeinfo = localtime(&now);
@@ -12,23 +38,8 @@ namespace {
     return base.str();
   }
 
-  std::set<std::string> getDirListing(const std::string& index_path) {
-    std::set<std::string> dir_listing;
-    DIR* dir = opendir(index_path.c_str());
-    if (!dir) {
-      Log::error("[Upload] Unable to open directory: " + index_path);
-      return dir_listing;
-    }
-    struct dirent* file;
-    while ((file = readdir(dir)) != NULL) {
-      dir_listing.insert(file->d_name);
-    }
-    closedir(dir);
-    return dir_listing;
-  }
-
   std::string generateFilename(const std::string& path) {
-    const std::set<std::string> dir_listing = getDirListing(path);
+    const std::set<std::string> dir_listing = Filesystem::getDirListing(path);
     const std::string base = getUploadBase();
     std::stringstream filename;
     filename << base;
@@ -41,36 +52,48 @@ namespace {
     return filename.str();
   }
 
+  bool bodySizeCheck(size_t size_limit, const std::string& body) {
+    bool ok = body.size() <= size_limit;
+    if (!ok) {
+      Log::error("[POST] File Not Created: Request body exceeds max size");
+    }
+    return ok;
+  }
+
+  bool uploadPathCheck(const std::string& upload_path) {
+    if (upload_path.empty()) {
+      Log::error("[POST] No upload path specified in config file");
+      return false;
+    }
+    if (!Filesystem::exists(upload_path)) {
+      Log::error("[POST] File Not Created: Upload path does not exist:\n" + upload_path);
+      return false;
+    }
+    if (!Filesystem::isDir(upload_path)) {
+      Log::error("[POST] File Not Created: Upload path is not a directory:\n" + upload_path);
+      return false;
+    }
+    return true;
+  }
+
 }
 
 namespace Post {
 
-  int upload(const RouteResponse& data, const std::string& body) {
-    const std::string& upload_path = data.location->upload_path;
-    const std::vector<std::string> methods = data.location->allowed_methods;
-    if (std::find(methods.begin(), methods.end(), "POST") == methods.end()) {
-      return 405;
+  HttpResponse upload(const RouteResponse& data, const std::string& body) {
+    if (!uploadPathCheck(data.location->upload_path)) {
+      return HttpResponse(500, ErrorPage::get(500, *data.error_pages));
     }
-    if (upload_path.empty() || !Filesystem::exists(upload_path) || !Filesystem::isDir(upload_path)) {
-      return 404;
+    if (!bodySizeCheck(data.client_body_max, body)) {
+      return HttpResponse(413, ErrorPage::get(413, *data.error_pages));
     }
-    const std::string filename = generateFilename(upload_path);
-    if (filename.empty()) {
-      return 404;
+    const std::string filename = generateFilename(data.location->upload_path);
+    const std::string filepath(data.location->upload_path + filename);
+    std::ofstream output(filepath.c_str(), std::ios::binary);
+    if (!writeFile(output, filepath, body)) {
+      return HttpResponse(500, ErrorPage::get(500, *data.error_pages));
     }
-    const std::string full_filepath(data.location->upload_path + filename);
-    std::ofstream output(full_filepath.c_str(), std::ios::binary);
-    if (!output.is_open()) {
-      return 404;
-    }
-    output.write(body.c_str(), body.size());
-    if (!output.good()) {
-      output.close();
-      remove(full_filepath.c_str());
-      return 500;
-    }
-    output.close();
-    return 200;
+    return HttpResponse(201, getFileUrl(filename, data));
   }
 
 }

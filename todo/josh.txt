@@ -1,2 +1,24 @@
 Filesystem::generateIndex()
  -> Confirm the url to prefix the file with
+
+Error Pages
+ -> Add error_body to RouteResponse
+ -> ErrorPage namespace will generate err page using map
+     -> Store in RouteResponse::error_body or HttpResponse::content
+     -> On error, server can return error_page immediately without further calls
+
+DELETE
+ -> Implement
+
+HEAD
+ -> Add to parsing / validation
+
+Return Codes
+ -> Check all are correct in Router / Get / Post
+
+Remove error_pages and location pointers from RouteResponse
+ -> Use references to existing objects or empty objects
+
+Config::
+ -> If post method allowed but no upload location specified - Error
+ -> Split in to multiple files: main parsing loop, set, validate

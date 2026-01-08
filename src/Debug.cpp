@@ -130,8 +130,5 @@ void Debug::PrintLn(std::string msg) {
 
 void Debug::PrintHttpResponse(const HttpResponse& data) {
   std::cout << BOLD BLUE << "HttpResponse\n" << RESET;
-  std::cout << BOLD << "Return Code: " << RESET << data.return_code << "\n"
-            << BOLD << "Content: " << RESET << data.content << "\n"
-            << BOLD << "Error Message: " << RESET << data.error_message << "\n"
-            << std::endl;
+  std::cout << BOLD << "Return Code: " << RESET << data.code << "\n" << BOLD << "Content: " << RESET << data.content << "\n" << std::endl;
 }

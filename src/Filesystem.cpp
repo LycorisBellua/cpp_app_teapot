@@ -57,4 +57,36 @@ namespace Filesystem {
     return normalised;
   }
 
+  std::pair<bool, std::string> readFile(const std::string& path) {
+    std::ifstream file(path.c_str(), std::ios::binary);
+    if (!file) {
+      Log::error("[READ FILE] Unable to open file: " + path);
+      return std::make_pair(false, "");
+    }
+
+    file.seekg(0, std::ios::end);
+    size_t end = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::string content(end, '\0');
+    file.read(&content[0], end);
+    file.close();
+    return std::make_pair(true, content);
+  }
+
+  std::set<std::string> getDirListing(const std::string& index_path) {
+    std::set<std::string> dir_listing;
+    DIR* dir = opendir(index_path.c_str());
+    if (!dir) {
+      Log::error("[DIRECTORY LISTING] Unable to open directory: " + index_path);
+      return dir_listing;
+    }
+    struct dirent* file;
+    while ((file = readdir(dir)) != NULL) {
+      dir_listing.insert(file->d_name);
+    }
+    closedir(dir);
+    return dir_listing;
+  }
+
 }
