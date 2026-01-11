@@ -432,7 +432,7 @@ void Config::setMethods(const ParsingData& data) {
     throw ConfigError(data, "A minimum of 1 and maximum of 3 allowed methods must be specified");
   }
   for (std::vector<std::string>::const_iterator m = methods.begin() + 1; m != methods.end(); ++m) {
-    if (*m != "GET" && *m != "POST" && *m != "DELETE") {
+    if (*m != "GET" && *m != "POST" && *m != "DELETE" && *m != "HEAD") {
       throw ConfigError(data, "Invalid Method: " + *m);
     }
     for (std::vector<std::string>::const_iterator m2 = m + 1; m2 != methods.end(); ++m2) {

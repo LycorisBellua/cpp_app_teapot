@@ -1,5 +1,6 @@
-#include "../include/Debug.hpp"
 #include "../include/Router.hpp"
+
+#include "../include/Debug.hpp"
 
 namespace {
 
@@ -23,7 +24,7 @@ namespace {
   }
 
   bool methodImplemented(const std::string& method) {
-    return method == "GET" || method == "POST" || method == "DELETE";
+    return method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD";
   }
 
   void logSuccess(const RouteRequest& req, const RouteResponse& res) {
@@ -96,7 +97,6 @@ const RouteResponse Router::getRoute(const RouteRequest& request) const {
   try {
     validMethod(request, location);
   } catch (const RouterError& e) {
-    Debug::PrintLn("Caught here!");
     return errorReturn(405, server);
   }
   RouteResponse response(*location, server->errors);
