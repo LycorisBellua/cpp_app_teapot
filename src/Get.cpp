@@ -29,12 +29,14 @@ namespace {
   HttpResponse handleFile(const RouteResponse& data) {
     const std::string& path = data.full_path;
     if (!Filesystem::exists(path)) {
+      Log::error("[GET/HEAD] File Not Found: " + path);
       return HttpResponse(404, ErrorPage::get(404, data.error_pages));
     }
     const std::pair<bool, std::string> filebuf = Filesystem::readFile(path);
     if (!filebuf.first) {
       return HttpResponse(403, ErrorPage::get(403, data.error_pages));
     }
+    Log::info("[GET/HEAD] Serving file: " + path);
     return HttpResponse(200, filebuf.second);
   }
 
@@ -43,6 +45,7 @@ namespace {
       if (Filesystem::exists(data.full_path + data.location.index)) {
         const std::pair<bool, std::string> indexbuf = Filesystem::readFile(data.full_path + data.location.index);
         if (indexbuf.first) {
+          Log::info("[GET/HEAD] Serving Index File: " + data.full_path + data.location.index);
           return HttpResponse(200, indexbuf.second);
         }
       }
@@ -50,9 +53,11 @@ namespace {
     if (data.location.autoindex) {
       const std::string indexbuf = generateIndex(data.full_path, data.location.path);
       if (!indexbuf.empty()) {
+        Log::info("[GET/HEAD] Serving autoindex for: " + data.full_path);
         return HttpResponse(200, indexbuf);
       }
     }
+    Log::error("[GET/HEAD] No index file specified and autoindex not active: " + data.full_path);
     return HttpResponse(403, ErrorPage::get(403, data.error_pages));
   }
 
@@ -67,6 +72,7 @@ namespace Get {
     else if (Filesystem::isRegularFile(data.full_path)) {
       return handleFile(data);
     }
+    Log::error("[GET/HEAD] Requested resource is not a directory or regular file: " + data.full_path);
     return HttpResponse(404, ErrorPage::get(404, data.error_pages));
   }
 
