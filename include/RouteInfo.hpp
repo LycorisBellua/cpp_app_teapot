@@ -9,6 +9,7 @@ struct RouteResponse {
   int error_code;
   std::string error_body;
   std::string full_path;
+  std::string query;
   std::string mime_type;
   size_t client_body_max;
   const std::map<int, std::string> error_pages;

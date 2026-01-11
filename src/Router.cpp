@@ -17,10 +17,18 @@ namespace {
     return static_cast<char>(strtol(hex.c_str(), NULL, 16));
   }
 
-  std::string removeQueryAndFragment(const std::string& uri) {
-    size_t start = uri.find_first_of("?#");
+  std::string removeQuery(const std::string& uri) {
+    size_t start = uri.find_first_of("?");
 
     return (start == uri.npos) ? uri : uri.substr(0, start);
+  }
+
+  std::string getQuery(const std::string& uri) {
+    size_t query_start = uri.find_first_of("?");
+    if (query_start == uri.npos) {
+      return "";
+    }
+    return uri.substr(query_start + 1);
   }
 
   bool methodImplemented(const std::string& method) {
@@ -34,6 +42,7 @@ namespace {
             << "\nMime Type: " << res.mime_type << "\nLocation: " << res.location.path;
     Log::info(log_str.str());
   }
+
 }
 
 /* ---------- Constructors / Destructor ---------- */
@@ -81,7 +90,7 @@ const RouteResponse Router::getRoute(const RouteRequest& request) const {
   std::string path;
   try {
     decoded = decodeUri(request);
-    path = removeQueryAndFragment(decoded);
+    path = removeQuery(decoded);
     path = normalizePath(path, request);
   } catch (const RouterError& e) {
     return errorReturn(400, NULL);
@@ -105,6 +114,7 @@ const RouteResponse Router::getRoute(const RouteRequest& request) const {
     return response;
   }
   response.full_path = Filesystem::normalisePaths(location->root + path.substr(1), Filesystem::getCurrentDir());
+  response.query = getQuery(decoded);
   response.client_body_max = server->client_body_max;
   response.mime_type = getMime(path);
   logSuccess(request, response);
