@@ -55,7 +55,7 @@ namespace {
   bool bodySizeCheck(size_t size_limit, const std::string& body) {
     bool ok = body.size() <= size_limit;
     if (!ok) {
-      Log::error("[POST] File Not Created: Request body exceeds max size");
+      Log::error("[POST] Request body exceeds max size");
     }
     return ok;
   }
@@ -81,6 +81,12 @@ namespace {
 namespace Post {
 
   HttpResponse upload(const RouteResponse& data, const std::string& body) {
+    /*if (isCgi(data)) {
+      return handleCgi(data, body);
+    }
+    if (isUpload(data)) {
+      return handleUpload(data, body);
+    }*/
     if (!uploadPathCheck(data.location.upload_path)) {
       return HttpResponse(500, ErrorPage::get(500, data.error_pages));
     }

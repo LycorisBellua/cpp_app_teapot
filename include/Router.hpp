@@ -18,8 +18,8 @@ class Router {
   ~Router();
 
   const std::vector<ServerData>& getServers() const;
-  const std::set<std::pair<std::string, int> > getPorts() const;
-  const RouteResponse getRoute(const RouteRequest& request) const;
+  std::set<std::pair<std::string, int> > getPorts() const;
+  RouteResponse getRoute(const RouteRequest& request) const;
 
  private:
   // Class Data

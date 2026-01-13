@@ -1,7 +1,5 @@
 #include "../include/Router.hpp"
 
-#include "../include/Debug.hpp"
-
 namespace {
 
   typedef std::vector<ServerData>::const_iterator srv_it;
@@ -77,7 +75,7 @@ const std::vector<ServerData>& Router::getServers() const {
   return this->servers;
 }
 
-const std::set<std::pair<std::string, int> > Router::getPorts() const {
+std::set<std::pair<std::string, int> > Router::getPorts() const {
   std::set<std::pair<std::string, int> > ports;
   for (srv_it s = servers.begin(); s != servers.end(); ++s) {
     ports.insert(std::make_pair(s->host, s->port));
@@ -85,7 +83,7 @@ const std::set<std::pair<std::string, int> > Router::getPorts() const {
   return ports;
 }
 
-const RouteResponse Router::getRoute(const RouteRequest& request) const {
+RouteResponse Router::getRoute(const RouteRequest& request) const {
   std::string decoded;
   std::string path;
   try {
