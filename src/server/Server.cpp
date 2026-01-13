@@ -2,18 +2,24 @@
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
+#include <netdb.h>
 #include <sys/epoll.h>
 
-Server::Server() : fd_listen_(-1), fd_epoll_(-1), addr_()
+Server::Server() : fd_epoll_(epoll_create(1))
 {
-	int port = 8080;
-	int queue_length = 10;
-
-	if (!createSocket()
-		|| !bindSocketToPort(port)
-		|| !listenForClients(queue_length)
-		|| !initEventLoop()
-		|| !runEventLoop())
+	// TODO: Create loop: iterate through the list of location pairs (IP/port)
+	{
+		int fd_listen = -1;
+		sockaddr_in addr = {};
+		if (!createSocket(fd_listen)
+			|| !bindSocket("localhost", 8080, fd_listen, addr)
+			|| !listenForClients(fd_listen)
+			|| !addListenerToEventHandler(fd_listen))
+			close(fd_listen);
+		else
+			listeners_.insert(std::pair<int, sockaddr_in>(fd_listen, addr));
+	}
+	if (!runEventLoop())
 		return;
 }
 
@@ -21,44 +27,70 @@ Server::~Server()
 {
 	closeIdleConnections(0);
 	close(fd_epoll_);
-	close(fd_listen_);
+	closeListeners();
 }
 
-/* Private (Instance) ------------------------------------------------------- */
+/* Private (Static) --------------------------------------------------------- */
 
-bool Server::createSocket()
+bool Server::createSocket(int& fd_listen)
 {
-	fd_listen_ = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd_listen_ < 0)
+	fd_listen = socket(AF_INET, SOCK_STREAM, 0);
+	if (fd_listen < 0)
 	{
 		std::cerr << "Error: Server: createSocket: socket" << std::endl;
 		return false;
 	}
-	else if (fcntl(fd_listen_, F_SETFL, O_NONBLOCK) < 0)
+	else if (fcntl(fd_listen, F_SETFL, O_NONBLOCK) < 0)
 	{
-		close(fd_listen_);
+		close(fd_listen);
+		fd_listen = -1;
 		std::cerr << "Error: Server: createSocket: fcntl" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool Server::bindSocketToPort(int port)
+bool Server::bindSocket(const std::string& ip, int port, int& fd_listen,
+	sockaddr_in& addr)
 {
-	addr_.sin_family = AF_INET;
-	addr_.sin_addr.s_addr = htonl(INADDR_ANY);
-	addr_.sin_port = htons(port);
-	if (bind(fd_listen_, (struct sockaddr *)&addr_, sizeof(addr_)) < 0)
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(port);
+	if (ip == "localhost" || ip == "127.0.0.1")
+		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	else if (ip == "0.0.0.0")
+		addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	else if (!Server::resolveIPv4(ip, addr))
+		return false;
+	if (bind(fd_listen, (sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		std::cerr << "Error: Server: bindSocketToPort" << std::endl;
+		std::cerr << "Error: Server: bindSocket" << std::endl;
 		return false;
 	}
 	return true;
 }
 
-bool Server::listenForClients(int queue_length) const
+bool Server::resolveIPv4(const std::string& ip, sockaddr_in& out)
 {
-	if (listen(fd_listen_, queue_length) < 0)
+	addrinfo hints = {};
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_NUMERICHOST;
+	addrinfo* res = 0;
+	if (getaddrinfo(ip.c_str(), 0, &hints, &res))
+	{
+		std::cerr << "Error: Server: IP \"" << ip << "\" is invalid"
+			<< std::endl;
+		return false;
+	}
+    out = *reinterpret_cast<sockaddr_in*>(res->ai_addr);
+	freeaddrinfo(res);
+	return true;
+}
+
+bool Server::listenForClients(int fd_listen)
+{
+	const int queue_length = 10;
+	if (listen(fd_listen, queue_length) < 0)
 	{
 		std::cerr << "Error: Server: listenForClients" << std::endl;
 		return false;
@@ -66,15 +98,24 @@ bool Server::listenForClients(int queue_length) const
 	return true;
 }
 
-bool Server::initEventLoop()
+/* Private (Instance) ------------------------------------------------------- */
+
+void Server::closeListeners()
 {
-	fd_epoll_ = epoll_create(1);
-	struct epoll_event ev;
+	std::map<int, sockaddr_in>::iterator it;
+	std::map<int, sockaddr_in>::iterator ite = listeners_.end();
+	for (it = listeners_.begin(); it != ite; ++it)
+		close(it->first);
+}
+
+bool Server::addListenerToEventHandler(int fd_listen)
+{
+	epoll_event ev;
 	ev.events = EPOLLIN;
-	ev.data.fd = fd_listen_;
-	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_listen_, &ev))
+	ev.data.fd = fd_listen;
+	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_listen, &ev))
 	{
-		std::cerr << "Error: Server: initEventLoop" << std::endl;
+		std::cerr << "Error: Server: addListenerToEventHandler" << std::endl;
 		return false;
 	}
 	return true;
@@ -83,9 +124,9 @@ bool Server::initEventLoop()
 bool Server::runEventLoop()
 {
 	const int max_events = 64;
-	const int epoll_timeout_ms = 1000; // 1s
-	const int idle_timeout_sec = 10;
-	struct epoll_event events[max_events];
+	const int epoll_timeout_ms = 1000;
+	const int idle_timeout_sec = 30;
+	epoll_event events[max_events];
 	while (1)
 	{
 		int n = epoll_wait(fd_epoll_, events, max_events, epoll_timeout_ms);
@@ -98,9 +139,10 @@ bool Server::runEventLoop()
 		for (int i = 0; i < n; ++i)
 		{
 			int fd = events[i].data.fd;
-			if (fd == fd_listen_)
+			std::map<int, sockaddr_in>::iterator listener = listeners_.find(fd);
+			if (listener != listeners_.end())
 			{
-				if (!acceptNewConnection())
+				if (!acceptNewConnection(listener->first, listener->second))
 					return false;
 				continue;
 			}
@@ -121,14 +163,14 @@ bool Server::runEventLoop()
 	return true;
 }
 
-bool Server::acceptNewConnection()
+bool Server::acceptNewConnection(int fd_listen, const sockaddr_in& addr)
 {
-	int addrlen = sizeof(addr_);
-	int fd_client = accept(fd_listen_, (struct sockaddr *)&addr_,
+	int addrlen = sizeof(addr);
+	int fd_client = accept(fd_listen, (sockaddr *)&addr,
 		(socklen_t *)&addrlen);
 	if (fd_client < 0)
 	{
-		std::cerr << "Error: Server: acceptNewConnection" << std::endl;
+		std::cerr << "Error: Server: acceptNewConnection: accept" << std::endl;
 		return false;
 	}
 	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
@@ -137,7 +179,7 @@ bool Server::acceptNewConnection()
 		std::cerr << "Error: Server: acceptNewConnection: fcntl" << std::endl;
 		return false;
 	}
-	struct epoll_event cev;
+	epoll_event cev;
 	cev.events = EPOLLIN | EPOLLOUT;
 	cev.data.fd = fd_client;
 	epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_client, &cev);

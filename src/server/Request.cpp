@@ -151,12 +151,6 @@ void Request::parseContentTypeHeader(const std::string value)
 	{
 		content_type_header_found_ = true;
 		content_type_ = value;
-		/*
-			TODO
-			- The config file is needed to check that Content-Type's value is 
-			valid. MIME?
-			- If invalid, which status code do I return?
-		*/
 	}
 }
 
@@ -228,18 +222,6 @@ void Request::afterHeaderCheck()
 {
 	if (version_ == "HTTP/1.1" && !host_header_found_)
 		setStatus(400);
-	else if (!status_)
-	{
-		/*
-			TODO
-			- Use the config struct to tell whether the domain and port are 
-			valid. If these values are set, but they do not match anything we 
-			have in store, then return 404.
-			- If the values are not set (empty string and 0 for the port), then 
-			use the default domain. If no default domain had been indicated by 
-			the config file, then use the first domain.
-		*/
-	}
 	if (status_)
 		should_close_connection_ = true;
 }

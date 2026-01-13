@@ -12,20 +12,23 @@ class Server
 		~Server();
 
 	private:
-		int fd_listen_;
 		int fd_epoll_;
-		struct sockaddr_in addr_;
+		std::map<int, sockaddr_in> listeners_;
 		std::map<int, Client> clients_;
 	
-		bool createSocket();
-		bool bindSocketToPort(int port);
-		bool listenForClients(int queue_length) const;
-		bool initEventLoop();
+		void closeListeners();
+		bool addListenerToEventHandler(int fd_listen);
 		bool runEventLoop();
-		bool acceptNewConnection();
+		bool acceptNewConnection(int fd_listen, const sockaddr_in& addr);
 		void closeConnection(int fd);
 		void closeIdleConnections(int idle_timeout_sec);
 		void sendResponse(int fd, Client& c);
+
+		static bool createSocket(int& fd_listen);
+		static bool bindSocket(const std::string& ip, int port, int& fd_listen,
+			sockaddr_in& addr);
+		static bool resolveIPv4(const std::string& ip, sockaddr_in& out);
+		static bool listenForClients(int fd_listen);
 };
 
 #endif

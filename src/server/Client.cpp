@@ -73,6 +73,16 @@ std::string Client::composeResponse() const
 			- If the method is HEAD, say it's GET.
 			- Fetch the requested resource (static page or CGI), and set the 
 			status code accordingly (an error, or 200 or 201 for success).
+
+			- Check the Content Type. If it's not part of the MIME list, it's 
+			an error. And `text/plain` must always be part of the list, it's 
+			the default value. If error, which status code to return?
+			- Check the Host (domain and port):
+				* If the values are unset (empty string and 0 for the port), 
+				then use the default domain. If no default domain had been 
+				given by the config file, then use the first domain.
+				* If the values are set, but do not match anything we have in 
+				store, then return 404.
 		*/
 	}
 	if (req_.getStatus() != 100)
