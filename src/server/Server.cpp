@@ -4,15 +4,10 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 
-Server::Server(int tmp_config) : fd_listen_(-1), fd_epoll_(-1), addr_()
+Server::Server() : fd_listen_(-1), fd_epoll_(-1), addr_()
 {
-	/*
-		TODO
-		- Pass the config struct as argument to the constructor.
-	*/
 	int port = 8080;
 	int queue_length = 10;
-	(void)tmp_config;
 
 	if (!createSocket()
 		|| !bindSocketToPort(port)

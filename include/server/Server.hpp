@@ -8,7 +8,7 @@
 class Server
 {
 	public:
-		Server(int tmp_config);
+		Server();
 		~Server();
 
 	private:
@@ -16,8 +16,6 @@ class Server
 		int fd_epoll_;
 		struct sockaddr_in addr_;
 		std::map<int, Client> clients_;
-
-		Server();
 	
 		bool createSocket();
 		bool bindSocketToPort(int port);

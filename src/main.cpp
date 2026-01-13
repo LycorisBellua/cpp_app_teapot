@@ -1,6 +1,7 @@
-#include "webserv.hpp"
 #include "Server.hpp"
 #include <iostream>
+
+#define DEFAULT_CONFIG_FILE_PATH "configs/default.conf"
 
 int main(int argc, char **argv)
 {
@@ -18,10 +19,9 @@ int main(int argc, char **argv)
 	/*
 		TODO
 		- Parse the config file.
-		- Pass the config struct as argument to the Server class.
 		- Use the intra testers (especially for the chunked body).
 	*/
 
-	Server server(0);
+	Server server;
 	return 0;
 }
