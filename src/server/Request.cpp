@@ -79,7 +79,7 @@ void Request::resetData()
 	domain_ = "";
 	port_ = 0;
 	content_type_header_found_ = false;
-	content_type_ = "text/plain";
+	content_type_ = "application/octet-stream";
 	content_length_header_found_ = false;
 	content_length_ = 0;
 	transfer_encoding_header_found_ = false;
@@ -163,12 +163,6 @@ void Request::parseContentLengthHeader(const std::string value)
 		content_length_header_found_ = true;
 		if (!Helper::decToUnsignedNbr(value, content_length_))
 			setStatus(400);
-		/*
-			TODO
-			- Check whether Content-Length's value is too long (because the 
-			config file has a property about the body size).
-			- If invalid, which status code do I return?
-		*/
 	}
 }
 

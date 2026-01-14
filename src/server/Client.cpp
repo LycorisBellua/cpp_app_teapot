@@ -74,9 +74,6 @@ std::string Client::composeResponse() const
 			- Fetch the requested resource (static page or CGI), and set the 
 			status code accordingly (an error, or 200 or 201 for success).
 
-			- Check the Content Type. If it's not part of the MIME list, it's 
-			an error. And `text/plain` must always be part of the list, it's 
-			the default value. If error, which status code to return?
 			- Check the Host (domain and port):
 				* If the values are unset (empty string and 0 for the port), 
 				then use the default domain. If no default domain had been 
@@ -236,11 +233,6 @@ bool Client::parseChunkedBody()
 		{
 			if (!req_.parseChunk(req_buffer_, chunk_size_))
 				break;
-			/*
-				TODO
-				- Check whether the chunked body is too long (the config file 
-				has a property about that).
-			*/
 			is_size_line_ = true;
 		}
 		if (req_.getStatus() == 400)
