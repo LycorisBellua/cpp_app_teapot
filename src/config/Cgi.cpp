@@ -1,4 +1,4 @@
-#include "../include/Cgi.hpp"
+#include "Cgi.hpp"
 
 namespace Cgi {
 

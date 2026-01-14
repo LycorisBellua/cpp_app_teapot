@@ -32,6 +32,11 @@ int main(int argc, char **argv)
   Router router(getRouter(argc, argv));
   //Debug::PrintPorts(router.getPorts());
   Server server = Server(router);
-  // TODO: Use the intra testers (especially for the chunked body).
+  /*
+    TODO:
+    - Use the intra testers (especially for the chunked body).
+    - Use the intra testers, and if need be, be able to parse this kind of request:
+		https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/POST#multipart_form_submission
+  */
   return 0;
 }

@@ -1,5 +1,7 @@
 #include "Helper.hpp"
 
+//TODO: Use this file to store misc helper functions
+
 std::vector<std::string> Helper::splitAtWhitespace(const std::string& str)
 {
 	std::vector<std::string> tokens;

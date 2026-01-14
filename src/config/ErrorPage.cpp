@@ -1,5 +1,5 @@
-#include "../include/Debug.hpp"
-#include "../include/ErrorPage.hpp"
+#include "Debug.hpp"
+#include "ErrorPage.hpp"
 
 namespace {
 
@@ -7,6 +7,8 @@ namespace {
 
   std::string getDefaultMessage(int code) {
     static std::map<int, std::string> errors;
+    //TODO: Extract Request::getStatusMsg(int)
+    //TODO: `code_msg` to return
     if (errors.empty()) {
       errors[400] = "Bad Request";
       errors[403] = "Forbidden";

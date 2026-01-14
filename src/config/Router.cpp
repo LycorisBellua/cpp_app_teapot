@@ -1,4 +1,4 @@
-#include "../include/Router.hpp"
+#include "Router.hpp"
 
 namespace {
 
@@ -267,7 +267,7 @@ void Router::validMethod(const RouteRequest& req, const LocationData* location) 
 }
 
 void Router::verifyBodySize(const RouteRequest& request, const ServerData* server) const {
-  if (request.content_length > server->client_body_max) {
+  if (request.body.length() > server->client_body_max) {
     throw RouterError("Body Size too large for matched server", request);
   }
 }

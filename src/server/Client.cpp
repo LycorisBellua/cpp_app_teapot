@@ -66,28 +66,19 @@ bool Client::parseRequest()
 
 std::string Client::composeResponse() const
 {
-	if (!req_.getStatus())
-	{
-		/*
-			TODO
-			- If the method is HEAD, say it's GET.
-			- Fetch the requested resource (static page or CGI), and set the 
-			status code accordingly (an error, or 200 or 201 for success).
-
-			- Check the Host (domain and port):
-				* If the values are unset (empty string and 0 for the port), 
-				then use the default domain. If no default domain had been 
-				given by the config file, then use the first domain.
-				* If the values are set, but do not match anything we have in 
-				store, then return 404.
-		*/
-	}
 	if (req_.getStatus() != 100)
 	{
 		/*
 			TODO
-			- If the status code represents an error, an error page needs to be 
-			returned.
+			- If the method is HEAD, say it's GET.
+			
+			- Populate the RouteRequest, and send it to router.getRoute:
+  				RouteResponse getRoute(const RouteRequest& request) const;
+			- I receive a RouteResponse. If it's not 0, I already have the 
+			error page. Otherwise, send RouteResponse to the proper method 
+			(GET/DELETE/POST handle).
+				HttpResponse handle(const RouteResponse&);
+			- The HttpResponse object is the final thing.
 		*/
 	}
 
@@ -96,12 +87,13 @@ std::string Client::composeResponse() const
 		- Compose the response.
 	*/
 	int res_status = req_.getStatus();
+	std::string res_msg = "OK";
 	std::string res_body = "Hello World!";
 	std::string res_type = "text/plain";
 	bool connection_close = req_.getShouldCloseConnection();
 	//
 	std::string res;
-	res += Response::getStartLine(res_status);
+	res += Response::getStartLine(res_status, res_msg);
 	if (res_status == 100)
 		res += Response::getCRLF();
 	else

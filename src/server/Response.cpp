@@ -10,13 +10,13 @@ std::string Response::getCRLF()
 	return "\r\n";
 }
 
-std::string Response::getStartLine(int status)
+std::string Response::getStartLine(int status, const std::string& msg)
 {
 	std::string str = getVersion();
 	str += " ";
 	str += Helper::nbrToString(status);
 	str += " ";
-	str += Request::getStatusMsg(status);
+	str += msg;
 	str += getCRLF();
 	return str;
 }

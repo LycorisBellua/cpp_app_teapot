@@ -1,4 +1,4 @@
-#include "../include/ServerData.hpp"
+#include "ServerData.hpp"
 
 LocationData::LocationData() : autoindex(false), redirect(0, "") {}
 

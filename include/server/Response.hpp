@@ -7,7 +7,7 @@ class Response
 {
 	public:
 		static std::string getCRLF();
-		static std::string getStartLine(int status);
+		static std::string getStartLine(int status, const std::string& msg);
 		static std::string getDateLine();
 		static std::string getContentLengthLine(size_t length);
 		static std::string getContentTypeLine(const std::string& type);

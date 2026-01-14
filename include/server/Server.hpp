@@ -2,13 +2,14 @@
 #define SERVER_HPP
 
 #include "Client.hpp"
+#include "Router.hpp"
 #include <map>
 #include <netinet/in.h>
 
 class Server
 {
 	public:
-		Server();
+		Server(const Router& router);
 		~Server();
 
 	private:
@@ -16,6 +17,8 @@ class Server
 		std::map<int, sockaddr_in> listeners_;
 		std::map<int, Client> clients_;
 	
+		Server();
+
 		void closeListeners();
 		bool addListenerToEventHandler(int fd_listen);
 		bool runEventLoop();

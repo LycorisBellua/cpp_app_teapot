@@ -1,4 +1,4 @@
-#include "../include/HttpResponse.hpp"
+#include "HttpResponse.hpp"
 
 HttpResponse::HttpResponse() : code(500) {}
 

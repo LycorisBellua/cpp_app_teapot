@@ -1,4 +1,4 @@
-#include "../include/Config.hpp"
+#include "Config.hpp"
 
 /* ---------- CONSTRUCTORS / DESTRUCTOR ---------- */
 Config::Config(const std::string& conf) : conf_path(conf) {

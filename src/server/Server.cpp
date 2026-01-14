@@ -5,14 +5,20 @@
 #include <netdb.h>
 #include <sys/epoll.h>
 
-Server::Server() : fd_epoll_(epoll_create(1))
+Server::Server(const Router& router) : fd_epoll_(epoll_create(1))
 {
-	// TODO: Create loop: iterate through the list of location pairs (IP/port)
+	//TODO: Use the Log functions for errors
+	const std::set<std::pair<std::string, int> >& ip_ports = router.getPorts();
+	std::set<std::pair<std::string, int> >::const_iterator it;
+	std::set<std::pair<std::string, int> >::const_iterator ite = ip_ports.end();
+	for (it = ip_ports.begin(); it != ite; ++it)
 	{
+		const std::string& ip = it->first;
+		int port = it->second;
 		int fd_listen = -1;
 		sockaddr_in addr = {};
 		if (!createSocket(fd_listen)
-			|| !bindSocket("localhost", 8080, fd_listen, addr)
+			|| !bindSocket(ip, port, fd_listen, addr)
 			|| !listenForClients(fd_listen)
 			|| !addListenerToEventHandler(fd_listen))
 			close(fd_listen);

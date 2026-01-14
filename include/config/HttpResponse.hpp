@@ -4,6 +4,8 @@
 
 struct HttpResponse {
   int code;
+  std::string code_msg; //TODO
+  std::string content_type; //TODO
   std::string content;
   HttpResponse();
   HttpResponse(int, const std::string&);
