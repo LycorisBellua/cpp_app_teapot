@@ -106,6 +106,11 @@ RouteResponse Router::getRoute(const RouteRequest& request) const {
   } catch (const RouterError& e) {
     return errorReturn(405, server, request);
   }
+  try {
+    verifyBodySize(request, server);
+  } catch (const RouterError& e) {
+    return errorReturn(413, NULL, request);
+  }
   RouteResponse response(*location, server->errors, request);
   if (location->redirect.first != 0) {
     response.error_code = location->redirect.first;
@@ -258,6 +263,12 @@ void Router::validMethod(const RouteRequest& req, const LocationData* location) 
   bool is_valid = (method != am.end()) || (am.empty() && methodImplemented(req.method));
   if (!is_valid) {
     throw RouterError("Invalid Method for matched location", req);
+  }
+}
+
+void Router::verifyBodySize(const RouteRequest& request, const ServerData* server) const {
+  if (request.content_length > server->client_body_max) {
+    throw RouterError("Body Size too large for matched server", request);
   }
 }
 

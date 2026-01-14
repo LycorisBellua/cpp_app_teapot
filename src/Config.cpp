@@ -366,7 +366,7 @@ void Config::setName(const ParsingData& data) {
 void Config::setBodySize(const ParsingData& data) {
   const std::vector<std::string>& body = data.tokens;
   if (body.size() != 2 || body[1].empty()) {
-    throw ConfigError(data, "One client_max_body_size must be specified per server");
+    throw ConfigError(data, "Invalid Body Size Value");
   }
   if (body[1].find_first_not_of("1234567890") != body[1].npos) {
     throw ConfigError(data, "Invalid Body Size value");

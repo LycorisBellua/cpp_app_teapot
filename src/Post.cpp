@@ -52,9 +52,9 @@ namespace {
     return filename.str();
   }*/
 
-  std::vector<std::string> splitBody(const RouteResponse& data, const std::string& boundary) {}
+  // std::vector<std::string> splitBody(const RouteResponse& data, const std::string& boundary) {}
 
-  std::string extractBoundary(const std::string& content_type) {
+  /*std::string extractBoundary(const std::string& content_type) {
     size_t pos = content_type.find("boundary=");
     if (pos == std::string::npos) {
       return "";
@@ -71,15 +71,16 @@ namespace {
       }
     }
     return value;
-  }
+  }*/
 
   HttpResponse handleUpload(const RouteResponse& data) {
-    const std::string boundary = extractBoundary(data.request.content_type);
-    if (boundary.empty()) {
+    /*const std::string boundary = extractBoundary(data.request.content_type);
+    verifyBodySize (boundary.empty()) {
       Log::error("[POST] No boundary value in Content-Type Header: " + data.request.content_type);
       return HttpResponse(400, ErrorPage::get(400, data.error_pages));
     }
-    std::vector<std::string> parts = splitBody(data, boundary);
+    std::vector<std::string> parts = splitBody(data, boundary);*/
+    return HttpResponse(500, ErrorPage::get(500, data.error_pages));
   }
 
   bool isUpload(const RouteResponse& data) {
