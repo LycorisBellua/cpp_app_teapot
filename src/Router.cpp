@@ -91,7 +91,7 @@ RouteResponse Router::getRoute(const RouteRequest& request) const {
     path = removeQuery(decoded);
     path = normalizePath(path, request);
   } catch (const RouterError& e) {
-    return errorReturn(400, NULL);
+    return errorReturn(400, NULL, request);
   }
   const ServerData* server = NULL;
   const LocationData* location = NULL;
@@ -99,14 +99,14 @@ RouteResponse Router::getRoute(const RouteRequest& request) const {
     server = getServer(request);
     location = getLocation(server->locations, path, request);
   } catch (const RouterError& e) {
-    return errorReturn(404, server);
+    return errorReturn(404, server, request);
   }
   try {
     validMethod(request, location);
   } catch (const RouterError& e) {
-    return errorReturn(405, server);
+    return errorReturn(405, server, request);
   }
-  RouteResponse response(*location, server->errors);
+  RouteResponse response(*location, server->errors, request);
   if (location->redirect.first != 0) {
     response.error_code = location->redirect.first;
     return response;
@@ -261,8 +261,8 @@ void Router::validMethod(const RouteRequest& req, const LocationData* location) 
   }
 }
 
-const RouteResponse Router::errorReturn(int code, const ServerData* srv) const {
-  RouteResponse response;
+const RouteResponse Router::errorReturn(int code, const ServerData* srv, const RouteRequest& req) const {
+  RouteResponse response(req);
   response.error_code = code;
   if (!srv) {
     response.error_body = ErrorPage::get(code);

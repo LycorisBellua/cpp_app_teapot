@@ -48,5 +48,5 @@ class Router {
   std::string decodeUri(const RouteRequest&) const;
   std::string normalizePath(const std::string&, const RouteRequest&) const;
   void validMethod(const RouteRequest&, const LocationData*) const;
-  const RouteResponse errorReturn(int, const ServerData*) const;
+  const RouteResponse errorReturn(int, const ServerData*, const RouteRequest&) const;
 };

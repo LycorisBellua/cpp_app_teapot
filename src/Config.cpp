@@ -12,14 +12,14 @@ Config::ParsingData::ParsingData(const std::string& conf_file) : infile(conf_fil
 
 /* ---------- EXCEPTION ---------- */
 Config::ConfigError::ConfigError(const std::string msg) {
-  err_msg = "Config File Error:\n" + msg;
+  err_msg = "[CONFIG] " + msg;
   Log::error(err_msg);
 }
 
 Config::ConfigError::ConfigError(const ParsingData& data, const std::string msg) {
   std::stringstream num;
   num << data.line_number;
-  err_msg = "Config File Error: " + msg + "\nLine " + num.str() + ": " + data.line;
+  err_msg = "[CONFIG] " + msg + "\nLine " + num.str() + ": " + data.line;
   Log::error(err_msg);
 }
 
@@ -397,14 +397,9 @@ void Config::setErrorPage(const ParsingData& data) {
   if (!Filesystem::exists(errpage[1])) {
     throw ConfigError(data, "Error page file does not exist: " + errpage[1]);
   }
-  if (Filesystem::isDir(errpage[1])) {
-    throw ConfigError(data, "Specified error page is a directory: " + errpage[1]);
+  if (!Filesystem::isRegularFile(errpage[1])) {
+    throw ConfigError(data, "Specified error page is not a regular file: " + errpage[1]);
   }
-  std::ifstream errfile(errpage[1].c_str());
-  if (!errfile.is_open()) {
-    throw ConfigError(data, "Can not open error page file: " + errpage[1]);
-  }
-  errfile.close();
   servers.back().errors[std::atoi(error_num.c_str())] = errpage[1];
 }
 
@@ -498,12 +493,6 @@ void Config::setUploadPath(const ParsingData& data) {
   if (path[1].find("//") != path[1].npos) {
     throw ConfigError(data, "A valid upload path must not contain '//'");
   }
-  /*if (!Filesystem::exists(path[1])) {
-    throw ConfigError(data, "Upload path does not exist: " + path[1]);
-  }
-  if (!Filesystem::isDir(path[1])) {
-    throw ConfigError(data, "Upload path is not a directory: " + path[1]);
-  }*/
   servers.back().locations.back().upload_path = path[1];
 }
 
@@ -601,6 +590,11 @@ void Config::verifyLocation(const LocationData& loc) const {
   if (loc.root.empty()) {
     throw ConfigError("Location " + loc.path + ": root must be specified for all non-redirect locations");
   }
+  if (std::find(loc.allowed_methods.begin(), loc.allowed_methods.end(), "POST") != loc.allowed_methods.end()) {
+    if (loc.cgi_interpreter.empty() && loc.upload_path.empty()) {
+      throw ConfigError("Location " + loc.path + ": CGI interpreter or upload_path must be specified for POST locations");
+    }
+  }
 }
 
 void Config::verifyVirtualHosts() const {
@@ -637,6 +631,12 @@ void Config::normalisePaths() {
       }
       if (!l->upload_path.empty()) {
         l->upload_path = Filesystem::normalisePaths(l->upload_path, l->root);
+        if (!Filesystem::exists(l->upload_path)) {
+          throw ConfigError("Upload Path does not exist: " + l->upload_path);
+        }
+        if (!Filesystem::isDir(l->upload_path)) {
+          throw ConfigError("Upload Path is not a directory: " + l->upload_path);
+        }
       }
     }
   }

@@ -89,4 +89,12 @@ namespace Filesystem {
     return dir_listing;
   }
 
+  std::string getfileExtension(const std::string& filepath) {
+    size_t ext_start = filepath.find_last_of(".");
+    if (ext_start == filepath.npos) {
+      return "";
+    }
+    return filepath.substr(ext_start);
+  }
+
 }

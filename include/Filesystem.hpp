@@ -21,5 +21,6 @@ namespace Filesystem {
   std::string normalisePaths(const std::string&, std::string);
   std::pair<bool, std::string> readFile(const std::string&);
   std::set<std::string> getDirListing(const std::string&);
+  std::string getfileExtension(const std::string&);
 
 }

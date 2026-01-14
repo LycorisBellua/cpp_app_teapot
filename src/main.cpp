@@ -12,7 +12,7 @@ namespace {
 
   Router getRouter(int ac, char** av) {
     if (ac > 2) {
-      Log::errorPrint("Error: Too many launch arguments");
+      Log::error("Error: Too many launch arguments");
       std::exit(EXIT_FAILURE);
     }
     try {
@@ -29,8 +29,9 @@ namespace {
 int main(int argc, char** argv) {
   Log::info("Webserv started");
   Router router(getRouter(argc, argv));
+  Debug::PrintPorts(router.getPorts());
   // Debug::PrintConfig(router);
-  const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads/laptop.jpg", "GET"));
+  /*const RouteResponse& response = router.getRoute(RouteRequest(8080, "test.server.name", "/uploads/laptop.jpg", "GET"));
   Debug::PrintRouteResponse(response);
 
   std::ofstream error_file("tests/error_test.html", std::ios::binary);
@@ -44,5 +45,5 @@ int main(int argc, char** argv) {
 
   std::ofstream output("tests/file_test", std::ios::binary);
   output << result.content;
-  output.close();
+  output.close();*/
 }
