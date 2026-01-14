@@ -17,6 +17,6 @@
 
 namespace Post {
 
-  HttpResponse handle(const RouteResponse&, const std::string&);
+  HttpResponse handle(const RouteResponse&);
 
 }

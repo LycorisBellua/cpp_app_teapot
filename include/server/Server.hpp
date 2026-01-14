@@ -13,6 +13,7 @@ class Server
 		~Server();
 
 	private:
+		const Router& router_;
 		int fd_epoll_;
 		std::map<int, sockaddr_in> listeners_;
 		std::map<int, Client> clients_;

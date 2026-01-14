@@ -35,6 +35,18 @@ bool Client::shouldCloseConnection() const
 	return req_.getShouldCloseConnection();
 }
 
+RouteRequest Client::getRouteRequestData() const
+{
+	return RouteRequest(
+		req_.getStatus(),
+		req_.getPort(),
+		req_.getDomain(),
+		req_.getURI(),
+		req_.getMethod(),
+		req_.getContentType(),
+		req_.getBody());
+}
+
 void Client::updateLastActivity()
 {
 	last_activity_ = std::time(0);
@@ -62,53 +74,6 @@ bool Client::parseRequest()
 	if (isFullyParsed())
 		updateLastActivity();
 	return true;
-}
-
-std::string Client::composeResponse() const
-{
-	if (req_.getStatus() != 100)
-	{
-		/*
-			TODO
-			- If the method is HEAD, say it's GET.
-			
-			- Populate the RouteRequest, and send it to router.getRoute:
-  				RouteResponse getRoute(const RouteRequest& request) const;
-			- I receive a RouteResponse. If it's not 0, I already have the 
-			error page. Otherwise, send RouteResponse to the proper method 
-			(GET/DELETE/POST handle).
-				HttpResponse handle(const RouteResponse&);
-			- The HttpResponse object is the final thing.
-		*/
-	}
-
-	/*
-		TODO
-		- Compose the response.
-	*/
-	int res_status = req_.getStatus();
-	std::string res_msg = "OK";
-	std::string res_body = "Hello World!";
-	std::string res_type = "text/plain";
-	bool connection_close = req_.getShouldCloseConnection();
-	//
-	std::string res;
-	res += Response::getStartLine(res_status, res_msg);
-	if (res_status == 100)
-		res += Response::getCRLF();
-	else
-	{
-		res += Response::getDateLine();
-		res += Response::getContentLengthLine(res_body.length());
-		if (!res_body.empty())
-			res += Response::getContentTypeLine(res_type);
-		if (connection_close)
-			res += Response::getConnectionCloseLine();
-		res += Response::getCRLF();
-		if (req_.getMethod() != "HEAD")
-			res += res_body;
-	}
-	return res;
 }
 
 /* Private (Static) --------------------------------------------------------- */

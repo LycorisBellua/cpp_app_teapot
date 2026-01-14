@@ -13,10 +13,9 @@ struct RouteRequest {
   std::string uri;
   std::string method;
   std::string content_type;
-  const std::string& body;
-  RouteRequest(const std::string& body);
-  RouteRequest(int port, const std::string& host, const std::string& uri, const std::string& method, const std::string& content_type,
-              const std::string& body);
+  std::string body;
+  RouteRequest(int error_code, int port, const std::string& host, const std::string& uri, const std::string& method,
+              const std::string& content_type, const std::string& body);
 };
 
 struct RouteResponse {

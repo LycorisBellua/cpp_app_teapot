@@ -1,11 +1,12 @@
 #include "Server.hpp"
+#include "Response.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
 #include <sys/epoll.h>
 
-Server::Server(const Router& router) : fd_epoll_(epoll_create(1))
+Server::Server(const Router& router) : router_(router), fd_epoll_(epoll_create(1))
 {
 	//TODO: Use the Log functions for errors
 	const std::set<std::pair<std::string, int> >& ip_ports = router.getPorts();
@@ -222,8 +223,8 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 
 void Server::sendResponse(int fd, Client& c)
 {
-	std::string response = c.composeResponse();
-	write(fd, response.c_str(), response.length());
+	std::string res = Response::compose(router_, c);
+	write(fd, res.c_str(), res.length());
 	if (c.shouldCloseConnection())
 		closeConnection(fd);
 	else

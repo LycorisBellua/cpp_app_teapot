@@ -2,7 +2,7 @@
 #define CLIENT_HPP
 
 #include "Request.hpp"
-#include "Response.hpp"
+#include "RouteInfo.hpp"
 #include <string>
 #include <ctime>
 
@@ -16,11 +16,11 @@ class Client
 		bool isFullyParsed() const;
 		bool isBufferEmpty() const;
 		bool shouldCloseConnection() const;
+		RouteRequest getRouteRequestData() const;
 
 		void updateLastActivity();
 		void resetParsingData();
 		bool parseRequest();
-		std::string composeResponse() const;
 
 	private:
 		int fd_;
