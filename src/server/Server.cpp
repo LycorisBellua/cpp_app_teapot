@@ -1,7 +1,7 @@
 #include "Server.hpp"
 #include "Config.hpp"
+#include "Log.hpp"
 #include "Response.hpp"
-#include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -10,7 +10,6 @@
 Server::Server(const std::string& config_path)
 	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
 {
-	//TODO: Use the Log functions for errors
 	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
 	std::set<std::pair<std::string, int> >::const_iterator it;
 	std::set<std::pair<std::string, int> >::const_iterator ite = ip_ports.end();
@@ -46,14 +45,14 @@ bool Server::createSocket(int& fd_listen)
 	fd_listen = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd_listen < 0)
 	{
-		std::cerr << "Error: Server: createSocket: socket" << std::endl;
+		Log::error("Error: Server: createSocket: socket");
 		return false;
 	}
 	else if (fcntl(fd_listen, F_SETFL, O_NONBLOCK) < 0)
 	{
 		close(fd_listen);
 		fd_listen = -1;
-		std::cerr << "Error: Server: createSocket: fcntl" << std::endl;
+		Log::error("Error: Server: createSocket: fcntl");
 		return false;
 	}
 	return true;
@@ -72,7 +71,7 @@ bool Server::bindSocket(const std::string& ip, int port, int& fd_listen,
 		return false;
 	if (bind(fd_listen, (sockaddr *)&addr, sizeof(addr)) < 0)
 	{
-		std::cerr << "Error: Server: bindSocket" << std::endl;
+		Log::error("Error: Server: bindSocket");
 		return false;
 	}
 	return true;
@@ -87,8 +86,7 @@ bool Server::resolveIPv4(const std::string& ip, sockaddr_in& out)
 	addrinfo* res = 0;
 	if (getaddrinfo(ip.c_str(), 0, &hints, &res))
 	{
-		std::cerr << "Error: Server: IP \"" << ip << "\" is invalid"
-			<< std::endl;
+		Log::error("Error: Server: IP \"" + ip + "\" is invalid");
 		return false;
 	}
     out = *reinterpret_cast<sockaddr_in*>(res->ai_addr);
@@ -101,7 +99,7 @@ bool Server::listenForClients(int fd_listen)
 	const int queue_length = 10;
 	if (listen(fd_listen, queue_length) < 0)
 	{
-		std::cerr << "Error: Server: listenForClients" << std::endl;
+		Log::error("Error: Server: listenForClients");
 		return false;
 	}
 	return true;
@@ -124,7 +122,7 @@ bool Server::addListenerToEventHandler(int fd_listen)
 	ev.data.fd = fd_listen;
 	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_listen, &ev))
 	{
-		std::cerr << "Error: Server: addListenerToEventHandler" << std::endl;
+		Log::error("Error: Server: addListenerToEventHandler");
 		return false;
 	}
 	return true;
@@ -141,8 +139,7 @@ bool Server::runEventLoop()
 		int n = epoll_wait(fd_epoll_, events, max_events, epoll_timeout_ms);
 		if (n < 0)
 		{
-			std::cerr << "Error: Server: runEventLoop: epoll_wait"
-				<< std::endl;
+			Log::error("Error: Server: runEventLoop: epoll_wait");
 			return false;
 		}
 		for (int i = 0; i < n; ++i)
@@ -179,13 +176,13 @@ bool Server::acceptNewConnection(int fd_listen, const sockaddr_in& addr)
 		(socklen_t *)&addrlen);
 	if (fd_client < 0)
 	{
-		std::cerr << "Error: Server: acceptNewConnection: accept" << std::endl;
+		Log::error("Error: Server: acceptNewConnection: accept");
 		return false;
 	}
 	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
 	{
 		close(fd_client);
-		std::cerr << "Error: Server: acceptNewConnection: fcntl" << std::endl;
+		Log::error("Error: Server: acceptNewConnection: fcntl");
 		return false;
 	}
 	epoll_event cev;
