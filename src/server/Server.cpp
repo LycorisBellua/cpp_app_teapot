@@ -1,4 +1,5 @@
 #include "Server.hpp"
+#include "Config.hpp"
 #include "Response.hpp"
 #include <iostream>
 #include <unistd.h>
@@ -6,10 +7,11 @@
 #include <netdb.h>
 #include <sys/epoll.h>
 
-Server::Server(const Router& router) : router_(router), fd_epoll_(epoll_create(1))
+Server::Server(const std::string& config_path)
+	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
 {
 	//TODO: Use the Log functions for errors
-	const std::set<std::pair<std::string, int> >& ip_ports = router.getPorts();
+	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
 	std::set<std::pair<std::string, int> >::const_iterator it;
 	std::set<std::pair<std::string, int> >::const_iterator ite = ip_ports.end();
 	for (it = ip_ports.begin(); it != ite; ++it)

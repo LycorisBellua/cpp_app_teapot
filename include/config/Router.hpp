@@ -6,6 +6,7 @@
 #include <string>
 
 #include "Log.hpp"  // IWYU pragma: keep
+#include "Config.hpp"
 #include "RouteInfo.hpp"
 #include "ServerData.hpp"
 #include "ErrorPage.hpp"   // IWYU pragma: keep
@@ -13,7 +14,7 @@
 
 class Router {
  public:
-  Router(const std::vector<ServerData>&, const std::map<std::string, std::string>&);
+  Router(const Config& conf);
   Router(const Router&);
   ~Router();
 

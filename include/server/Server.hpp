@@ -9,11 +9,11 @@
 class Server
 {
 	public:
-		Server(const Router& router);
+		Server(const std::string& config_path);
 		~Server();
 
 	private:
-		const Router& router_;
+		const Router router_;
 		int fd_epoll_;
 		std::map<int, sockaddr_in> listeners_;
 		std::map<int, Client> clients_;

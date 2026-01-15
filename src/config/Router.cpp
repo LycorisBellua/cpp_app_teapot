@@ -45,7 +45,7 @@ namespace {
 }
 
 /* ---------- Constructors / Destructor ---------- */
-Router::Router(const std::vector<ServerData>& s, const std::map<std::string, std::string>& m) : servers(s), mime(m) {}
+Router::Router(const Config& conf) : servers(conf.getServers()), mime(conf.getMime()) {}
 
 Router::Router(const Router& src) : servers(src.servers), mime(src.mime) {}
 
