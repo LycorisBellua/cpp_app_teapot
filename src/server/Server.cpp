@@ -1,10 +1,10 @@
 #include "Server.hpp"
 #include "Config.hpp"
+#include "Socket.hpp"
 #include "Log.hpp"
 #include "Response.hpp"
 #include <unistd.h>
 #include <fcntl.h>
-#include <netdb.h>
 #include <sys/epoll.h>
 
 Server::Server(const std::string& config_path)
@@ -17,15 +17,14 @@ Server::Server(const std::string& config_path)
 	{
 		const std::string& ip = it->first;
 		int port = it->second;
-		int fd_listen = -1;
-		sockaddr_in addr = {};
-		if (!createSocket(fd_listen)
-			|| !bindSocket(ip, port, fd_listen, addr)
-			|| !listenForClients(fd_listen)
-			|| !addListenerToEventHandler(fd_listen))
-			close(fd_listen);
-		else
-			listeners_.insert(std::pair<int, sockaddr_in>(fd_listen, addr));
+		std::pair<int, sockaddr_in> listener = Socket::createListener(ip, port);
+		if (listener.first != -1)
+		{
+			if (!addListenerToEventHandler(listener.first))
+				close(listener.first);
+			else
+				listeners_.insert(listener);
+		}
 	}
 	if (!runEventLoop())
 		return;
@@ -36,73 +35,6 @@ Server::~Server()
 	closeIdleConnections(0);
 	close(fd_epoll_);
 	closeListeners();
-}
-
-/* Private (Static) --------------------------------------------------------- */
-
-bool Server::createSocket(int& fd_listen)
-{
-	fd_listen = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd_listen < 0)
-	{
-		Log::error("Error: Server: createSocket: socket");
-		return false;
-	}
-	else if (fcntl(fd_listen, F_SETFL, O_NONBLOCK) < 0)
-	{
-		close(fd_listen);
-		fd_listen = -1;
-		Log::error("Error: Server: createSocket: fcntl");
-		return false;
-	}
-	return true;
-}
-
-bool Server::bindSocket(const std::string& ip, int port, int& fd_listen,
-	sockaddr_in& addr)
-{
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	if (ip == "localhost" || ip == "127.0.0.1")
-		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	else if (ip == "0.0.0.0")
-		addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	else if (!Server::resolveIPv4(ip, addr))
-		return false;
-	if (bind(fd_listen, (sockaddr *)&addr, sizeof(addr)) < 0)
-	{
-		Log::error("Error: Server: bindSocket");
-		return false;
-	}
-	return true;
-}
-
-bool Server::resolveIPv4(const std::string& ip, sockaddr_in& out)
-{
-	addrinfo hints = {};
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_NUMERICHOST;
-	addrinfo* res = 0;
-	if (getaddrinfo(ip.c_str(), 0, &hints, &res))
-	{
-		Log::error("Error: Server: IP \"" + ip + "\" is invalid");
-		return false;
-	}
-    out = *reinterpret_cast<sockaddr_in*>(res->ai_addr);
-	freeaddrinfo(res);
-	return true;
-}
-
-bool Server::listenForClients(int fd_listen)
-{
-	const int queue_length = 10;
-	if (listen(fd_listen, queue_length) < 0)
-	{
-		Log::error("Error: Server: listenForClients");
-		return false;
-	}
-	return true;
 }
 
 /* Private (Instance) ------------------------------------------------------- */
