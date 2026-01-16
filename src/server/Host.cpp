@@ -1,6 +1,8 @@
 #include "Host.hpp"
 #include "Helper.hpp"
 
+/* Public (Static) ---------------------------------------------------------- */
+
 bool Host::parseUri(std::string& uri, std::string& domain, int& port)
 {
 	if (uri.empty())
@@ -45,7 +47,7 @@ int Host::parsePort(const std::string& port, const std::string& scheme)
 	return nbr;
 }
 
-/* Private ------------------------------------------------------------------ */
+/* Private (Static) --------------------------------------------------------- */
 
 bool Host::isOriginForm(const std::string& uri)
 {

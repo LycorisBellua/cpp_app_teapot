@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 
+/* Public (Instance) -------------------------------------------------------- */
+
 Server::Server(const std::string& config_path)
 	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
 {

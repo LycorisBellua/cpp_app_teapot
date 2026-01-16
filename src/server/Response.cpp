@@ -5,7 +5,7 @@
 #include "Helper.hpp"
 #include <ctime>
 
-/* Public (static) ---------------------------------------------------------- */
+/* Public (Static) ---------------------------------------------------------- */
 
 std::string Response::compose(const Router& router, const Client& c)
 {
@@ -26,7 +26,7 @@ std::string Response::compose(const Router& router, const Client& c)
 	return "";
 }
 
-/* Private (static) --------------------------------------------------------- */
+/* Private (Static) --------------------------------------------------------- */
 
 std::string Response::serialize(const Client& c, const RouteRequest& req,
 	const HttpResponse& res)

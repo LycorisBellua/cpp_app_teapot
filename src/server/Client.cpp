@@ -3,6 +3,8 @@
 #include "Helper.hpp"
 #include <unistd.h>
 
+/* Public (Instance) -------------------------------------------------------- */
+
 Client::Client() : fd_(-1), req_buffer_("")
 {
 	resetParsingData();
