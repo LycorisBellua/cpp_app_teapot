@@ -14,8 +14,22 @@ class Response
 	private:
 		Response();
 
-		static std::string serialize(const Client& c, const RouteRequest& req,
-			const HttpResponse& res);
+		class Adapter
+		{
+			public:
+				int status;
+				std::string status_msg;
+				std::string body;
+				std::string type;
+				bool should_close;
+				bool is_head;
+
+				Adapter();
+				void setFromRouteResponse(const RouteResponse& res);
+				void setFromHttpResponse(const HttpResponse& res);
+		};
+
+		static std::string serialize(const Response::Adapter& res);
 		static std::string getCRLF();
 		static std::string getStartLine(int status, const std::string& msg);
 		static std::string getVersion();

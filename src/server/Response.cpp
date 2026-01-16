@@ -9,43 +9,51 @@
 
 std::string Response::compose(const Router& router, const Client& c)
 {
-	//TODO: 100 Continue
-	// if (c.getStatus() != 100)
 	const RouteRequest& req = c.getRouteRequestData();
-	const RouteResponse& res = router.getRoute(req);
-	if (res.error_code)
+	Response::Adapter adapter;
+	adapter.should_close = c.shouldCloseConnection();
+	adapter.is_head = req.method == "HEAD";
+	if (req.error_code == 100)
 	{
-		// TODO: I already have the error page
+		adapter.status = 100;
+		adapter.status_msg = "Continue";
 	}
-	else if (req.method == "GET" || req.method == "HEAD")
-		return Response::serialize(c, req, Get::handle(res));
-	else if (req.method == "DELETE")
-		return Response::serialize(c, req, Delete::handle(res));
-	else if (req.method == "POST")
-		return Response::serialize(c, req, Post::handle(res));
-	return "";
+	else
+	{
+		const RouteResponse& res = router.getRoute(req);
+		if (res.error_code)
+			adapter.setFromRouteResponse(res);
+		else if (req.method == "GET" || req.method == "HEAD")
+			adapter.setFromHttpResponse(Get::handle(res));
+		else if (req.method == "POST")
+			adapter.setFromHttpResponse(Post::handle(res));
+		else if (req.method == "DELETE")
+			adapter.setFromHttpResponse(Delete::handle(res));
+		else
+			return "";
+	}
+	return Response::serialize(adapter);
 }
 
 /* Private (Static) --------------------------------------------------------- */
 
-std::string Response::serialize(const Client& c, const RouteRequest& req,
-	const HttpResponse& res)
+std::string Response::serialize(const Response::Adapter& res)
 {
 	std::string str;
-	str += Response::getStartLine(res.code, res.code_msg);
-	if (req.error_code == 100)
+	str += Response::getStartLine(res.status, res.status_msg);
+	if (res.status == 100)
 		str += Response::getCRLF();
 	else
 	{
 		str += Response::getDateLine();
-		str += Response::getContentLengthLine(res.content.length());
-		if (!res.content.empty())
-			str += Response::getContentTypeLine(res.content_type);
-		if (c.shouldCloseConnection())
+		str += Response::getContentLengthLine(res.body.length());
+		if (!res.body.empty() && !res.type.empty())
+			str += Response::getContentTypeLine(res.type);
+		if (res.should_close)
 			str += Response::getConnectionCloseLine();
 		str += Response::getCRLF();
-		if (req.method != "HEAD")
-			str += res.content;
+		if (!res.is_head)
+			str += res.body;
 	}
 	return str;
 }
@@ -100,4 +108,28 @@ std::string Response::getContentTypeLine(const std::string& type)
 std::string Response::getConnectionCloseLine()
 {
 	return "Connection: close" + getCRLF();
+}
+
+/* Private Nested Class ----------------------------------------------------- */
+
+Response::Adapter::Adapter()
+	: status(0), status_msg(""), body(""), type(""), should_close(false),
+	is_head(false)
+{
+}
+
+void Response::Adapter::setFromRouteResponse(const RouteResponse& res)
+{
+	this->status = res.error_code;
+	this->status_msg = res.error_msg.empty();
+	this->body = res.error_body;
+	this->type = res.mime_type;
+}
+
+void Response::Adapter::setFromHttpResponse(const HttpResponse& res)
+{
+	this->status = res.code;
+	this->status_msg = res.code_msg;
+	this->body = res.content;
+	this->type = res.content_type;
 }
