@@ -3,7 +3,7 @@
 namespace {
 
   void writeLog(std::ostream& os, const std::string& msg_type, const std::string& msg) {
-    time_t now = time(0);
+    const time_t now = time(0);
     struct tm* timeinfo = localtime(&now);
     char buffer[100];
     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timeinfo);

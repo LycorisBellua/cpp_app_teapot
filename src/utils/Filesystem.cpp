@@ -90,8 +90,8 @@ namespace Filesystem {
   }
 
   std::string getfileExtension(const std::string& filepath) {
-    size_t ext_start = filepath.find_last_of(".");
-    if (ext_start == filepath.npos) {
+    size_t ext_start = filepath.find_last_of('.');
+    if (ext_start == std::string::npos) {
       return "";
     }
     return filepath.substr(ext_start);
