@@ -53,10 +53,16 @@ namespace {
   }*/
 
   std::vector<std::string> splitBody(const RouteResponse& data, const std::string& boundary) {
-    (void)data;
-    (void)boundary;
     std::vector<std::string> split;
-zsh    return split;
+    std::string body("--" + data.request.body);
+    while (!body.empty()) {
+      size_t pos = body.find(boundary);
+      if (pos == std::string::npos) {
+        break;
+      }
+      body = body.substr(pos + boundary.length());
+    }
+    return split;
   }
 
   std::string extractBoundary(const std::string& content_type) {
