@@ -20,7 +20,7 @@ std::string Response::compose(const Router& router, const Client& c)
 	}
 	else
 	{
-		const RouteResponse& res = router.getRoute(req);
+		const RouteInfo& res = router.getRoute(req);
 		if (res.error_code)
 			adapter.setFromRouteResponse(res);
 		else if (req.method == "GET" || req.method == "HEAD")
@@ -118,7 +118,7 @@ Response::Adapter::Adapter()
 {
 }
 
-void Response::Adapter::setFromRouteResponse(const RouteResponse& res)
+void Response::Adapter::setFromRouteResponse(const RouteInfo& res)
 {
 	this->status = res.error_code;
 	this->status_msg = res.error_msg.empty();

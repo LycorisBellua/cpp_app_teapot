@@ -2,7 +2,7 @@
 
 namespace {
 
-  HttpResponse deleteFile(const RouteResponse& data) {
+  HttpResponse deleteFile(const RouteInfo& data) {
     if (unlink(data.full_path.c_str()) == -1) {
       if (errno == EACCES || errno == EPERM) {
         Log::error("[DELETE] Incorrect Permissions: " + data.full_path);
@@ -19,7 +19,7 @@ namespace {
 
 namespace Delete {
 
-  HttpResponse handle(const RouteResponse& data) {
+  HttpResponse handle(const RouteInfo& data) {
     if (!Filesystem::exists(data.full_path)) {
       Log::error("[DELETE] Requested file does not exist: " + data.full_path);
       return HttpResponse(404, ErrorPage::get(404, data.server.errors));

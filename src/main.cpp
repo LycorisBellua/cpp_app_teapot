@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
       "initiating request or by the URL in the value of the Location header provided with the response.";
   const Router test_router = (Config(argv[1]));
   const RouteRequest test_req(0, 8080, "test.server.name", "/uploads", "HEAD", "", multipart_body);
-  const RouteResponse test_route = test_router.getRoute(test_req);
+  const RouteInfo test_route = test_router.getRoute(test_req);
   const HttpResponse test_http = Get::handle(test_route);
 
   return 0;

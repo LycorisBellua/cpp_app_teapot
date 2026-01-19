@@ -26,7 +26,7 @@ namespace {
     return html.str();
   }
 
-  HttpResponse handleFile(const RouteResponse& data) {
+  HttpResponse handleFile(const RouteInfo& data) {
     const std::string& path = data.full_path;
     if (!Filesystem::exists(path)) {
       Log::error("[GET/HEAD] File Not Found: " + path);
@@ -40,7 +40,7 @@ namespace {
     return HttpResponse(200, filebuf.second);
   }
 
-  HttpResponse handleDirectory(const RouteResponse& data) {
+  HttpResponse handleDirectory(const RouteInfo& data) {
     if (!data.location.index.empty()) {
       if (Filesystem::exists(data.full_path + data.location.index)) {
         const std::pair<bool, std::string> indexbuf = Filesystem::readFile(data.full_path + data.location.index);
@@ -65,7 +65,7 @@ namespace {
 
 namespace Get {
 
-  HttpResponse handle(const RouteResponse& data) {
+  HttpResponse handle(const RouteInfo& data) {
     if (Filesystem::isDir(data.full_path)) {
       return handleDirectory(data);
     }

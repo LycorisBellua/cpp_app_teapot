@@ -11,7 +11,7 @@ namespace {
   typedef std::vector<std::string>::const_iterator str_vec_it;
   typedef std::map<std::string, std::string>::const_iterator map_it;
 
-  std::string getFileUrl(const std::string& filename, const RouteResponse& data) {
+  std::string getFileUrl(const std::string& filename, const RouteInfo& data) {
     const std::string& url_path = data.location.path;
     if (url_path[url_path.length() - 1] == '/') {
       return url_path + filename;
@@ -37,7 +37,7 @@ namespace {
     return true;
   }
 
-  std::string lookupMime(const RouteResponse& data) {
+  std::string lookupMime(const RouteInfo& data) {
     for (map_it it = data.mime_list.begin(); it != data.mime_list.end(); ++it) {
       if (it->second == data.request.content_type) {
         return it->first;
@@ -57,7 +57,7 @@ namespace {
     return base.str();
   }
 
-  std::string generateFilename(const RouteResponse& data) {
+  std::string generateFilename(const RouteInfo& data) {
     const std::set<std::string> dir_listing = Filesystem::getDirListing(data.full_path);
     const std::string base = getUploadBase();
     const std::string extension = lookupMime(data);
@@ -260,7 +260,7 @@ namespace {
     }
   }*/
 
-  HttpResponse simpleUpload(const RouteResponse& data) {
+  HttpResponse simpleUpload(const RouteInfo& data) {
     const std::string filename = generateFilename(data);
     const std::string filepath = data.full_path + filename;
     std::ofstream output_file(filepath.c_str(), std::ios::binary);
@@ -270,7 +270,7 @@ namespace {
     return HttpResponse(201, getFileUrl(filename, data));
   }
 
-  bool isUpload(const RouteResponse& data) {
+  bool isUpload(const RouteInfo& data) {
     const std::string& upload_path = data.location.upload_path;
     if (upload_path.empty()) {
       Log::error("[POST] No upload path specified in config file");
@@ -284,7 +284,7 @@ namespace {
     return true;
   }
 
-  bool isCgi(const RouteResponse& data) {
+  bool isCgi(const RouteInfo& data) {
     const std::string& cgi_ext = data.location.cgi_extension;
     if (cgi_ext.empty()) {
       return false;
@@ -293,7 +293,7 @@ namespace {
     return extension == cgi_ext;
   }
 
-  bool bodySizeCheck(const RouteResponse& data) {
+  bool bodySizeCheck(const RouteInfo& data) {
     bool ok = data.request.body.size() <= data.server.client_body_max;
     if (!ok) {
       Log::error("[POST] Request body exceeds max size");
@@ -305,7 +305,7 @@ namespace {
 
 namespace Post {
 
-  HttpResponse handle(const RouteResponse& data) {
+  HttpResponse handle(const RouteInfo& data) {
     if (!bodySizeCheck(data)) {
       return HttpResponse(413, ErrorPage::get(413, data.server.errors));
     }

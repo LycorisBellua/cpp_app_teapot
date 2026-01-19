@@ -35,7 +35,7 @@ namespace {
     return method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD";
   }
 
-  void logSuccess(const RouteRequest& req, const RouteResponse& res) {
+  void logSuccess(const RouteRequest& req, const RouteInfo& res) {
     std::stringstream log_str;
     log_str << "[Router] Successfully matched request to Server/Location\n\nRequest:" << "\nPort: " << req.port << "\nHost: " << req.host
             << "\nURI: " << req.uri << "\nMethod: " << req.method << "\n\nRoute:" << "\nFull Path: " << res.full_path
@@ -85,7 +85,7 @@ std::set<std::pair<std::string, int> > Router::getPorts() const {
   return ports;
 }
 
-RouteResponse Router::getRoute(const RouteRequest& request) const {
+RouteInfo Router::getRoute(const RouteRequest& request) const {
   std::string decoded;
   std::string path;
   try {
@@ -113,7 +113,7 @@ RouteResponse Router::getRoute(const RouteRequest& request) const {
   } catch (const RouterError& e) {
     return errorReturn(413, NULL, request);
   }
-  RouteResponse response(*server, *location, mime, request);
+  RouteInfo response(*server, *location, mime, request);
   if (location->redirect.first != 0) {
     response.error_code = location->redirect.first;
     return response;
@@ -273,8 +273,8 @@ void Router::verifyBodySize(const RouteRequest& request, const ServerData* serve
   }
 }
 
-const RouteResponse Router::errorReturn(int code, const ServerData* srv, const RouteRequest& req) const {
-  RouteResponse response(mime, req);
+const RouteInfo Router::errorReturn(int code, const ServerData* srv, const RouteRequest& req) const {
+  RouteInfo response(mime, req);
   response.error_code = code;
   if (!srv) {
     response.error_body = ErrorPage::get(code);

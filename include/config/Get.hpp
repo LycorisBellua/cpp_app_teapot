@@ -11,5 +11,5 @@
 #include "RouteInfo.hpp"
 
 namespace Get {
-  HttpResponse handle(const RouteResponse&);
+  HttpResponse handle(const RouteInfo&);
 }

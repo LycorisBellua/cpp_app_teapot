@@ -104,8 +104,8 @@ void Debug::PrintConfig(const Router& router) {
   }
 }
 
-void Debug::PrintRouteResponse(const RouteResponse& response) {
-  std::cout << BLUE << "RouteResponse\n"
+void Debug::PrintRouteInfo(const RouteInfo& response) {
+  std::cout << BLUE << "RouteInfo\n"
             << RESET << BOLD << "Error Code: " << RESET << response.error_code << "\n"
             << BOLD << "Error Body: " << RESET << response.error_body << "\n"
             << BOLD << "Full Path: " << RESET << response.full_path << "\n"

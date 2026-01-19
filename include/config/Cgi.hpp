@@ -6,6 +6,6 @@
 
 namespace Cgi {
 
-  HttpResponse handle(const RouteResponse&);
+  HttpResponse handle(const RouteInfo&);
 
 }

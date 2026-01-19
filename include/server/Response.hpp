@@ -25,7 +25,7 @@ class Response
 				bool is_head;
 
 				Adapter();
-				void setFromRouteResponse(const RouteResponse& res);
+				void setFromRouteResponse(const RouteInfo& res);
 				void setFromHttpResponse(const HttpResponse& res);
 		};
 

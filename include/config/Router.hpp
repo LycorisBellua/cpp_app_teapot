@@ -11,6 +11,7 @@
 #include "ServerData.hpp"
 #include "ErrorPage.hpp"   // IWYU pragma: keep
 #include "Filesystem.hpp"  // IWYU pragma: keep
+#include "HttpResponse.hpp"
 
 class Router {
  public:
@@ -20,7 +21,7 @@ class Router {
 
   const std::vector<ServerData>& getServers() const;
   std::set<std::pair<std::string, int> > getPorts() const;
-  RouteResponse getRoute(const RouteRequest& request) const;
+  RouteInfo getRoute(const RouteRequest& request) const;
 
  private:
   // Class Data
@@ -50,5 +51,5 @@ class Router {
   std::string normalizePath(const std::string&, const RouteRequest&) const;
   void validMethod(const RouteRequest&, const LocationData*) const;
   void verifyBodySize(const RouteRequest&, const ServerData*) const;
-  const RouteResponse errorReturn(int, const ServerData*, const RouteRequest&) const;
+  const RouteInfo errorReturn(int, const ServerData*, const RouteRequest&) const;
 };
