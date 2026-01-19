@@ -1,54 +1,44 @@
-For cookies, we need to provide a working example, and I suggest using 
-background colors. For each user session, which is expressed by cookies, the 
-HTML pages we send back will have these specific colors. Colors will be used in 
-the order of the cookies sent with the request. It could be one cookie for one 
-color, or a gradient if more cookies are used. As for cookie values that don't 
-translate to a hex code, it's okay, as we can see cookies in the browser anyway.
+- Each domain (host/port pair) has its cookie list.
 
-Example with two colors (from top to bottom):
+- When a request has the Cookie header, parse in order to have the cookie list 
+of this request. There shouldn't be a semi-colon at the end of the header 
+value, but tolerate it. This example has three cookies:
+
+```
+Cookie: name0=value0
+Cookie: name1=value1; name2=value2
+```
+
+- The response for this request should tell the client to delete any cookie the 
+domain doesn't recognize:
+`Set-Cookie: weirdCookie=; Max-Age=0; Path=/`
+
+- If the cookie is recognized, it can be used for something, but this doesn't 
+concern the response.
+
+- If no valid cookie was sent with the request, the server generates one. This 
+cookie is sent with the response. Then, for this ongoing connection, we don't 
+send a new cookie again, so have a boolean to remember that a cookie has just 
+been issued but the client doesn't "bother" with returning it to you (it could 
+be a case of pipelining, which explains that).
+
+- The cookie is a background color with a hex code, randomly generated:
+`Set-Cookie: background-color=#4468A6; Path=/`
+
+- The background color is to be used with the HTML page that's being returned, 
+if it's an HTML page.
+Example:
 ```
 <!DOCTYPE html>
 <html>
 <head>
-	<style>
-		body
-		{
-			margin: 0;
-			min-height: 100vh;
-			background: linear-gradient(#e66465, #9198e5);
-		}
-	</style>
 </head>
-<body>
+<body style="background-color: #4468A6;">
 </body>
 </html>
 ```
 
---------------------------------------------------------------------------------
-
-[Map request to a route]
-
-- Call the routing API
-- Determine:
-	* which file to serve
-	* whether to run CGI
-	* allowed methods
-	* upload directory
-	* redirects
-
-[Handle cookies and session management]
-
-- Read `Cookie` headers from request
-- Look up session in memory or using session ID
-- Create new session if none exists or expired
-- Attach session data to request context for route handlers
-
-[Build the HTTP response]
-
-- Headers
-- Body (static file, upload result, CGI output, error page, etc)
-
-[Set cookies for session management]
-
-- If session was created or modified -> send `Set-Cookie` header
-- Include any other cookies the route requires
+- Use the background color when the cookie is being issued, and then keep using 
+it for this connection, unless a request sends a new color (and it's one the 
+domain recognizes). If the request has different colors, use the last one to 
+keep things simple, instead of going for a gradient.
