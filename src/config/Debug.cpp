@@ -110,10 +110,10 @@ void Debug::PrintRouteResponse(const RouteResponse& response) {
             << BOLD << "Error Body: " << RESET << response.error_body << "\n"
             << BOLD << "Full Path: " << RESET << response.full_path << "\n"
             << BOLD << "Mime Type: " << RESET << response.mime_type << "\n"
-            << BOLD << "Client Body Max: " << RESET << response.client_body_max << "\n\n"
+            << BOLD << "Client Body Max: " << RESET << response.server.client_body_max << "\n\n"
             << UNDERLINE << "Error Pages\n"
             << RESET;
-  printErrorPages(response.error_pages);
+  printErrorPages(response.server.errors);
   std::cout << UNDERLINE << "\nLocation\n" << RESET;
   printLocation(response.location);
 }

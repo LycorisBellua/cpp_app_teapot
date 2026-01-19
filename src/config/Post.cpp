@@ -1,8 +1,17 @@
 #include "Post.hpp"
 
+#include <filesystem>
+
+#include "Debug.hpp"
+
+// TODO: finish multi-part. for binary uploads, check request level content disposition
+
 namespace {
 
-  /*std::string getFileUrl(const std::string& filename, const RouteResponse& data) {
+  typedef std::vector<std::string>::const_iterator str_vec_it;
+  typedef std::map<std::string, std::string>::const_iterator map_it;
+
+  std::string getFileUrl(const std::string& filename, const RouteResponse& data) {
     const std::string& url_path = data.location.path;
     if (url_path[url_path.length() - 1] == '/') {
       return url_path + filename;
@@ -28,6 +37,16 @@ namespace {
     return true;
   }
 
+  std::string lookupMime(const RouteResponse& data) {
+    for (map_it it = data.mime_list.begin(); it != data.mime_list.end(); ++it) {
+      if (it->second == data.request.content_type) {
+        return it->first;
+      }
+    }
+    Log::info("[POST] No matching file extension found for: " + data.request.content_type);
+    return "";
+  }
+
   std::string getUploadBase() {
     time_t now = time(0);
     struct tm* timeinfo = localtime(&now);
@@ -38,31 +57,165 @@ namespace {
     return base.str();
   }
 
-  std::string generateFilename(const std::string& path) {
-    const std::set<std::string> dir_listing = Filesystem::getDirListing(path);
+  std::string generateFilename(const RouteResponse& data) {
+    const std::set<std::string> dir_listing = Filesystem::getDirListing(data.full_path);
     const std::string base = getUploadBase();
+    const std::string extension = lookupMime(data);
     std::stringstream filename;
-    filename << base;
+    filename << base << extension;
     size_t suffix = 0;
     while (dir_listing.find(filename.str()) != dir_listing.end()) {
       filename.str("");
       filename.clear();
-      filename << base << "_" << ++suffix;
+      filename << base << "_" << ++suffix << extension;
     }
     return filename.str();
-  }*/
+  }
 
-  std::vector<std::string> splitBody(const RouteResponse& data, const std::string& boundary) {
+  /*std::string extractFilename(const std::string& raw) {
+    size_t i = raw.find('=');
+    if (i == std::string::npos) {
+      return "";
+    }
+    ++i;
+
+    // Skip whitespace after '='
+    while (i < raw.length() && std::isspace(static_cast<unsigned char>(raw[i]))) {
+      ++i;
+    }
+
+    if (i >= raw.length()) {
+      return "";
+    }
+
+    // Quoted value
+    if (raw[i] == '\"') {
+      ++i;  // Skip opening quote
+      std::string result;
+
+      while (i < raw.length()) {
+        if (raw[i] == '\\' && i + 1 < raw.length()) {
+          // Handle escape sequences: \\ and \"
+          char next = raw[i + 1];
+          if (next == '\\' || next == '\"') {
+            result += next;
+            i += 2;
+            continue;
+          }
+        }
+        if (raw[i] == '\"') {
+          // Found closing quote - verify only whitespace remains
+          ++i;
+          while (i < raw.length()) {
+            if (!std::isspace(static_cast<unsigned char>(raw[i]))) {
+              return "";  // Junk after closing quote
+            }
+            ++i;
+          }
+          return result;
+        }
+        result += raw[i];
+        ++i;
+      }
+      // No closing quote found - malformed
+      return "";
+    }
+    // Unquoted value
+    std::string result;
+    while (i < raw.length() && !std::isspace(static_cast<unsigned char>(raw[i]))) {
+      // Quotes not allowed in unquoted values
+      if (raw[i] == '\"') {
+        return "";
+      }
+      result += raw[i];
+      ++i;
+    }
+
+    // Verify only whitespace remains after unquoted value
+    while (i < raw.length()) {
+      if (!std::isspace(static_cast<unsigned char>(raw[i]))) {
+        return "";  // Junk after unquoted value
+      }
+      ++i;
+    }
+
+    return result;
+  }
+
+  std::pair<bool, size_t> findInVector(const std::vector<std::string>& vec, const std::string& to_find) {
+    for (size_t index = 0; index < vec.size(); ++index) {
+      if (vec[index].find(to_find) != std::string::npos) {
+        return std::make_pair(true, index);
+      }
+    }
+    return std::make_pair(false, 0);
+  }
+
+  std::vector<std::string> splitOnStr(const std::string& to_split, const std::string& separator) {
+    std::string to_process = to_split;
+    std::vector<std::string> result;
+    while (!to_process.empty()) {
+      size_t pos = to_process.find(separator);
+      if (pos == std::string::npos) {
+        result.push_back(to_process);
+        break;
+      }
+      result.push_back(to_process.substr(0, pos));
+      if (pos + separator.length() < to_process.length()) {
+        to_process = to_process.substr(pos + separator.length());
+      }
+      else {
+        break;
+      }
+    }
+    return result;
+  }
+
+  HttpResponse processParts(const RouteResponse& data, const std::vector<std::string>& parts) {
+    for (str_vec_it it = parts.begin(); it != parts.end(); ++it) {
+      const std::vector<std::string> lines = splitOnStr(*it, "\r\n");
+      std::pair<bool, size_t> c_disp = findInVector(lines, "Content-Disposition");
+      if (!c_disp.first) {
+        Log::error("[POST] Missing Content-Disposition header in multipart body" + *it);
+        return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+      }
+      const std::vector<std::string> content_disp = splitOnStr(lines[c_disp.second], ";");
+      std::pair<bool, size_t> name = findInVector(content_disp, "filename");
+      if (!name.first) {
+        continue;
+      }
+      const std::string filename = extractFilename(content_disp[name.second]);
+      if (filename.empty()) {
+        return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+      }
+      std::pair<bool, size_t> c_type = findInVector(lines, "Content-Type");
+    }
+    return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+  }
+
+  std::vector<std::string> splitBody(const RouteResponse& data, const std::string& bound) {
     std::vector<std::string> split;
-    std::string body("--" + data.request.body);
+    std::string body = data.request.body;
+    const std::string boundary = "--" + bound;
+    bool final_delimiter = false;
     while (!body.empty()) {
       size_t pos = body.find(boundary);
       if (pos == std::string::npos) {
         break;
       }
-      body = body.substr(pos + boundary.length());
+      pos += boundary.length();
+      if (pos + 1 < body.length() && body[pos] == '-' && body[pos + 1] == '-') {
+        final_delimiter = true;
+        break;
+      }
+      size_t end_pos = body.find(boundary, pos);
+      if (end_pos == std::string::npos) {
+        break;
+      }
+      split.push_back(body.substr(pos, end_pos - pos));
+      body = body.substr(end_pos);
     }
-    return split;
+    return (final_delimiter == true) ? split : std::vector<std::string>();
   }
 
   std::string extractBoundary(const std::string& content_type) {
@@ -84,14 +237,37 @@ namespace {
     return value;
   }
 
-  HttpResponse handleUpload(const RouteResponse& data) {
+  HttpResponse multipartUpload(const RouteResponse& data) {
     const std::string boundary = extractBoundary(data.request.content_type);
     if (boundary.empty()) {
       Log::error("[POST] No boundary value in Content-Type Header: " + data.request.content_type);
-      return HttpResponse(400, ErrorPage::get(400, data.error_pages));
+      return HttpResponse(400, ErrorPage::get(400, data.server.errors));
     }
     std::vector<std::string> parts = splitBody(data, boundary);
-    return HttpResponse(500, ErrorPage::get(500, data.error_pages));
+    if (parts.empty()) {
+      Log::error("[POST] No final boundary found in multipart body");
+      return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+    }
+    return processParts(data, parts);
+  }
+
+  HttpResponse handleUpload(const RouteResponse& data) {
+    if (data.request.content_type.find("multipart/form-data") != std::string::npos) {
+      return multipartUpload(data);
+    }
+    else {
+      return simpleUpload(data);
+    }
+  }*/
+
+  HttpResponse simpleUpload(const RouteResponse& data) {
+    const std::string filename = generateFilename(data);
+    const std::string filepath = data.full_path + filename;
+    std::ofstream output_file(filepath.c_str(), std::ios::binary);
+    if (!writeFile(output_file, filename, data.request.body)) {
+      return HttpResponse(500, ErrorPage::get(500, data.server.errors));
+    }
+    return HttpResponse(201, getFileUrl(filename, data));
   }
 
   bool isUpload(const RouteResponse& data) {
@@ -100,7 +276,12 @@ namespace {
       Log::error("[POST] No upload path specified in config file");
       return false;
     }
-    return data.request.content_type.find("multipart/form-data") != std::string::npos;
+    // return data.request.content_type.find("multipart/form-data") != std::string::npos;
+    if (data.request.body.size() == 0) {
+      Log::error("[POST] No body to upload");
+      return false;
+    }
+    return true;
   }
 
   bool isCgi(const RouteResponse& data) {
@@ -113,7 +294,7 @@ namespace {
   }
 
   bool bodySizeCheck(const RouteResponse& data) {
-    bool ok = data.request.body.size() <= data.client_body_max;
+    bool ok = data.request.body.size() <= data.server.client_body_max;
     if (!ok) {
       Log::error("[POST] Request body exceeds max size");
     }
@@ -126,16 +307,17 @@ namespace Post {
 
   HttpResponse handle(const RouteResponse& data) {
     if (!bodySizeCheck(data)) {
-      return HttpResponse(413, ErrorPage::get(413, data.error_pages));
+      return HttpResponse(413, ErrorPage::get(413, data.server.errors));
     }
     if (isCgi(data)) {
       return Cgi::handle(data);
     }
     if (isUpload(data)) {
-      return handleUpload(data);
+      // return handleUpload(data);
+      return simpleUpload(data);
     }
     // TODO: Check fallback return code
-    return HttpResponse(400, ErrorPage::get(500, data.error_pages));
+    return HttpResponse(400, ErrorPage::get(500, data.server.errors));
 
     /*    const std::string filename = generateFilename(data.location.upload_path);
     const std::string filepath(data.location.upload_path + filename);

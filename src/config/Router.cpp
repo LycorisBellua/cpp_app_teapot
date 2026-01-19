@@ -1,4 +1,5 @@
 #include "Router.hpp"
+
 #include "Debug.hpp"
 
 namespace {
@@ -112,14 +113,13 @@ RouteResponse Router::getRoute(const RouteRequest& request) const {
   } catch (const RouterError& e) {
     return errorReturn(413, NULL, request);
   }
-  RouteResponse response(*location, server->errors, request);
+  RouteResponse response(*server, *location, mime, request);
   if (location->redirect.first != 0) {
     response.error_code = location->redirect.first;
     return response;
   }
   response.full_path = Filesystem::normalisePaths(location->root + path.substr(1), Filesystem::getCurrentDir());
   response.query = getQuery(decoded);
-  response.client_body_max = server->client_body_max;
   response.mime_type = getMime(path);
   logSuccess(request, response);
   return response;
@@ -268,13 +268,13 @@ void Router::validMethod(const RouteRequest& req, const LocationData* location) 
 }
 
 void Router::verifyBodySize(const RouteRequest& request, const ServerData* server) const {
-  if (request.body.length() > server->client_body_max) {
+  if (request.body.size() > server->client_body_max) {
     throw RouterError("Body Size too large for matched server", request);
   }
 }
 
 const RouteResponse Router::errorReturn(int code, const ServerData* srv, const RouteRequest& req) const {
-  RouteResponse response(req);
+  RouteResponse response(mime, req);
   response.error_code = code;
   if (!srv) {
     response.error_body = ErrorPage::get(code);

@@ -30,11 +30,11 @@ namespace {
     const std::string& path = data.full_path;
     if (!Filesystem::exists(path)) {
       Log::error("[GET/HEAD] File Not Found: " + path);
-      return HttpResponse(404, ErrorPage::get(404, data.error_pages));
+      return HttpResponse(404, ErrorPage::get(404, data.server.errors));
     }
     const std::pair<bool, std::string> filebuf = Filesystem::readFile(path);
     if (!filebuf.first) {
-      return HttpResponse(403, ErrorPage::get(403, data.error_pages));
+      return HttpResponse(403, ErrorPage::get(403, data.server.errors));
     }
     Log::info("[GET/HEAD] Serving file: " + path);
     return HttpResponse(200, filebuf.second);
@@ -58,7 +58,7 @@ namespace {
       }
     }
     Log::error("[GET/HEAD] No index file specified and autoindex not active: " + data.full_path);
-    return HttpResponse(403, ErrorPage::get(403, data.error_pages));
+    return HttpResponse(403, ErrorPage::get(403, data.server.errors));
   }
 
 }
@@ -73,7 +73,7 @@ namespace Get {
       return handleFile(data);
     }
     Log::error("[GET/HEAD] Requested resource is not a directory or regular file: " + data.full_path);
-    return HttpResponse(404, ErrorPage::get(404, data.error_pages));
+    return HttpResponse(404, ErrorPage::get(404, data.server.errors));
   }
 
 }
