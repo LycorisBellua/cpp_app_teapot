@@ -1,6 +1,7 @@
 #include "Request.hpp"
 #include "Host.hpp"
 #include "Helper.hpp"
+#include <algorithm>
 
 /* Public (Static) ---------------------------------------------------------- */
 
@@ -181,7 +182,7 @@ void Request::parseHostHeader(const std::string value)
 	else
 	{
 		host_header_found_ = true;
-		std::vector<std::string> tokens = Helper::splitAtFirstColon(value,
+		std::vector<std::string> tokens = Helper::splitAtFirstChar(value, ';',
 			false);
 		domain_ = tokens[0];
 		port_ = Host::parsePort(tokens.size() == 1 ? "" : tokens[1], "http");
@@ -256,6 +257,46 @@ void Request::parseConnectionHeader(const std::string value)
 			should_close_connection_ = false;
 		else
 			setStatus(400);
+	}
+}
+
+void Request::parseCookie(const std::string value)
+{
+	//TODO: Test that the "Cookie" headers are parsed properly and that there's 
+	// no duplicate.
+	// Also test with '=' in the cookie value (must not be truncated).
+	std::vector<std::string> cookies = Helper::splitAtChar(value, ';', false);
+	for (size_t i = 0; i < cookies.size(); ++i)
+	{
+		if (!Helper::isPrintableAscii(cookies[i]))
+			continue;
+		std::vector<std::string> kvp = Helper::splitAtFirstChar(cookies[i], '=',
+			true);
+		/*
+			TODO
+			- Depending on where the '=' is, splitAtFirstChar needs to insert 
+			an empty string either in first or second position.
+				"val1=val2" -> "val1" + "val2"
+				"=val"      -> ""     + "val"
+				"val="      -> "val"  + ""
+				"="         -> ""     + ""
+				"val"       -> "val"
+			- Check all places that use splitAtFirstChar to make sure this 
+			change (if it's a change) doesn't mess with anything.
+		*/
+		if (kvp.empty())
+			continue;
+		else if (kvp.size() == 1)
+			kvp.insert(kvp.begin(), "");
+		if (kvp[0].empty() && kvp[1].empty())
+			continue;
+		std::pair<std::string, std::string> new_c =
+			std::pair<std::string, std::string>(kvp[0], kvp[1]);
+		std::vector< std::pair<std::string, std::string> >::iterator old_c =
+			std::find(cookies_.begin(), cookies_.end(), new_c);
+		if (old_c != cookies_.end())
+			cookies_.erase(old_c);
+		cookies_.push_back(new_c);
 	}
 }
 

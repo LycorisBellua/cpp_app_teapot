@@ -123,8 +123,8 @@ void Client::parseHeader()
 		}
 		else
 		{
-			std::vector<std::string> tokens = Helper::splitAtFirstColon
-				(line, true);
+			std::vector<std::string> tokens = Helper::splitAtFirstChar(line,
+				';', true);
 			if (tokens.size() != 2 || tokens[0].empty() || tokens[1].empty())
 				req_.setStatus(400);
 			else if (Helper::insensitiveCmp(tokens[0], "Host"))
@@ -138,6 +138,8 @@ void Client::parseHeader()
 			else if (Helper::insensitiveCmp(tokens[0], "Expect"))
 				req_.parseExpectHeader(tokens[1]);
 			else if (Helper::insensitiveCmp(tokens[0], "Connection"))
+				req_.parseConnectionHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Cookie"))
 				req_.parseConnectionHeader(tokens[1]);
 		}
 		if (req_.getStatus() == 400)

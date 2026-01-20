@@ -12,12 +12,27 @@ std::vector<std::string> Helper::splitAtWhitespace(const std::string& str)
 	return tokens;
 }
 
-std::vector<std::string> Helper::splitAtFirstColon(const std::string& str,
-	bool trim)
+std::vector<std::string> Helper::splitAtChar(const std::string& str,
+	char delimiter, bool trim)
 {
 	std::vector<std::string> tokens;
-	size_t colon = str.find(':');
-	if (colon == std::string::npos)
+	std::istringstream iss(str);
+	std::string token;
+	while (std::getline(iss, token, delimiter))
+	{
+		if (trim)
+			token = Helper::trimWhitespaces(token);
+		tokens.push_back(token);
+	}
+	return tokens;
+}
+
+std::vector<std::string> Helper::splitAtFirstChar(const std::string& str,
+	char delimiter, bool trim)
+{
+	std::vector<std::string> tokens;
+	size_t del = str.find(delimiter);
+	if (del == std::string::npos)
 	{
 		std::string token = !trim ? str : Helper::trimWhitespaces(str);
 		if (token.length())
@@ -25,8 +40,8 @@ std::vector<std::string> Helper::splitAtFirstColon(const std::string& str,
 	}
 	else
 	{
-		std::string token1 = str.substr(0, colon);
-		std::string token2 = str.substr(colon + 1);
+		std::string token1 = str.substr(0, del);
+		std::string token2 = str.substr(del + 1);
 		if (trim)
 		{
 			token1 = Helper::trimWhitespaces(token1);
@@ -83,4 +98,15 @@ std::string Helper::touppercase(const std::string& str)
 	for (size_t i = 0; i < res.length(); ++i)
 		res[i] = std::toupper(static_cast<unsigned char>(res[i]));
 	return res;
+}
+
+bool Helper::isPrintableAscii(const std::string& str)
+{
+	for (size_t i = 0; i < str.length(); ++i)
+	{
+		unsigned char c = static_cast<unsigned char>(str[i]);
+		if (c > 127 || !std::isprint(c))
+			return false;
+	}
+	return true;
 }
