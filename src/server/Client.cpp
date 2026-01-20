@@ -5,13 +5,8 @@
 
 /* Public (Instance) -------------------------------------------------------- */
 
-Client::Client() : fd_(-1), req_buffer_("")
-{
-	resetParsingData();
-	updateLastActivity();
-}
-
-Client::Client(int fd) : fd_(fd), req_buffer_("")
+Client::Client(const std::string& ip, int fd)
+	: ip_(ip), fd_(fd), req_buffer_("")
 {
 	resetParsingData();
 	updateLastActivity();
@@ -39,6 +34,7 @@ bool Client::shouldCloseConnection() const
 
 RouteRequest Client::getRouteRequestData() const
 {
+	//TODO: Send `ip_` along with the request data (needed for CGI)
 	return RouteRequest(
 		req_.getStatus(),
 		req_.getPort(),

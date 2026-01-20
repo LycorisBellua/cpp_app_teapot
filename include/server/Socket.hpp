@@ -10,6 +10,7 @@ class Socket
 	public:
 		static std::pair<int, sockaddr_in> createListener(const std::string& ip,
 			int port);
+		static std::string getStringIP(const sockaddr_in& addr);
 
 	private:
 		Socket();

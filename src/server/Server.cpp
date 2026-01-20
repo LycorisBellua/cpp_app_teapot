@@ -86,9 +86,12 @@ bool Server::runEventLoop()
 					return false;
 				continue;
 			}
+			std::map<int, Client>::iterator client = clients_.find(fd);
+			if (client == clients_.end())
+				continue;
+			Client& c = client->second;
 			bool can_read = events[i].events & EPOLLIN;
 			bool can_write = events[i].events & EPOLLOUT;
-			Client& c = clients_[fd];
 			if ((can_read || !c.isBufferEmpty()) && !c.isFullyParsed()
 				&& !c.parseRequest())
 			{
@@ -126,7 +129,9 @@ bool Server::acceptNewConnection(int fd_listen, const sockaddr_in& addr)
 	std::map<int, Client>::iterator old_elem = clients_.find(fd_client);
 	if (old_elem != clients_.end())
 		clients_.erase(old_elem);
-	clients_.insert(std::pair<int, Client>(fd_client, Client(fd_client)));
+	std::string str_ip = Socket::getStringIP(addr);
+	clients_.insert(std::pair<int, Client>(fd_client,
+		Client(str_ip, fd_client)));
 	return true;
 }
 

@@ -9,8 +9,7 @@
 class Client
 {
 	public:
-		Client();
-		Client(int fd);
+		Client(const std::string& ip, int fd);
 
 		std::time_t getLastActivity() const;
 		bool isFullyParsed() const;
@@ -23,6 +22,9 @@ class Client
 		bool parseRequest();
 
 	private:
+		Client();
+
+		const std::string ip_;
 		int fd_;
 		std::time_t last_activity_;
 		bool start_line_found_;

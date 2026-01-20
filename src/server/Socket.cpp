@@ -1,5 +1,6 @@
 #include "Socket.hpp"
 #include "Log.hpp"
+#include <sstream>
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>
@@ -19,6 +20,21 @@ std::pair<int, sockaddr_in> Socket::createListener(const std::string& ip,
 		fd_listen = -1;
 	}
 	return std::pair<int, sockaddr_in>(fd_listen, addr);
+}
+
+std::string Socket::getStringIP(const sockaddr_in& addr)
+{
+	uint32_t ip = ntohl(addr.sin_addr.s_addr);
+	unsigned char a = (ip >> 24) & 0xFF;
+	unsigned char b = (ip >> 16) & 0xFF;
+	unsigned char c = (ip >> 8) & 0xFF;
+	unsigned char d = ip & 0xFF;
+	std::ostringstream oss;
+	oss << static_cast<unsigned int>(a) << '.'
+		<< static_cast<unsigned int>(b) << '.'
+		<< static_cast<unsigned int>(c) << '.'
+		<< static_cast<unsigned int>(d);
+	return oss.str();
 }
 
 /* Private (Static) --------------------------------------------------------- */
