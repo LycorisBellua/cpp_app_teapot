@@ -24,6 +24,8 @@ std::vector<std::string> Helper::splitAtChar(const std::string& str,
 			token = Helper::trimWhitespaces(token);
 		tokens.push_back(token);
 	}
+	if (!str.empty() && str[str.size() - 1] == delimiter)
+        tokens.push_back("");
 	return tokens;
 }
 

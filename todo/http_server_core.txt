@@ -1,5 +1,3 @@
-- Each domain (host/port pair) has its cookie list.
-
 - When a request has the Cookie header, parse in order to have the cookie list 
 of this request. There shouldn't be a semi-colon at the end of the header 
 value, but tolerate it. This example has three cookies:
@@ -9,9 +7,13 @@ Cookie: name0=value0
 Cookie: name1=value1; name2=value2
 ```
 
+--------------------------------------------------------------------------------
+
+- Each domain (host/port pair) has its cookie list.
+
 - The response for this request should tell the client to delete any cookie the 
 domain doesn't recognize:
-`Set-Cookie: weirdCookie=; Max-Age=0; Path=/`
+`Set-Cookie: weirdCookie=value; Max-Age=0; Path=/`
 
 - If the cookie is recognized, it can be used for something, but this doesn't 
 concern the response.
