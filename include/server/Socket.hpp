@@ -2,14 +2,14 @@
 #define SOCKET_HPP
 
 #include <string>
-#include <utility>
 #include <netinet/in.h>
 
 class Socket
 {
 	public:
-		static std::pair<int, sockaddr_in> createListener(const std::string& ip,
-			int port);
+		static int createListener(const std::string& ip, int port);
+		static bool acceptConnection(int fd_listen, int& fd_client,
+			sockaddr_in& addr);
 		static std::string getStringIP(const sockaddr_in& addr);
 
 	private:

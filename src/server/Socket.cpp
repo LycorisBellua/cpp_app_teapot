@@ -7,8 +7,7 @@
 
 /* Public (Static) ---------------------------------------------------------- */
 
-std::pair<int, sockaddr_in> Socket::createListener(const std::string& ip,
-	int port)
+int Socket::createListener(const std::string& ip, int port)
 {
 	int fd_listen = -1;
 	sockaddr_in addr = {};
@@ -19,7 +18,26 @@ std::pair<int, sockaddr_in> Socket::createListener(const std::string& ip,
 		close(fd_listen);
 		fd_listen = -1;
 	}
-	return std::pair<int, sockaddr_in>(fd_listen, addr);
+	return fd_listen;
+}
+
+bool Socket::acceptConnection(int fd_listen, int& fd_client, sockaddr_in& addr)
+{
+	int addrlen = sizeof(addr);
+	fd_client = accept(fd_listen, (sockaddr *)&addr, (socklen_t *)&addrlen);
+	if (fd_client < 0)
+	{
+		Log::error("Error: Socket: acceptConnection: accept");
+		return false;
+	}
+	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
+	{
+		close(fd_client);
+		fd_client = -1;
+		Log::error("Error: Socket: acceptConnection: fcntl");
+		return false;
+	}
+	return true;
 }
 
 std::string Socket::getStringIP(const sockaddr_in& addr)

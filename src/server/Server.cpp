@@ -12,6 +12,7 @@
 Server::Server(const std::string& config_path)
 	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
 {
+	// TODO: Besides the IP and the port, I also need the domain name
 	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
 	std::set<std::pair<std::string, int> >::const_iterator it;
 	std::set<std::pair<std::string, int> >::const_iterator ite = ip_ports.end();
@@ -19,14 +20,13 @@ Server::Server(const std::string& config_path)
 	{
 		const std::string& ip = it->first;
 		int port = it->second;
-		std::pair<int, sockaddr_in> listener = Socket::createListener(ip, port);
-		if (listener.first != -1)
-		{
-			if (!addListenerToEventHandler(listener.first))
-				close(listener.first);
-			else
-				listeners_.insert(listener);
-		}
+		std::map<int, Listener>::iterator it = findListener(ip, port);
+		if (it == listeners_.end())
+			it = addListener(ip, port);
+		if (it == listeners_.end())
+			continue;
+		// TODO: Add domain name to listener
+		(void)it; //it->addDomainName(domain);
 	}
 	if (!runEventLoop())
 		return;
@@ -41,10 +41,44 @@ Server::~Server()
 
 /* Private (Instance) ------------------------------------------------------- */
 
+std::map<int, Listener>::iterator Server::findListener(const std::string& ip,
+	int port)
+{
+	std::map<int, Listener>::iterator it;
+	std::map<int, Listener>::iterator ite = listeners_.end();
+	for (it = listeners_.begin(); it != ite; ++it)
+	{
+		if (it->second.hasThisIPAndPort(ip, port))
+			break;
+	}
+	return it;
+}
+
+std::map<int, Listener>::iterator Server::addListener(const std::string& ip,
+	int port)
+{
+	int fd_listen = Socket::createListener(ip, port);
+	if (fd_listen < 0 || !addListenerToEventHandler(fd_listen))
+	{
+		close(fd_listen);
+		return listeners_.end();
+	}
+	std::pair<std::map<int, Listener>::iterator, bool> result =
+		listeners_.insert(std::make_pair(fd_listen,
+			Listener(fd_listen, ip, port)));
+	if (!result.second)
+	{
+		close(fd_listen);
+		epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd_listen, NULL);
+		return listeners_.end();
+	}
+	return result.first;
+}
+
 void Server::closeListeners()
 {
-	std::map<int, sockaddr_in>::iterator it;
-	std::map<int, sockaddr_in>::iterator ite = listeners_.end();
+	std::map<int, Listener>::iterator it;
+	std::map<int, Listener>::iterator ite = listeners_.end();
 	for (it = listeners_.begin(); it != ite; ++it)
 		close(it->first);
 }
@@ -79,10 +113,9 @@ bool Server::runEventLoop()
 		for (int i = 0; i < n; ++i)
 		{
 			int fd = events[i].data.fd;
-			std::map<int, sockaddr_in>::iterator listener = listeners_.find(fd);
-			if (listener != listeners_.end())
+			if (listeners_.find(fd) != listeners_.end())
 			{
-				if (!acceptNewConnection(listener->first, listener->second))
+				if (!addConnection(fd))
 					return false;
 				continue;
 			}
@@ -106,22 +139,12 @@ bool Server::runEventLoop()
 	return true;
 }
 
-bool Server::acceptNewConnection(int fd_listen, const sockaddr_in& addr)
+bool Server::addConnection(int fd_listen)
 {
-	int addrlen = sizeof(addr);
-	int fd_client = accept(fd_listen, (sockaddr *)&addr,
-		(socklen_t *)&addrlen);
-	if (fd_client < 0)
-	{
-		Log::error("Error: Server: acceptNewConnection: accept");
+	int fd_client = -1;
+	sockaddr_in addr = {};
+	if (!Socket::acceptConnection(fd_listen, fd_client, addr))
 		return false;
-	}
-	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
-	{
-		close(fd_client);
-		Log::error("Error: Server: acceptNewConnection: fcntl");
-		return false;
-	}
 	epoll_event cev;
 	cev.events = EPOLLIN | EPOLLOUT;
 	cev.data.fd = fd_client;
@@ -130,8 +153,7 @@ bool Server::acceptNewConnection(int fd_listen, const sockaddr_in& addr)
 	if (old_elem != clients_.end())
 		clients_.erase(old_elem);
 	std::string str_ip = Socket::getStringIP(addr);
-	clients_.insert(std::pair<int, Client>(fd_client,
-		Client(str_ip, fd_client)));
+	clients_.insert(std::make_pair(fd_client, Client(str_ip, fd_client)));
 	return true;
 }
 

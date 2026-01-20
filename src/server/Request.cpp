@@ -275,8 +275,7 @@ void Request::parseCookie(const std::string value)
 			kvp.insert(kvp.begin(), "");
 		if (kvp[0].empty() && kvp[1].empty())
 			continue;
-		std::pair<std::string, std::string> c =
-			std::pair<std::string, std::string>(kvp[0], kvp[1]);
+		std::pair<std::string, std::string> c = std::make_pair(kvp[0], kvp[1]);
 		if (std::find(cookies_.begin(), cookies_.end(), c) == cookies_.end())
 			cookies_.push_back(c);
 	}
