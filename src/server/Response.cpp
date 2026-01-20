@@ -9,7 +9,7 @@
 
 std::string Response::compose(const Router& router, const Client& c)
 {
-	const RouteRequest& req = c.getRouteRequestData();
+	const RequestData& req = c.getRequestData();
 	Response::Adapter adapter;
 	adapter.should_close = c.shouldCloseConnection();
 	adapter.is_head = req.method == "HEAD";
@@ -24,11 +24,11 @@ std::string Response::compose(const Router& router, const Client& c)
 		if (res.error_code)
 			adapter.setFromRouteResponse(res);
 		else if (req.method == "GET" || req.method == "HEAD")
-			adapter.setFromHttpResponse(Get::handle(res));
+			adapter.setFromResponseData(Get::handle(res));
 		else if (req.method == "POST")
-			adapter.setFromHttpResponse(Post::handle(res));
+			adapter.setFromResponseData(Post::handle(res));
 		else if (req.method == "DELETE")
-			adapter.setFromHttpResponse(Delete::handle(res));
+			adapter.setFromResponseData(Delete::handle(res));
 		else
 			return "";
 	}
@@ -126,7 +126,7 @@ void Response::Adapter::setFromRouteResponse(const RouteInfo& res)
 	this->type = res.mime_type;
 }
 
-void Response::Adapter::setFromHttpResponse(const HttpResponse& res)
+void Response::Adapter::setFromResponseData(const ResponseData& res)
 {
 	this->status = res.code;
 	this->status_msg = res.code_msg;

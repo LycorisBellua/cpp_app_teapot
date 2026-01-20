@@ -35,7 +35,7 @@ namespace {
     return method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD";
   }
 
-  void logSuccess(const RouteRequest& req, const RouteInfo& res) {
+  void logSuccess(const RequestData& req, const RouteInfo& res) {
     std::stringstream log_str;
     log_str << "[Router] Successfully matched request to Server/Location\n\nRequest:" << "\nPort: " << req.port << "\nHost: " << req.host
             << "\nURI: " << req.uri << "\nMethod: " << req.method << "\n\nRoute:" << "\nFull Path: " << res.full_path
@@ -58,7 +58,7 @@ Router::RouterError::RouterError(const std::string msg) {
   Log::error(err_msg);
 }
 
-Router::RouterError::RouterError(const std::string& msg, const RouteRequest& req) {
+Router::RouterError::RouterError(const std::string& msg, const RequestData& req) {
   std::stringstream err_string;
   err_string << "[Router] " << msg << "\nPort: " << req.port << "\nHost: " << req.host << "\nURI: " << req.uri << "\nMethod: " << req.method;
   err_msg = err_string.str();
@@ -85,7 +85,7 @@ std::set<std::pair<std::string, int> > Router::getPorts() const {
   return ports;
 }
 
-RouteInfo Router::getRoute(const RouteRequest& request) const {
+RouteInfo Router::getRoute(const RequestData& request) const {
   std::string decoded;
   std::string path;
   try {
@@ -126,7 +126,7 @@ RouteInfo Router::getRoute(const RouteRequest& request) const {
 }
 
 /* ---------- Private ---------- */
-const ServerData* Router::getServer(const RouteRequest& request) const {
+const ServerData* Router::getServer(const RequestData& request) const {
   const ServerData* default_server = NULL;
   for (srv_it srv = servers.begin(); srv != servers.end(); ++srv) {
     if (srv->port == request.port) {
@@ -142,7 +142,7 @@ const ServerData* Router::getServer(const RouteRequest& request) const {
   return default_server;
 }
 
-const LocationData* Router::getLocation(const std::vector<LocationData>& locations, const std::string& path, const RouteRequest& request) const {
+const LocationData* Router::getLocation(const std::vector<LocationData>& locations, const std::string& path, const RequestData& request) const {
   loc_it match = locations.end();
   for (loc_it loc = locations.begin(); loc != locations.end(); ++loc) {
     if (path.compare(0, loc->path.length(), loc->path) == 0) {
@@ -167,7 +167,7 @@ const std::string Router::getMime(const std::string& path) const {
   return found == mime.end() ? "application/octet-stream" : found->second;
 }
 
-std::string Router::decodeUri(const RouteRequest& req) const {
+std::string Router::decodeUri(const RequestData& req) const {
   std::string result;
 
   for (size_t i = 0; i < req.uri.size(); ++i) {
@@ -200,7 +200,7 @@ std::string Router::decodeUri(const RouteRequest& req) const {
   return result;
 }
 
-std::string Router::normalizePath(const std::string& path, const RouteRequest& request) const {
+std::string Router::normalizePath(const std::string& path, const RequestData& request) const {
   if (path.empty() || path[0] != '/') {
     throw RouterError("Path must start with /", request);
   }
@@ -257,7 +257,7 @@ std::string Router::normalizePath(const std::string& path, const RouteRequest& r
   return result;
 }
 
-void Router::validMethod(const RouteRequest& req, const LocationData* location) const {
+void Router::validMethod(const RequestData& req, const LocationData* location) const {
   const std::vector<std::string>& am = location->allowed_methods;
   strvec_it method = std::find(am.begin(), am.end(), req.method);
 
@@ -267,13 +267,13 @@ void Router::validMethod(const RouteRequest& req, const LocationData* location) 
   }
 }
 
-void Router::verifyBodySize(const RouteRequest& request, const ServerData* server) const {
+void Router::verifyBodySize(const RequestData& request, const ServerData* server) const {
   if (request.body.size() > server->client_body_max) {
     throw RouterError("Body Size too large for matched server", request);
   }
 }
 
-const RouteInfo Router::errorReturn(int code, const ServerData* srv, const RouteRequest& req) const {
+const RouteInfo Router::errorReturn(int code, const ServerData* srv, const RequestData& req) const {
   RouteInfo response(mime, req);
   response.error_code = code;
   if (!srv) {

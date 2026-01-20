@@ -1,11 +1,11 @@
 #pragma once
 
 #include "ErrorPage.hpp"  // IWYU pragma: keep
-#include "HttpResponse.hpp"
+#include "RequestData.hpp"
 #include "RouteInfo.hpp"
 
 namespace Cgi {
 
-  HttpResponse handle(const RouteInfo&);
+  ResponseData handle(const RouteInfo&);
 
 }

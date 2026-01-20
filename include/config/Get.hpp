@@ -6,10 +6,10 @@
 
 #include "ErrorPage.hpp"   // IWYU pragma: keep
 #include "Filesystem.hpp"  // IWYU pragma: keep
-#include "HttpResponse.hpp"
+#include "RequestData.hpp"
 #include "Log.hpp"  // IWYU pragma: keep
 #include "RouteInfo.hpp"
 
 namespace Get {
-  HttpResponse handle(const RouteInfo&);
+  ResponseData handle(const RouteInfo&);
 }

@@ -33,8 +33,8 @@ bool Client::shouldCloseConnection() const {
   return req_.getShouldCloseConnection();
 }
 
-RouteRequest Client::getRouteRequestData() const {
-  return RouteRequest(req_.getStatus(), req_.getPort(), req_.getDomain(), req_.getURI(), req_.getMethod(), req_.getContentType(), req_.getBody());
+RequestData Client::getRequestData() const {
+  return RequestData(req_.getStatus(), req_.getPort(), req_.getDomain(), req_.getURI(), req_.getMethod(), req_.getContentType(), req_.getBody());
 }
 
 void Client::updateLastActivity() {

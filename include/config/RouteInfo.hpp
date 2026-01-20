@@ -4,7 +4,7 @@
 #include <string>
 
 #include "ServerData.hpp"
-#include "HttpResponse.hpp"
+#include "RequestData.hpp"
 
 // TODO: Make server and location const references
 struct RouteInfo {
@@ -17,9 +17,9 @@ struct RouteInfo {
   ServerData server;
   LocationData location;
   const std::map<std::string, std::string> mime_list;
-  const RouteRequest& request;
+  const RequestData& request;
 
-  RouteInfo(const std::map<std::string, std::string>& mime, const RouteRequest&);
+  RouteInfo(const std::map<std::string, std::string>& mime, const RequestData&);
 
-  RouteInfo(const ServerData&, const LocationData&, const std::map<std::string, std::string>& mime, const RouteRequest&);
+  RouteInfo(const ServerData&, const LocationData&, const std::map<std::string, std::string>& mime, const RequestData&);
 };

@@ -16,7 +16,7 @@ class Client
 		bool isFullyParsed() const;
 		bool isBufferEmpty() const;
 		bool shouldCloseConnection() const;
-		RouteRequest getRouteRequestData() const;
+		RequestData getRequestData() const;
 
 		void updateLastActivity();
 		void resetParsingData();

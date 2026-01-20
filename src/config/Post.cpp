@@ -171,13 +171,13 @@ namespace {
     return result;
   }
 
-  HttpResponse processParts(const RouteResponse& data, const std::vector<std::string>& parts) {
+  ResponseData processParts(const RouteResponse& data, const std::vector<std::string>& parts) {
     for (str_vec_it it = parts.begin(); it != parts.end(); ++it) {
       const std::vector<std::string> lines = splitOnStr(*it, "\r\n");
       std::pair<bool, size_t> c_disp = findInVector(lines, "Content-Disposition");
       if (!c_disp.first) {
         Log::error("[POST] Missing Content-Disposition header in multipart body" + *it);
-        return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+        return ResponseData(400, ErrorPage::get(400, data.server.errors));
       }
       const std::vector<std::string> content_disp = splitOnStr(lines[c_disp.second], ";");
       std::pair<bool, size_t> name = findInVector(content_disp, "filename");
@@ -186,11 +186,11 @@ namespace {
       }
       const std::string filename = extractFilename(content_disp[name.second]);
       if (filename.empty()) {
-        return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+        return ResponseData(400, ErrorPage::get(400, data.server.errors));
       }
       std::pair<bool, size_t> c_type = findInVector(lines, "Content-Type");
     }
-    return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+    return ResponseData(400, ErrorPage::get(400, data.server.errors));
   }
 
   std::vector<std::string> splitBody(const RouteResponse& data, const std::string& bound) {
@@ -237,21 +237,21 @@ namespace {
     return value;
   }
 
-  HttpResponse multipartUpload(const RouteResponse& data) {
+  ResponseData multipartUpload(const RouteResponse& data) {
     const std::string boundary = extractBoundary(data.request.content_type);
     if (boundary.empty()) {
       Log::error("[POST] No boundary value in Content-Type Header: " + data.request.content_type);
-      return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+      return ResponseData(400, ErrorPage::get(400, data.server.errors));
     }
     std::vector<std::string> parts = splitBody(data, boundary);
     if (parts.empty()) {
       Log::error("[POST] No final boundary found in multipart body");
-      return HttpResponse(400, ErrorPage::get(400, data.server.errors));
+      return ResponseData(400, ErrorPage::get(400, data.server.errors));
     }
     return processParts(data, parts);
   }
 
-  HttpResponse handleUpload(const RouteResponse& data) {
+  ResponseData handleUpload(const RouteResponse& data) {
     if (data.request.content_type.find("multipart/form-data") != std::string::npos) {
       return multipartUpload(data);
     }
@@ -260,14 +260,14 @@ namespace {
     }
   }*/
 
-  HttpResponse simpleUpload(const RouteInfo& data) {
+  ResponseData simpleUpload(const RouteInfo& data) {
     const std::string filename = generateFilename(data);
     const std::string filepath = data.full_path + filename;
     std::ofstream output_file(filepath.c_str(), std::ios::binary);
     if (!writeFile(output_file, filename, data.request.body)) {
-      return HttpResponse(500, ErrorPage::get(500, data.server.errors));
+      return ResponseData(500, ErrorPage::get(500, data.server.errors));
     }
-    return HttpResponse(201, getFileUrl(filename, data));
+    return ResponseData(201, getFileUrl(filename, data));
   }
 
   bool isUpload(const RouteInfo& data) {
@@ -305,9 +305,9 @@ namespace {
 
 namespace Post {
 
-  HttpResponse handle(const RouteInfo& data) {
+  ResponseData handle(const RouteInfo& data) {
     if (!bodySizeCheck(data)) {
-      return HttpResponse(413, ErrorPage::get(413, data.server.errors));
+      return ResponseData(413, ErrorPage::get(413, data.server.errors));
     }
     if (isCgi(data)) {
       return Cgi::handle(data);
@@ -317,15 +317,15 @@ namespace Post {
       return simpleUpload(data);
     }
     // TODO: Check fallback return code
-    return HttpResponse(400, ErrorPage::get(500, data.server.errors));
+    return ResponseData(400, ErrorPage::get(500, data.server.errors));
 
     /*    const std::string filename = generateFilename(data.location.upload_path);
     const std::string filepath(data.location.upload_path + filename);
     std::ofstream output(filepath.c_str(), std::ios::binary);
     if (!writeFile(output, filepath, data.request.body)) {
-      return HttpResponse(500, ErrorPage::get(500, data.error_pages));
+      return ResponseData(500, ErrorPage::get(500, data.error_pages));
     }
-    return HttpResponse(201, getFileUrl(filename, data));*/
+    return ResponseData(201, getFileUrl(filename, data));*/
   }
 
 }

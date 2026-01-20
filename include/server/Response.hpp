@@ -3,7 +3,7 @@
 
 #include "Router.hpp"
 #include "Client.hpp"
-#include "HttpResponse.hpp"
+#include "RequestData.hpp"
 #include <string>
 
 class Response
@@ -26,7 +26,7 @@ class Response
 
 				Adapter();
 				void setFromRouteResponse(const RouteInfo& res);
-				void setFromHttpResponse(const HttpResponse& res);
+				void setFromResponseData(const ResponseData& res);
 		};
 
 		static std::string serialize(const Response::Adapter& res);
