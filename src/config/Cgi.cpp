@@ -4,7 +4,7 @@ namespace {
   typedef std::vector<std::string>::iterator str_vec_it;
   typedef std::set<std::pair<std::string, std::string> >::iterator header_it;
 
-  /*void removeCodeAndContentTypeHeaders(ResponseData& response) {
+  void removeCodeAndContentTypeHeaders(ResponseData& response) {
     for (std::set<std::pair<std::string, std::string> >::iterator it = response.headers.begin();
          it != response.headers.end();) {
       if (it->first == "Status" || it->first == "Content-Type") {
@@ -14,7 +14,7 @@ namespace {
         ++it;
       }
     }
-  }*/
+  }
 
   bool setStatus(const std::pair<std::string, std::string>& status_header, ResponseData& response) {
     std::vector<std::string> tokens = Helper::splitAtWhitespace(status_header.second);
@@ -24,10 +24,10 @@ namespace {
     }
     response.code = std::atoi(tokens[0].c_str());
     for (size_t i = 1; i < tokens.size(); ++i) {
-      response.code_msg += tokens[i];
-      if (i + 1 < tokens.size()) {
+      response.code_msg.append(tokens[i]);
+      /*if (i + 1 < tokens.size()) {
         response.code_msg.push_back(' ');
-      }
+      }*/
     }
     return true;
   }
@@ -150,7 +150,7 @@ namespace {
     if (!validateCgiHeaders(response)) {
       return ResponseData(502, ErrorPage::get(502, data.server.errors));
     }
-    //removeCodeAndContentTypeHeaders(response);
+    removeCodeAndContentTypeHeaders(response);
     return response;
   }
 

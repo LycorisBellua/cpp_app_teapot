@@ -14,11 +14,9 @@ struct ResponseData {
 
   ResponseData(int, const std::string&);
 
-  ResponseData(const ResponseData& src);
 
   ~ResponseData();
 
-  ResponseData& operator=(const ResponseData& src);
 };
 
 struct RequestData {

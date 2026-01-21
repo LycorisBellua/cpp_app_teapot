@@ -8,15 +8,4 @@ ResponseData::ResponseData() : code(0) {}
 
 ResponseData::ResponseData(int return_code, const std::string& content) : code(return_code), content(content) {}
 
-ResponseData::ResponseData(const ResponseData& src) : code(src.code), content(src.content), headers(src.headers) {}
-
 ResponseData::~ResponseData() {}
-
-ResponseData& ResponseData::operator=(const ResponseData& src) {
-  if (this != &src) {
-    code = src.code;
-    content = src.content;
-    headers = src.headers;
-  }
-  return *this;
-}
