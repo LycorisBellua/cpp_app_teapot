@@ -18,7 +18,9 @@ std::string Response::compose(const Router& router, const Client& c)
 		adapter.status = 100;
 		adapter.status_msg = "Continue";
 	}
-	else
+        // TODO: change this to receive ResponseData
+        (void)router;
+	/*else
 	{
 		const RouteInfo& res = router.getRoute(req);
 		if (res.error_code)
@@ -31,7 +33,7 @@ std::string Response::compose(const Router& router, const Client& c)
 			adapter.setFromResponseData(Delete::handle(res));
 		else
 			return "";
-	}
+	}*/
 	return Response::serialize(adapter);
 }
 

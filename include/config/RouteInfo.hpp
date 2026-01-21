@@ -16,12 +16,10 @@ struct RouteInfo {
   std::string path_info;
   std::string path_translated;
   std::string script_name;
-  ServerData server;
-  LocationData location;
+  const ServerData& server;
+  const LocationData& location;
   const std::map<std::string, std::string> mime_list;
   const RequestData& request;
-
-  RouteInfo(const std::map<std::string, std::string>& mime, const RequestData&);
 
   RouteInfo(const ServerData&, const LocationData&, const std::map<std::string, std::string>& mime, const RequestData&);
 };

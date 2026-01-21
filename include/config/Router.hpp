@@ -12,6 +12,9 @@
 #include "RequestData.hpp"
 #include "RouteInfo.hpp"
 #include "ServerData.hpp"
+#include "Delete.hpp"
+#include "Get.hpp"
+#include "Post.hpp"
 
 class Router {
  public:
@@ -19,9 +22,8 @@ class Router {
   Router(const Router&);
   ~Router();
 
-  const std::vector<ServerData>& getServers() const;
+  ResponseData handle(const RequestData&);
   std::set<std::pair<std::string, int> > getPorts() const;
-  RouteInfo getRoute(const RequestData& request) const;
 
  private:
   // Class Data
@@ -43,13 +45,15 @@ class Router {
     std::string err_msg;
   };
 
+  RouteInfo getRoute(const RequestData& request) const;
   const ServerData* getServer(const RequestData&) const;
-  const LocationData* getLocation(const std::vector<LocationData>&, const std::string&, const RequestData&) const;
+  const LocationData* getLocation(const std::vector<LocationData>&, const std::string&,
+                                  const RequestData&) const;
   const std::string getMime(const std::string&) const;
 
   std::string decodeUri(const std::string&, const RequestData&) const;
   std::string normalizePath(const std::string&, const RequestData&) const;
   void validMethod(const RequestData&, const LocationData*) const;
   void verifyBodySize(const RequestData&, const ServerData*) const;
-  const RouteInfo errorReturn(int, const ServerData*, const RequestData&) const;
+  RouteInfo errorReturn(int, const ServerData*, const RequestData&) const;
 };

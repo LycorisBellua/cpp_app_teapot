@@ -7,9 +7,9 @@
 
 struct ResponseData {
   int code;
-  std::string code_msg; //TODO
+  std::string code_msg;
   std::string content;
-  std::string content_type; //TODO
+  std::string content_type;
   std::set<std::pair<std::string, std::string> > headers;
 
   ResponseData();
@@ -21,7 +21,7 @@ struct ResponseData {
 };
 
 struct RequestData {
-  int error_code; // TODO: If not 0, return error page
+  int error_code;
   int port;
   std::string host;
   std::string uri;
