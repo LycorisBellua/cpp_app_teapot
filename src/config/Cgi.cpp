@@ -215,6 +215,18 @@ namespace {
     int status;
     waitpid(pid, &status, 0);
 
+    if (WIFEXITED(status)) {
+      int exit_code = WEXITSTATUS(status);
+      if (exit_code != 0) {
+        Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
+        return ResponseData(500, ErrorPage::get(500, data.server.errors));
+      }
+    } else if (WIFSIGNALED(status)) {
+      int signal = WTERMSIG(status);
+      Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
+      return ResponseData(500, ErrorPage::get(500, data.server.errors));
+    }
+
     return cgiOutput(data, output);
   }
 
@@ -264,6 +276,10 @@ namespace {
 
 namespace Cgi {
   ResponseData handle(const RouteInfo& data) {
+    if (!Filesystem::exists(data.full_path)) {
+      Log::error("[CGI] Requested Script does not exist: " + data.full_path);
+      return ResponseData(404, ErrorPage::get(404, data.server.errors));
+    }
     std::vector<char*> args = getArgs(data);
     std::vector<std::string> envStrings = getEnvStrings(data);
     std::vector<char*> envPointers = getEnvPointers(envStrings);
