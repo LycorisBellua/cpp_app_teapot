@@ -119,12 +119,13 @@ std::set<std::pair<std::string, int> > Router::getPorts() const {
 }
 
 RouteInfo Router::getRoute(const RequestData& request) const {
-  std::string decoded;
+  std::string query = getQuery(request.uri);
+  std::string decoded_path;
   std::string path;
   try {
-    decoded = decodeUri(request);
-    path = removeQuery(decoded);
-    path = normalizePath(path, request);
+    path = removeQuery(request.uri);
+    decoded_path = decodeUri(path, request);
+    path = normalizePath(decoded_path, request);
   } catch (const RouterError& e) {
     return errorReturn(400, NULL, request);
   }
@@ -153,7 +154,7 @@ RouteInfo Router::getRoute(const RequestData& request) const {
   }
   CgiPathSplit cgi_split = splitCgiPath(path, location->cgi_extension);
   response.full_path = Filesystem::normalisePaths(location->root + cgi_split.script_path.substr(1), Filesystem::getCurrentDir());
-  response.query = getQuery(decoded);
+  response.query = query;
   response.mime_type = getMime(cgi_split.script_path);
   response.path_info = cgi_split.path_info;
   if (!cgi_split.path_info.empty()) {
@@ -206,13 +207,14 @@ const std::string Router::getMime(const std::string& path) const {
   return found == mime.end() ? "application/octet-stream" : found->second;
 }
 
-std::string Router::decodeUri(const RequestData& req) const {
+std::string Router::decodeUri(const std::string& uri_no_query, const RequestData& req) const {
+  const std::string& uri = uri_no_query;
   std::string result;
 
-  for (size_t i = 0; i < req.uri.size(); ++i) {
-    if (req.uri[i] == '%' && i + 2 < req.uri.size()) {
-      if (isHexChar(req.uri[i + 1]) && isHexChar(req.uri[i + 2])) {
-        char decoded = decodeHex(req.uri.substr(i + 1, 2));
+  for (size_t i = 0; i < uri.size(); ++i) {
+    if (uri[i] == '%' && i + 2 < uri.size()) {
+      if (isHexChar(uri[i + 1]) && isHexChar(uri[i + 2])) {
+        char decoded = decodeHex(uri.substr(i + 1, 2));
         if (decoded == '\0') {
           throw RouterError("Null byte in URI", req);
         }
@@ -229,11 +231,11 @@ std::string Router::decodeUri(const RequestData& req) const {
         throw RouterError("Invalid Hex Characters in URI", req);
       }
     }
-    else if (req.uri[i] == '%') {
+    else if (uri[i] == '%') {
       throw RouterError("Invalid Hex Encoding", req);
     }
     else {
-      result.push_back(req.uri[i]);
+      result.push_back(uri[i]);
     }
   }
   return result;

@@ -25,9 +25,9 @@ namespace {
     response.code = std::atoi(tokens[0].c_str());
     for (size_t i = 1; i < tokens.size(); ++i) {
       response.code_msg.append(tokens[i]);
-      /*if (i + 1 < tokens.size()) {
+      if (i + 1 < tokens.size()) {
         response.code_msg.push_back(' ');
-      }*/
+      }
     }
     return true;
   }
@@ -53,7 +53,7 @@ namespace {
       }
     }
 
-    if (!hasStatus && !hasContentType) {
+    if (!hasStatus && !hasContentType && !hasLocation) {
       Log::error("[CGI] Missing required headers (need Status or Content-Type)");
       return false;
     }

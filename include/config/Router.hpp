@@ -47,7 +47,7 @@ class Router {
   const LocationData* getLocation(const std::vector<LocationData>&, const std::string&, const RequestData&) const;
   const std::string getMime(const std::string&) const;
 
-  std::string decodeUri(const RequestData&) const;
+  std::string decodeUri(const std::string&, const RequestData&) const;
   std::string normalizePath(const std::string&, const RequestData&) const;
   void validMethod(const RequestData&, const LocationData*) const;
   void verifyBodySize(const RequestData&, const ServerData*) const;
