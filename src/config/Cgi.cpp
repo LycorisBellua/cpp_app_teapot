@@ -141,14 +141,14 @@ namespace {
     ResponseData response;
     response.headers = splitHeaders(output);
     if (response.headers.empty()) {
-      return ResponseData(502, ErrorPage::get(502, data.server.errors));
+      return ResponseData(502, data.server.errors);
     }
     response.content = splitBody(output);
     if (response.content == "ERROR") {
-      return ResponseData(502, ErrorPage::get(502, data.server.errors));
+      return ResponseData(502, data.server.errors);
     }
     if (!validateCgiHeaders(response)) {
-      return ResponseData(502, ErrorPage::get(502, data.server.errors));
+      return ResponseData(502, data.server.errors);
     }
     removeCodeAndContentTypeHeaders(response);
     return response;
@@ -160,14 +160,14 @@ namespace {
 
     if (pipe(stdin_pipe) == -1) {
       Log::error("[CGI] Failed to set up stdin pipe");
-      return ResponseData(500, ErrorPage::get(500, data.server.errors));
+      return ResponseData(500, data.server.errors);
     }
 
     if (pipe(stdout_pipe) == -1) {
       close(stdin_pipe[0]);
       close(stdin_pipe[1]);
       Log::error("[CGI] Failed to set up stdout pipe");
-      return ResponseData(500, ErrorPage::get(500, data.server.errors));
+      return ResponseData(500, data.server.errors);
     }
 
     const pid_t pid = fork();
@@ -178,7 +178,7 @@ namespace {
       close(stdin_pipe[1]);
       close(stdout_pipe[0]);
       close(stdout_pipe[1]);
-      return ResponseData(500, ErrorPage::get(500, data.server.errors));
+      return ResponseData(500, data.server.errors);
     }
 
     std::vector<char*> args;
@@ -219,12 +219,12 @@ namespace {
       int exit_code = WEXITSTATUS(status);
       if (exit_code != 0) {
         Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
-        return ResponseData(500, ErrorPage::get(500, data.server.errors));
+        return ResponseData(500, data.server.errors);
       }
     } else if (WIFSIGNALED(status)) {
       int signal = WTERMSIG(status);
       Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
-      return ResponseData(500, ErrorPage::get(500, data.server.errors));
+      return ResponseData(500, data.server.errors);
     }
 
     return cgiOutput(data, output);
@@ -278,7 +278,7 @@ namespace Cgi {
   ResponseData handle(const RouteInfo& data) {
     if (!Filesystem::exists(data.full_path)) {
       Log::error("[CGI] Requested Script does not exist: " + data.full_path);
-      return ResponseData(404, ErrorPage::get(404, data.server.errors));
+      return ResponseData(404, data.server.errors);
     }
     std::vector<char*> args = getArgs(data);
     std::vector<std::string> envStrings = getEnvStrings(data);

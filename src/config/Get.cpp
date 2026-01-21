@@ -32,14 +32,14 @@ namespace {
     const std::string& path = data.full_path;
     if (!Filesystem::exists(path)) {
       Log::error("[GET/HEAD] File Not Found: " + path);
-      return ResponseData(404, ErrorPage::get(404, data.server.errors));
+      return ResponseData(404, data.server.errors);
     }
     const std::pair<bool, std::string> filebuf = Filesystem::readFile(path);
     if (!filebuf.first) {
-      return ResponseData(403, ErrorPage::get(403, data.server.errors));
+      return ResponseData(403, data.server.errors);
     }
     Log::info("[GET/HEAD] Serving file: " + path);
-    return ResponseData(200, filebuf.second);
+    return ResponseData(200, filebuf.second, data.mime_type);
   }
 
   ResponseData handleDirectory(const RouteInfo& data) {
@@ -48,7 +48,7 @@ namespace {
         const std::pair<bool, std::string> indexbuf = Filesystem::readFile(data.full_path + data.location.index);
         if (indexbuf.first) {
           Log::info("[GET/HEAD] Serving Index File: " + data.full_path + data.location.index);
-          return ResponseData(200, indexbuf.second);
+          return ResponseData(200, indexbuf.second, "text/html");
         }
       }
     }
@@ -56,11 +56,11 @@ namespace {
       const std::string indexbuf = generateIndex(data.full_path, data.location.path);
       if (!indexbuf.empty()) {
         Log::info("[GET/HEAD] Serving autoindex for: " + data.full_path);
-        return ResponseData(200, indexbuf);
+        return ResponseData(200, indexbuf, "text/html");
       }
     }
     Log::error("[GET/HEAD] No index file specified and autoindex not active: " + data.full_path);
-    return ResponseData(403, ErrorPage::get(403, data.server.errors));
+    return ResponseData(403, data.server.errors);
   }
 
   bool isCgi(const RouteInfo& data) {
@@ -87,7 +87,7 @@ namespace Get {
       return handleFile(data);
     }
     Log::error("[GET/HEAD] Requested resource is not a directory or regular file: " + data.full_path);
-    return ResponseData(404, ErrorPage::get(404, data.server.errors));
+    return ResponseData(404, data.server.errors);
   }
 
 }

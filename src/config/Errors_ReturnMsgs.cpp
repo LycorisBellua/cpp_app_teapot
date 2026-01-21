@@ -4,7 +4,7 @@ namespace {
 
   typedef std::map<int, std::string>::const_iterator error_it;
 
-  std::string getDefaultMessage(int code) {
+  std::string getDefaultMessage(const int code) {
     static std::map<int, std::string> messages;
     if (messages.empty()) {
       messages[100] = "Continue";

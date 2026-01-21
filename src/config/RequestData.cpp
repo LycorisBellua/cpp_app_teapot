@@ -1,11 +1,39 @@
 #include "RequestData.hpp"
 
-RequestData::RequestData(int error_code, int port, const std::string& host, const std::string& uri, const std::string& method,
-                           const std::string& content_type, const std::string& body)
-    : error_code(error_code), port(port), host(host), uri(uri), method(method), content_type(content_type), body(body) {}
+RequestData::RequestData(int error_code, int port, const std::string& host, const std::string& uri,
+                         const std::string& method, const std::string& content_type,
+                         const std::string& body)
+    : error_code(error_code),
+      port(port),
+      host(host),
+      uri(uri),
+      method(method),
+      content_type(content_type),
+      body(body) {}
 
+// Empty Response
 ResponseData::ResponseData() : code(0) {}
 
-ResponseData::ResponseData(const int return_code, const std::string& code_msg, const std::string& content) : code(return_code), code_msg(code_msg), content(content) {}
+// Error (No User Error Pages)
+ResponseData::ResponseData(const int error_code)
+    : code(error_code),
+      code_msg(StatusMsg::get(error_code)),
+      content(ErrorPage::get(error_code)),
+      content_type("text/html") {}
+
+// Error (User Error pages)
+ResponseData::ResponseData(const int error_code, const std::map<int, std::string>& user_errors)
+    : code(error_code),
+      code_msg(StatusMsg::get(error_code)),
+      content(ErrorPage::get(error_code, user_errors)),
+      content_type("text/html") {}
+
+// Success Response
+ResponseData::ResponseData(const int return_code, const std::string& content,
+                           const std::string& content_type)
+    : code(return_code),
+      code_msg(StatusMsg::get(return_code)),
+      content(content),
+      content_type(content_type) {}
 
 ResponseData::~ResponseData() {}

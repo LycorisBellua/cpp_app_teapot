@@ -8,7 +8,6 @@
 
 namespace {
 
-  typedef std::vector<std::string>::const_iterator str_vec_it;
   typedef std::map<std::string, std::string>::const_iterator map_it;
 
   std::string getFileUrl(const std::string& filename, const RouteInfo& data) {
@@ -265,9 +264,9 @@ namespace {
     const std::string filepath = data.full_path + filename;
     std::ofstream output_file(filepath.c_str(), std::ios::binary);
     if (!writeFile(output_file, filename, data.request.body)) {
-      return ResponseData(500, ErrorPage::get(500, data.server.errors));
+      return ResponseData(500, data.server.errors);
     }
-    return ResponseData(201, getFileUrl(filename, data));
+    return ResponseData(201, getFileUrl(filename, data), "text/plain");
   }
 
   bool isUpload(const RouteInfo& data) {
@@ -277,7 +276,7 @@ namespace {
       return false;
     }
     // return data.request.content_type.find("multipart/form-data") != std::string::npos;
-    if (data.request.body.size() == 0) {
+    if (data.request.body.empty()) {
       Log::error("[POST] No body to upload");
       return false;
     }
@@ -307,7 +306,7 @@ namespace Post {
 
   ResponseData handle(const RouteInfo& data) {
     if (!bodySizeCheck(data)) {
-      return ResponseData(413, ErrorPage::get(413, data.server.errors));
+      return ResponseData(413, data.server.errors);
     }
     if (isCgi(data)) {
       return Cgi::handle(data);
@@ -317,7 +316,7 @@ namespace Post {
       return simpleUpload(data);
     }
     // TODO: Check fallback return code
-    return ResponseData(400, ErrorPage::get(500, data.server.errors));
+    return ResponseData(400, data.server.errors);
 
     /*    const std::string filename = generateFilename(data.location.upload_path);
     const std::string filepath(data.location.upload_path + filename);

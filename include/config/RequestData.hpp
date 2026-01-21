@@ -2,6 +2,8 @@
 
 #include <set>
 #include <string>
+#include <map>
+#include "Errors_ReturnMsgs.hpp"
 
 struct ResponseData {
   int code;
@@ -11,10 +13,9 @@ struct ResponseData {
   std::set<std::pair<std::string, std::string> > headers;
 
   ResponseData();
-
-  ResponseData(int, const std::string&, const std::string&);
-
-
+  ResponseData(const int error_code);
+  ResponseData(const int error_code, const std::map<int, std::string>& user_errors);
+  ResponseData(const int return_code, const std::string& content, const std::string& content_type);
   ~ResponseData();
 
 };
