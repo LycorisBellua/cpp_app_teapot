@@ -129,7 +129,7 @@ void Debug::PrintLn(std::string msg) {
   std::cout << RED << msg << RESET << std::endl;
 }
 
-void Debug::PrintHttpResponse(const HttpResponse& data) {
-  std::cout << BOLD BLUE << "HttpResponse\n" << RESET;
+void Debug::PrintResponseData(const ResponseData& data) {
+  std::cout << BOLD BLUE << "ResponseData\n" << RESET;
   std::cout << BOLD << "Return Code: " << RESET << data.code << "\n" << BOLD << "Content: " << RESET << data.content << "\n" << std::endl;
 }

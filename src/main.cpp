@@ -35,9 +35,12 @@ int main(int argc, char** argv) {
       "response is returned. The newly-created items can be returned in the body of the response message, but must be locatable by the URL of the "
       "initiating request or by the URL in the value of the Location header provided with the response.";
   const Router test_router = (Config(argv[1]));
-  const RequestData test_req(0, 8080, "test.server.name", "/uploads", "HEAD", "", multipart_body);
+  const RequestData test_req(0, 8080, "test.server.name", "/cgi/test_red.py/extra/path?x=1", "GET", "", "");
   const RouteInfo test_route = test_router.getRoute(test_req);
   const ResponseData test_http = Get::handle(test_route);
+  std::ofstream out_file("cgi_test.html", std::ios::binary);
+  out_file << test_http.content;
+  out_file.close();
 
   return 0;
 }

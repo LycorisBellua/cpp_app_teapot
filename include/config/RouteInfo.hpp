@@ -1,6 +1,5 @@
 #pragma once
 
-#include <limits>
 #include <string>
 
 #include "ServerData.hpp"
@@ -14,6 +13,9 @@ struct RouteInfo {
   std::string full_path;
   std::string query;
   std::string mime_type;
+  std::string path_info;
+  std::string path_translated;
+  std::string script_name;
   ServerData server;
   LocationData location;
   const std::map<std::string, std::string> mime_list;

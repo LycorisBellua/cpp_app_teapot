@@ -1,5 +1,7 @@
 #include "Get.hpp"
 
+#include "Cgi.hpp"
+
 namespace {
 
   typedef std::set<std::string>::const_iterator fl_it;
@@ -61,11 +63,23 @@ namespace {
     return ResponseData(403, ErrorPage::get(403, data.server.errors));
   }
 
+  bool isCgi(const RouteInfo& data) {
+    const std::string& cgi_ext = data.location.cgi_extension;
+    if (cgi_ext.empty()) {
+      return false;
+    }
+    std::string extension = Filesystem::getfileExtension(data.full_path);
+    return extension == cgi_ext;
+  }
+
 }
 
 namespace Get {
 
   ResponseData handle(const RouteInfo& data) {
+    if (isCgi(data)) {
+      return Cgi::handle(data);
+    }
     if (Filesystem::isDir(data.full_path)) {
       return handleDirectory(data);
     }

@@ -35,6 +35,39 @@ namespace {
     return method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD";
   }
 
+  struct CgiPathSplit {
+    std::string script_path;
+    std::string path_info;
+  };
+
+  CgiPathSplit splitCgiPath(const std::string& path, const std::string& cgi_ext) {
+    CgiPathSplit result;
+    result.script_path = path;
+
+    if (cgi_ext.empty()) {
+      return result;
+    }
+
+    size_t ext_pos = path.find(cgi_ext);
+    if (ext_pos == std::string::npos) {
+      return result;
+    }
+
+    size_t script_end = ext_pos + cgi_ext.length();
+
+    // Must be at end of path or followed by '/'
+    if (script_end < path.length() && path[script_end] != '/') {
+      return result;
+    }
+
+    result.script_path = path.substr(0, script_end);
+    if (script_end < path.length()) {
+      result.path_info = path.substr(script_end);
+    }
+
+    return result;
+  }
+
   void logSuccess(const RequestData& req, const RouteInfo& res) {
     std::stringstream log_str;
     log_str << "[Router] Successfully matched request to Server/Location\n\nRequest:" << "\nPort: " << req.port << "\nHost: " << req.host
@@ -118,9 +151,15 @@ RouteInfo Router::getRoute(const RequestData& request) const {
     response.error_code = location->redirect.first;
     return response;
   }
-  response.full_path = Filesystem::normalisePaths(location->root + path.substr(1), Filesystem::getCurrentDir());
+  CgiPathSplit cgi_split = splitCgiPath(path, location->cgi_extension);
+  response.full_path = Filesystem::normalisePaths(location->root + cgi_split.script_path.substr(1), Filesystem::getCurrentDir());
   response.query = getQuery(decoded);
-  response.mime_type = getMime(path);
+  response.mime_type = getMime(cgi_split.script_path);
+  response.path_info = cgi_split.path_info;
+  if (!cgi_split.path_info.empty()) {
+    response.path_translated = Filesystem::normalisePaths(location->root + cgi_split.path_info.substr(1), Filesystem::getCurrentDir());
+  }
+  response.script_name = cgi_split.script_path;
   logSuccess(request, response);
   return response;
 }
