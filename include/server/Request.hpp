@@ -38,7 +38,6 @@ struct Request
 		bool parseChunk(std::string& req_buffer, size_t chunk_size);
 		void afterBodyCheck();
 
-		static std::string getStatusMsg(int status);
 
 	private:
 		bool start_line_found_;

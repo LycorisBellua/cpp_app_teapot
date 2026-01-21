@@ -6,13 +6,13 @@
 struct ResponseData {
   int code;
   std::string code_msg; //TODO
-  std::string content_type; //TODO
   std::string content;
+  std::string content_type; //TODO
   std::set<std::pair<std::string, std::string> > headers;
 
   ResponseData();
 
-  ResponseData(int, const std::string&);
+  ResponseData(int, const std::string&, const std::string&);
 
 
   ~ResponseData();

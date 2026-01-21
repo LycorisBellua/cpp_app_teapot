@@ -6,6 +6,6 @@ RequestData::RequestData(int error_code, int port, const std::string& host, cons
 
 ResponseData::ResponseData() : code(0) {}
 
-ResponseData::ResponseData(int return_code, const std::string& content) : code(return_code), content(content) {}
+ResponseData::ResponseData(const int return_code, const std::string& code_msg, const std::string& content) : code(return_code), code_msg(code_msg), content(content) {}
 
 ResponseData::~ResponseData() {}
