@@ -4,6 +4,7 @@
 #include "Request.hpp"
 #include "RouteInfo.hpp"
 #include <string>
+#include <vector>
 #include <ctime>
 
 class Client
@@ -15,11 +16,14 @@ class Client
 		bool isFullyParsed() const;
 		bool isBufferEmpty() const;
 		bool shouldCloseConnection() const;
+		std::string getBackgroundColor() const;
+		std::vector< std::pair<std::string, std::string> > getCookies() const;
 		RouteRequest getRouteRequestData() const;
 
 		void updateLastActivity();
 		void resetParsingData();
 		bool parseRequest();
+		bool setBackgroundColor(const std::string& str);
 
 	private:
 		Client();
@@ -35,6 +39,7 @@ class Client
 		size_t chunk_size_;
 		std::string req_buffer_;
 		Request req_;
+		std::string hex_bg_color_;
 
 		static size_t findEndOfLine(const std::string& str);
 

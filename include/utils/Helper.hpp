@@ -28,6 +28,7 @@ class Helper
 			str2);
 		static std::string touppercase(const std::string& str);
 		static bool isPrintableAscii(const std::string& str);
+		static bool isHexChar(char c);
 	
 	private:
 		Helper();

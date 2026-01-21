@@ -9,10 +9,35 @@
 
 std::string Response::compose(const Router& router, const Client& c)
 {
-	// TODO: The CGI can return HTTP headers to be sent. There's now a data 
-	// structure in the response structure containing all the properly 
-	// formatted key/value pairs.
-	// TODO: The CGI needs to be partly handled in the event loop.
+	/*
+		TODO: The CGI can return HTTP headers to be sent. There's now a data 
+		structure in the response structure containing all the properly 
+		formatted key/value pairs.
+		TODO: The CGI needs to be partly handled in the event loop.
+	*/
+	/*
+		TODO
+		- Client functions we have:
+			std::vector< std::pair<std::string, std::string> > getCookies() const;
+			std::string getHexBackgroundColor() const;
+			bool setHexBackgroundColor(const std::string& str);
+		- BackgroundColorCookie functions we have:
+			static bool isValidName(const std::string& str);
+			static bool isValidValue(const std::string& str);
+
+		- Select the listener.
+		- For each cookie, ask whether the listener has a copy of the cookie.
+			- If not, add the cookie to a list marked for "deletion" (response 
+			headers).
+				`Set-Cookie: weirdCookie=value; Max-Age=0; Path=/`
+			- If so, then call `c.setBackgroundColor(value)`.
+		- If there was no saved value, it means either no cookie was sent or 
+		none was valid.
+			- Generate a hex code that's not already in use (in uppercase).
+			- Store this cookie into the listener's cookie list.
+			- Be aware that you'll have to use the `Set-Cookie` response header.
+			- Call `c.setBackgroundColor(value)`.
+	*/
 	const RouteRequest& req = c.getRouteRequestData();
 	Response::Adapter adapter;
 	adapter.should_close = c.shouldCloseConnection();

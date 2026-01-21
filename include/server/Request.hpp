@@ -20,6 +20,7 @@ struct Request
 		bool getIsChunked() const;
 		bool getDoesExpect100() const;
 		bool getShouldCloseConnection() const;
+		std::vector< std::pair<std::string, std::string> > getCookies() const;
 		std::string getBody() const;
 
 		void resetData();

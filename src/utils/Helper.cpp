@@ -112,3 +112,13 @@ bool Helper::isPrintableAscii(const std::string& str)
 	}
 	return true;
 }
+
+bool Helper::isHexChar(char c)
+{
+	if (std::isdigit(c))
+		return true;
+	else if (!std::isalpha(c))
+		return false;
+	c = std::toupper(static_cast<unsigned char>(c));
+	return c >= 'A' && c <= 'F';
+}

@@ -1,12 +1,34 @@
 #include "Client.hpp"
 #include "Host.hpp"
 #include "Helper.hpp"
+#include "BackgroundColorCookie.hpp"
 #include <unistd.h>
 
 /* Public (Instance) -------------------------------------------------------- */
 
 Client::Client(const std::string& ip, int fd)
-	: ip_(ip), fd_(fd), req_buffer_("")
+	: ip_(ip), fd_(fd), req_buffer_(""), hex_bg_color_("")
+{
+	resetParsingData();
+	updateLastActivity();
+}
+
+std::time_t Client::getLastActivity() const
+{
+	return last_activity_;
+}
+
+bool Client::isFullyParsed() const
+{
+	return body_end_found_;
+}
+
+#include <unistd.h>
+
+/* Public (Instance) -------------------------------------------------------- */
+
+Client::Client(const std::string& ip, int fd)
+	: ip_(ip), fd_(fd), req_buffer_(""), hex_bg_color_("")
 {
 	resetParsingData();
 	updateLastActivity();
@@ -32,9 +54,21 @@ bool Client::shouldCloseConnection() const
 	return req_.getShouldCloseConnection();
 }
 
+std::string Client::getBackgroundColor() const
+{
+	return hex_bg_color_;
+}
+
+std::vector< std::pair<std::string, std::string> > Client::getCookies() const
+{
+	return req_.getCookies();
+}
+
 RouteRequest Client::getRouteRequestData() const
 {
-	//TODO: Send Client IP (`ip_`) along with the request data (needed for CGI)
+	//TODO: Send BG color (`hex_bg_color_`) along with the request data.
+	// If it's an empty string, send "#FFFFFF".
+	//TODO: Send Client IP (`ip_`) along with the request data (needed for CGI).
 	return RouteRequest(
 		req_.getStatus(),
 		req_.getPort(),
@@ -71,6 +105,14 @@ bool Client::parseRequest()
 	parseBody();
 	if (isFullyParsed())
 		updateLastActivity();
+	return true;
+}
+
+bool Client::setBackgroundColor(const std::string& str)
+{
+	if (!BackgroundColorCookie::isValidValue(str))
+		return false;
+	hex_bg_color_ = str;
 	return true;
 }
 

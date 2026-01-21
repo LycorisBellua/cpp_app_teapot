@@ -1,14 +1,3 @@
-- When a request has the Cookie header, parse in order to have the cookie list 
-of this request. There shouldn't be a semi-colon at the end of the header 
-value, but tolerate it. This example has three cookies:
-
-```
-Cookie: name0=value0
-Cookie: name1=value1; name2=value2
-```
-
---------------------------------------------------------------------------------
-
 TODO
 - The listener has an IP and a port.
 - Each IP/port pair has a list of cookies.
@@ -25,13 +14,6 @@ TODO
 
 - Each domain (host/port pair) has its cookie list.
 
-- The response for this request should tell the client to delete any cookie the 
-domain doesn't recognize:
-`Set-Cookie: weirdCookie=value; Max-Age=0; Path=/`
-
-- If the cookie is recognized, it can be used for something, but this doesn't 
-concern the response.
-
 - If no valid cookie was sent with the request, the server generates one. This 
 cookie is sent with the response. Then, for this ongoing connection, we don't 
 send a new cookie again, so have a boolean to remember that a cookie has just 
@@ -40,6 +22,8 @@ be a case of pipelining, which explains that).
 
 - The cookie is a background color with a hex code, randomly generated:
 `Set-Cookie: background-color=#4468A6; Path=/`
+
+--------------------------------------------------------------------------------
 
 - The background color is to be used with the HTML page that's being returned, 
 if it's an HTML page.
@@ -53,8 +37,3 @@ Example:
 </body>
 </html>
 ```
-
-- Use the background color when the cookie is being issued, and then keep using 
-it for this connection, unless a request sends a new color (and it's one the 
-domain recognizes). If the request has different colors, use the last one to 
-keep things simple, instead of going for a gradient.

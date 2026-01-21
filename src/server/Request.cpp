@@ -110,6 +110,11 @@ bool Request::getShouldCloseConnection() const
 	return should_close_connection_;
 }
 
+std::vector< std::pair<std::string, std::string> > Request::getCookies() const
+{
+	return cookies_;
+}
+
 std::string Request::getBody() const
 {
 	return body_;
