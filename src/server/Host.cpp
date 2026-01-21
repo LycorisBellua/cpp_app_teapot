@@ -74,7 +74,7 @@ bool Host::processAbsoluteForm(std::string& uri, std::string& domain, int& port)
 	if (nbr_port < 0)
 		return false;
 	uri = path;
-	domain = domain_name;
+	domain = domain_name == "localhost" ? "127.0.0.1" : domain_name;
 	port = nbr_port;
 	return true;
 }

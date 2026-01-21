@@ -34,7 +34,7 @@ bool Client::shouldCloseConnection() const
 
 RouteRequest Client::getRouteRequestData() const
 {
-	//TODO: Send `ip_` along with the request data (needed for CGI)
+	//TODO: Send Client IP (`ip_`) along with the request data (needed for CGI)
 	return RouteRequest(
 		req_.getStatus(),
 		req_.getPort(),

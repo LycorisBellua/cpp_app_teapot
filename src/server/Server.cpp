@@ -12,7 +12,6 @@
 Server::Server(const std::string& config_path)
 	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
 {
-	// TODO: Besides the IP and the port, I also need the domain name
 	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
 	std::set<std::pair<std::string, int> >::const_iterator it;
 	std::set<std::pair<std::string, int> >::const_iterator ite = ip_ports.end();
@@ -20,16 +19,12 @@ Server::Server(const std::string& config_path)
 	{
 		const std::string& ip = it->first;
 		int port = it->second;
-		std::map<int, Listener>::iterator it = findListener(ip, port);
-		if (it == listeners_.end())
-			it = addListener(ip, port);
-		if (it == listeners_.end())
-			continue;
-		// TODO: Add domain name to listener
-		(void)it; //it->addDomainName(domain);
+		addListener(ip, port);
 	}
-	if (!runEventLoop())
-		return;
+	if (listeners_.empty())
+		Log::error("Error: Server: constructor: listener list is empty");
+	else
+		runEventLoop();
 }
 
 Server::~Server()
@@ -41,38 +36,37 @@ Server::~Server()
 
 /* Private (Instance) ------------------------------------------------------- */
 
-std::map<int, Listener>::iterator Server::findListener(const std::string& ip,
-	int port)
+bool Server::addListener(const std::string& ip, int port)
 {
 	std::map<int, Listener>::iterator it;
 	std::map<int, Listener>::iterator ite = listeners_.end();
 	for (it = listeners_.begin(); it != ite; ++it)
 	{
 		if (it->second.hasThisIPAndPort(ip, port))
-			break;
+		{
+			Log::error("Error: Server: addListener: listener already exists");
+			return false;
+		}
 	}
-	return it;
-}
-
-std::map<int, Listener>::iterator Server::addListener(const std::string& ip,
-	int port)
-{
 	int fd_listen = Socket::createListener(ip, port);
 	if (fd_listen < 0 || !addListenerToEventHandler(fd_listen))
 	{
+		Log::error("Error: Server: addListener: can't create listener or add "
+			"it to event handler");
 		close(fd_listen);
-		return listeners_.end();
+		return false;
 	}
 	std::pair<std::map<int, Listener>::iterator, bool> result =
 		listeners_.insert(std::make_pair(fd_listen,
 			Listener(fd_listen, ip, port)));
 	if (!result.second)
 	{
+		Log::error("Error: Server: addListener: can't add listener to map");
 		close(fd_listen);
 		epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd_listen, NULL);
-		return listeners_.end();
+		return false;
 	}
-	return result.first;
+	return true;
 }
 
 void Server::closeListeners()

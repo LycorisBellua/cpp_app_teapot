@@ -184,7 +184,7 @@ void Request::parseHostHeader(const std::string value)
 		host_header_found_ = true;
 		std::vector<std::string> tokens = Helper::splitAtFirstChar(value, ':',
 			false);
-		domain_ = tokens[0];
+		domain_ = tokens[0] == "localhost" ? "127.0.0.1" : tokens[0];
 		port_ = Host::parsePort(tokens.size() == 1 ? "" : tokens[1], "http");
 		if (!Host::isValidDomain(domain_) || port_ < 0)
 			setStatus(400);

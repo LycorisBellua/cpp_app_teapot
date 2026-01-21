@@ -20,10 +20,7 @@ class Server
 	
 		Server();
 
-		std::map<int, Listener>::iterator findListener(const std::string& ip,
-			int port);
-		std::map<int, Listener>::iterator addListener(const std::string& ip,
-			int port);
+		bool addListener(const std::string& ip, int port);
 		void closeListeners();
 		bool addListenerToEventHandler(int fd_listen);
 		bool runEventLoop();

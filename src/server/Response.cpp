@@ -9,6 +9,10 @@
 
 std::string Response::compose(const Router& router, const Client& c)
 {
+	// TODO: The CGI can return HTTP headers to be sent. There's now a data 
+	// structure in the response structure containing all the properly 
+	// formatted key/value pairs.
+	// TODO: The CGI needs to be partly handled in the event loop.
 	const RouteRequest& req = c.getRouteRequestData();
 	Response::Adapter adapter;
 	adapter.should_close = c.shouldCloseConnection();

@@ -9,6 +9,20 @@ Cookie: name1=value1; name2=value2
 
 --------------------------------------------------------------------------------
 
+TODO
+- The listener has an IP and a port.
+- Each IP/port pair has a list of cookies.
+
+- Use the domain/port values to know which cookie list to use:
+	* If host is empty and port is 0 -> Fetch the first server.
+	* If host is empty but we have the port -> Fetch the first server with this port.
+	* If we have the host but port is 0 -> Fetch the first server with this host.
+	* If we have both the host and the port -> Fetch the first server that matches with both.
+	* And if no such server has been found, we might have a server with "0.0.0.0" and with this exact port.
+	* Otherwise abort, there's no need to tell the client to delete any cookie, because the host is invalid anyway.
+
+--------------------------------------------------------------------------------
+
 - Each domain (host/port pair) has its cookie list.
 
 - The response for this request should tell the client to delete any cookie the 

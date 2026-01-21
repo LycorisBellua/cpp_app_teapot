@@ -78,7 +78,7 @@ bool Socket::bindSocket(const std::string& ip, int port, int& fd_listen,
 {
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	if (ip == "localhost" || ip == "127.0.0.1")
+	if (ip == "127.0.0.1")
 		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	else if (ip == "0.0.0.0")
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -111,7 +111,7 @@ bool Socket::resolveIPv4(const std::string& ip, sockaddr_in& out)
 
 bool Socket::listenForClients(int fd_listen)
 {
-	const int queue_length = 10;
+	const int queue_length = 64;
 	if (listen(fd_listen, queue_length) < 0)
 	{
 		Log::error("Error: Socket: listenForClients");
