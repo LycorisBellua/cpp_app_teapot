@@ -1,7 +1,0 @@
-{
-  "name": "C++ Webserv",
-  "image": "ghcr.io/joshw34/dev_containers/cpp-dev:latest",
-  "runArgs": [
-    "--security-opt=label=disable"
-  ],
-}
