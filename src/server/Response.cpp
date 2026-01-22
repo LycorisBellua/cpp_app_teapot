@@ -34,6 +34,9 @@ std::string Response::compose(const Router& router, const Client& c)
 			- Store this cookie into the listener's cookie list.
 			- Be aware that you'll have to use the `Set-Cookie` response header.
 			- Call `c.setBackgroundColor(value)`.
+		- Once I receive the response body, if it's an HTML file (doctype is 
+		case insensitive), add the background color (<body> might already have 
+		a style option).
 	*/
 	const RequestData& req = c.getRequestData();
 	const ResponseData& res = router.handle(req);
