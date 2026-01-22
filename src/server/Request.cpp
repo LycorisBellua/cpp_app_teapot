@@ -1,6 +1,7 @@
 #include "Request.hpp"
 #include "Host.hpp"
 #include "Helper.hpp"
+#include <algorithm>
 
 /* Public (Instance) -------------------------------------------------------- */
 
@@ -62,6 +63,11 @@ bool Request::getDoesExpect100() const
 bool Request::getShouldCloseConnection() const
 {
 	return should_close_connection_;
+}
+
+std::vector< std::pair<std::string, std::string> > Request::getCookies() const
+{
+	return cookies_;
 }
 
 std::string Request::getBody() const
@@ -136,9 +142,9 @@ void Request::parseHostHeader(const std::string value)
 	else
 	{
 		host_header_found_ = true;
-		std::vector<std::string> tokens = Helper::splitAtFirstColon(value,
+		std::vector<std::string> tokens = Helper::splitAtFirstChar(value, ':',
 			false);
-		domain_ = tokens[0];
+		domain_ = tokens[0] == "localhost" ? "127.0.0.1" : tokens[0];
 		port_ = Host::parsePort(tokens.size() == 1 ? "" : tokens[1], "http");
 		if (!Host::isValidDomain(domain_) || port_ < 0)
 			setStatus(400);
@@ -211,6 +217,27 @@ void Request::parseConnectionHeader(const std::string value)
 			should_close_connection_ = false;
 		else
 			setStatus(400);
+	}
+}
+
+void Request::parseCookie(const std::string value)
+{
+	std::vector<std::string> cookies = Helper::splitAtChar(value, ';', false);
+	for (size_t i = 0; i < cookies.size(); ++i)
+	{
+		if (!Helper::isPrintableAscii(cookies[i]))
+			continue;
+		std::vector<std::string> kvp = Helper::splitAtFirstChar(cookies[i], '=',
+			true);
+		if (kvp.empty())
+			continue;
+		else if (kvp.size() == 1)
+			kvp.insert(kvp.begin(), "");
+		if (kvp[0].empty() && kvp[1].empty())
+			continue;
+		std::pair<std::string, std::string> c = std::make_pair(kvp[0], kvp[1]);
+		if (std::find(cookies_.begin(), cookies_.end(), c) == cookies_.end())
+			cookies_.push_back(c);
 	}
 }
 

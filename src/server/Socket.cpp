@@ -1,13 +1,13 @@
 #include "Socket.hpp"
 #include "Log.hpp"
+#include <sstream>
 #include <fcntl.h>
 #include <unistd.h>
 #include <netdb.h>
 
 /* Public (Static) ---------------------------------------------------------- */
 
-std::pair<int, sockaddr_in> Socket::createListener(const std::string& ip,
-	int port)
+int Socket::createListener(const std::string& ip, int port)
 {
 	int fd_listen = -1;
 	sockaddr_in addr = {};
@@ -18,7 +18,41 @@ std::pair<int, sockaddr_in> Socket::createListener(const std::string& ip,
 		close(fd_listen);
 		fd_listen = -1;
 	}
-	return std::pair<int, sockaddr_in>(fd_listen, addr);
+	return fd_listen;
+}
+
+bool Socket::acceptConnection(int fd_listen, int& fd_client, sockaddr_in& addr)
+{
+	int addrlen = sizeof(addr);
+	fd_client = accept(fd_listen, (sockaddr *)&addr, (socklen_t *)&addrlen);
+	if (fd_client < 0)
+	{
+		Log::error("Error: Socket: acceptConnection: accept");
+		return false;
+	}
+	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
+	{
+		close(fd_client);
+		fd_client = -1;
+		Log::error("Error: Socket: acceptConnection: fcntl");
+		return false;
+	}
+	return true;
+}
+
+std::string Socket::getStringIP(const sockaddr_in& addr)
+{
+	uint32_t ip = ntohl(addr.sin_addr.s_addr);
+	unsigned char a = (ip >> 24) & 0xFF;
+	unsigned char b = (ip >> 16) & 0xFF;
+	unsigned char c = (ip >> 8) & 0xFF;
+	unsigned char d = ip & 0xFF;
+	std::ostringstream oss;
+	oss << static_cast<unsigned int>(a) << '.'
+		<< static_cast<unsigned int>(b) << '.'
+		<< static_cast<unsigned int>(c) << '.'
+		<< static_cast<unsigned int>(d);
+	return oss.str();
 }
 
 /* Private (Static) --------------------------------------------------------- */
@@ -44,7 +78,7 @@ bool Socket::bindSocket(const std::string& ip, int port, int& fd_listen,
 {
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	if (ip == "localhost" || ip == "127.0.0.1")
+	if (ip == "127.0.0.1")
 		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	else if (ip == "0.0.0.0")
 		addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -77,7 +111,7 @@ bool Socket::resolveIPv4(const std::string& ip, sockaddr_in& out)
 
 bool Socket::listenForClients(int fd_listen)
 {
-	const int queue_length = 10;
+	const int queue_length = 64;
 	if (listen(fd_listen, queue_length) < 0)
 	{
 		Log::error("Error: Socket: listenForClients");

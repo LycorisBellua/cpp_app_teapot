@@ -113,7 +113,7 @@ std::set<std::pair<std::string, int> > Router::getPorts() const {
   return ports;
 }
 
-ResponseData Router::handle(const RequestData& request) {
+ResponseData Router::handle(const RequestData& request) const {
   if (request.error_code != 0) {
     return ResponseData(request.error_code);
   }

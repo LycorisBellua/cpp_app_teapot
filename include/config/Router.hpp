@@ -22,7 +22,7 @@ class Router {
   Router(const Router&);
   ~Router();
 
-  ResponseData handle(const RequestData&);
+  ResponseData handle(const RequestData&) const;
   std::set<std::pair<std::string, int> > getPorts() const;
 
  private:

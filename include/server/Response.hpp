@@ -14,22 +14,8 @@ class Response
 	private:
 		Response();
 
-		class Adapter
-		{
-			public:
-				int status;
-				std::string status_msg;
-				std::string body;
-				std::string type;
-				bool should_close;
-				bool is_head;
-
-				Adapter();
-				void setFromRouteResponse(const RouteInfo& res);
-				void setFromResponseData(const ResponseData& res);
-		};
-
-		static std::string serialize(const Response::Adapter& res);
+		static std::string serialize(const ResponseData& res, bool is_head,
+			bool should_close);
 		static std::string getCRLF();
 		static std::string getStartLine(int status, const std::string& msg);
 		static std::string getVersion();

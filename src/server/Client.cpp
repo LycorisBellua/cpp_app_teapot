@@ -1,28 +1,26 @@
 #include "Client.hpp"
-
-#include <unistd.h>
-
-#include "Helper.hpp"
 #include "Host.hpp"
+#include "Helper.hpp"
+#include "BackgroundColorCookie.hpp"
+#include <unistd.h>
 
 /* Public (Instance) -------------------------------------------------------- */
 
-Client::Client() : fd_(-1), req_buffer_("") {
-  resetParsingData();
-  updateLastActivity();
+Client::Client(const std::string& ip, int fd)
+	: ip_(ip), fd_(fd), req_buffer_(""), hex_bg_color_("")
+{
+	resetParsingData();
+	updateLastActivity();
 }
 
-Client::Client(int fd) : fd_(fd), req_buffer_("") {
-  resetParsingData();
-  updateLastActivity();
+std::time_t Client::getLastActivity() const
+{
+	return last_activity_;
 }
 
-std::time_t Client::getLastActivity() const {
-  return last_activity_;
-}
-
-bool Client::isFullyParsed() const {
-  return body_end_found_;
+bool Client::isFullyParsed() const
+{
+	return body_end_found_;
 }
 
 bool Client::isBufferEmpty() const {
@@ -34,7 +32,20 @@ bool Client::shouldCloseConnection() const {
 }
 
 RequestData Client::getRequestData() const {
+  	//TODO: Send BG color (`hex_bg_color_`) along with the request data.
+	// If it's an empty string, send "#FFFFFF".
+	//TODO: Send Client IP (`ip_`) along with the request data (needed for CGI).
   return RequestData(req_.getStatus(), req_.getPort(), req_.getDomain(), req_.getURI(), req_.getMethod(), req_.getContentType(), req_.getBody());
+}
+
+std::string Client::getBackgroundColor() const
+{
+	return hex_bg_color_;
+}
+
+std::vector< std::pair<std::string, std::string> > Client::getCookies() const
+{
+	return req_.getCookies();
 }
 
 void Client::updateLastActivity() {
@@ -66,6 +77,14 @@ bool Client::parseRequest() {
   return true;
 }
 
+bool Client::setBackgroundColor(const std::string& str)
+{
+	if (!BackgroundColorCookie::isValidValue(str))
+		return false;
+	hex_bg_color_ = str;
+	return true;
+}
+
 /* Private (Static) --------------------------------------------------------- */
 
 size_t Client::findEndOfLine(const std::string& str) {
@@ -89,54 +108,52 @@ bool Client::readMoreRequestData() {
   return true;
 }
 
-void Client::parseHeader() {
-  if (end_line_found_) {
-    return;
-  }
-  size_t eol;
-  while (!end_line_found_ && (eol = findEndOfLine(req_buffer_)) != std::string::npos) {
-    std::string line = Helper::extractLine(req_buffer_, eol, true);
-    if (line.empty()) {
-      if (start_line_found_) {
-        end_line_found_ = true;
-      }
-    }
-    else if (!start_line_found_) {
-      start_line_found_ = true;
-      updateLastActivity();
-      req_.parseStartLine(Helper::splitAtWhitespace(line));
-    }
-    else {
-      std::vector<std::string> tokens = Helper::splitAtFirstColon(line, true);
-      if (tokens.size() != 2 || tokens[0].empty() || tokens[1].empty()) {
-        req_.setStatus(400);
-      }
-      else if (Helper::insensitiveCmp(tokens[0], "Host")) {
-        req_.parseHostHeader(tokens[1]);
-      }
-      else if (Helper::insensitiveCmp(tokens[0], "Content-Type")) {
-        req_.parseContentTypeHeader(tokens[1]);
-      }
-      else if (Helper::insensitiveCmp(tokens[0], "Content-Length")) {
-        req_.parseContentLengthHeader(tokens[1]);
-      }
-      else if (Helper::insensitiveCmp(tokens[0], "Transfer-Encoding")) {
-        req_.parseTransferEncodingHeader(tokens[1]);
-      }
-      else if (Helper::insensitiveCmp(tokens[0], "Expect")) {
-        req_.parseExpectHeader(tokens[1]);
-      }
-      else if (Helper::insensitiveCmp(tokens[0], "Connection")) {
-        req_.parseConnectionHeader(tokens[1]);
-      }
-    }
-    if (req_.getStatus() == 400) {
-      end_line_found_ = true;
-    }
-  }
-  if (end_line_found_) {
-    req_.afterHeaderCheck();
-  }
+void Client::parseHeader()
+{
+	if (end_line_found_)
+		return;
+	size_t eol;
+	while (!end_line_found_
+		&& (eol = findEndOfLine(req_buffer_)) != std::string::npos)
+	{
+		std::string line = Helper::extractLine(req_buffer_, eol, true);
+		if (line.empty())
+		{
+			if (start_line_found_)
+				end_line_found_ = true;
+		}
+		else if (!start_line_found_)
+		{
+			start_line_found_ = true;
+			updateLastActivity();
+			req_.parseStartLine(Helper::splitAtWhitespace(line));
+		}
+		else
+		{
+			std::vector<std::string> tokens = Helper::splitAtFirstChar(line,
+				':', true);
+			if (tokens.size() != 2 || tokens[0].empty() || tokens[1].empty())
+				req_.setStatus(400);
+			else if (Helper::insensitiveCmp(tokens[0], "Host"))
+				req_.parseHostHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Content-Type"))
+				req_.parseContentTypeHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Content-Length"))
+				req_.parseContentLengthHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Transfer-Encoding"))
+				req_.parseTransferEncodingHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Expect"))
+				req_.parseExpectHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Connection"))
+				req_.parseConnectionHeader(tokens[1]);
+			else if (Helper::insensitiveCmp(tokens[0], "Cookie"))
+				req_.parseCookie(tokens[1]);
+		}
+		if (req_.getStatus() == 400)
+			end_line_found_ = true;
+	}
+	if (end_line_found_)
+		req_.afterHeaderCheck();
 }
 
 void Client::parseBody() {

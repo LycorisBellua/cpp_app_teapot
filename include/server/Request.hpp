@@ -20,6 +20,7 @@ struct Request
 		bool getIsChunked() const;
 		bool getDoesExpect100() const;
 		bool getShouldCloseConnection() const;
+		std::vector< std::pair<std::string, std::string> > getCookies() const;
 		std::string getBody() const;
 
 		void resetData();
@@ -32,6 +33,7 @@ struct Request
 		void parseTransferEncodingHeader(const std::string value);
 		void parseExpectHeader(const std::string value);
 		void parseConnectionHeader(const std::string value);
+		void parseCookie(const std::string value);
 		void afterHeaderCheck();
 		bool parseRegularBody(std::string& req_buffer);
 		bool parseChunkSize(std::string& line, size_t& chunk_size);
@@ -59,6 +61,7 @@ struct Request
 		bool does_expect_100_;
 		bool connection_header_found_;
 		bool should_close_connection_;
+		std::vector< std::pair<std::string, std::string> > cookies_;
 		std::string body_;
 
 		static bool isRecognizedMethod(const std::string& str);

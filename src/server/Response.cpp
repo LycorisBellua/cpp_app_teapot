@@ -1,7 +1,4 @@
 #include "Response.hpp"
-#include "Get.hpp"
-#include "Delete.hpp"
-#include "Post.hpp"
 #include "Helper.hpp"
 #include <ctime>
 
@@ -9,53 +6,63 @@
 
 std::string Response::compose(const Router& router, const Client& c)
 {
+	/*
+		TODO: The CGI can return HTTP headers to be sent. There's now a data 
+		structure in the response structure containing all the properly 
+		formatted key/value pairs.
+		TODO: The CGI needs to be partly handled in the event loop.
+	*/
+	/*
+		TODO
+		- Client functions we have:
+			std::vector< std::pair<std::string, std::string> > getCookies() const;
+			std::string getHexBackgroundColor() const;
+			bool setHexBackgroundColor(const std::string& str);
+		- BackgroundColorCookie functions we have:
+			static bool isValidName(const std::string& str);
+			static bool isValidValue(const std::string& str);
+
+		- Select the listener.
+		- For each cookie, ask whether the listener has a copy of the cookie.
+			- If not, add the cookie to a list marked for "deletion" (response 
+			headers).
+				`Set-Cookie: weirdCookie=value; Max-Age=0; Path=/`
+			- If so, then call `c.setBackgroundColor(value)`.
+		- If there was no saved value, it means either no cookie was sent or 
+		none was valid.
+			- Generate a hex code that's not already in use (in uppercase).
+			- Store this cookie into the listener's cookie list.
+			- Be aware that you'll have to use the `Set-Cookie` response header.
+			- Call `c.setBackgroundColor(value)`.
+	*/
 	const RequestData& req = c.getRequestData();
-	Response::Adapter adapter;
-	adapter.should_close = c.shouldCloseConnection();
-	adapter.is_head = req.method == "HEAD";
-	if (req.error_code == 100)
-	{
-		adapter.status = 100;
-		adapter.status_msg = "Continue";
-	}
-        // TODO: change this to receive ResponseData
-        (void)router;
-	/*else
-	{
-		const RouteInfo& res = router.getRoute(req);
-		if (res.error_code)
-			adapter.setFromRouteResponse(res);
-		else if (req.method == "GET" || req.method == "HEAD")
-			adapter.setFromResponseData(Get::handle(res));
-		else if (req.method == "POST")
-			adapter.setFromResponseData(Post::handle(res));
-		else if (req.method == "DELETE")
-			adapter.setFromResponseData(Delete::handle(res));
-		else
-			return "";
-	}*/
-	return Response::serialize(adapter);
+	const ResponseData& res = router.handle(req);
+	bool is_head = req.method == "HEAD";
+	bool should_close = c.shouldCloseConnection() || res.code == 400;
+	return Response::serialize(res, is_head, should_close);
 }
 
 /* Private (Static) --------------------------------------------------------- */
 
-std::string Response::serialize(const Response::Adapter& res)
+std::string Response::serialize(const ResponseData& res, bool is_head,
+	bool should_close)
 {
 	std::string str;
-	str += Response::getStartLine(res.status, res.status_msg);
-	if (res.status == 100)
+	str += Response::getStartLine(res.code, res.code_msg);
+	if (res.code == 100)
 		str += Response::getCRLF();
 	else
 	{
 		str += Response::getDateLine();
-		str += Response::getContentLengthLine(res.body.length());
-		if (!res.body.empty() && !res.type.empty())
-			str += Response::getContentTypeLine(res.type);
-		if (res.should_close)
+		str += Response::getContentLengthLine(res.content.length());
+		if (!res.content.empty() && !res.content_type.empty())
+			str += Response::getContentTypeLine(res.content_type);
+		//TODO: Add all elements of `res.headers` if not empty
+		if (should_close)
 			str += Response::getConnectionCloseLine();
 		str += Response::getCRLF();
-		if (!res.is_head)
-			str += res.body;
+		if (!is_head)
+			str += res.content;
 	}
 	return str;
 }
@@ -110,28 +117,4 @@ std::string Response::getContentTypeLine(const std::string& type)
 std::string Response::getConnectionCloseLine()
 {
 	return "Connection: close" + getCRLF();
-}
-
-/* Private Nested Class ----------------------------------------------------- */
-
-Response::Adapter::Adapter()
-	: status(0), status_msg(""), body(""), type(""), should_close(false),
-	is_head(false)
-{
-}
-
-void Response::Adapter::setFromRouteResponse(const RouteInfo& res)
-{
-	this->status = res.error_code;
-	this->status_msg = res.error_msg.empty();
-	this->body = res.error_body;
-	this->type = res.mime_type;
-}
-
-void Response::Adapter::setFromResponseData(const ResponseData& res)
-{
-	this->status = res.code;
-	this->status_msg = res.code_msg;
-	this->body = res.content;
-	this->type = res.content_type;
 }
