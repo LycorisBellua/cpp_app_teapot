@@ -15,3 +15,7 @@ build
 **/.envrc
 **/compile_commands.json
 **/.cache
+
+**/.idea
+**/.clang-format
+**/.devcontainer

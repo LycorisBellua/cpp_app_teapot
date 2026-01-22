@@ -119,7 +119,7 @@ ResponseData Router::handle(const RequestData& request) const {
   }
   const RouteInfo& data = getRoute(request);
   if (data.error_code != 0) {
-    return (data.error_code == 400) ? ResponseData(400)
+    return (data.error_code == 400 || data.error_code == 404) ? ResponseData(data.error_code)
                                     : ResponseData(data.error_code, data.server.errors);
   }
   if (request.method == "GET" || request.method == "HEAD") {
