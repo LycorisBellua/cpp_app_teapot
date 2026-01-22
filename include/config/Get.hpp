@@ -9,6 +9,8 @@
 #include "Log.hpp"                // IWYU pragma: keep
 #include "RequestData.hpp"
 #include "RouteInfo.hpp"
+#include "Cgi.hpp"
+
 
 namespace Get {
   ResponseData handle(const RouteInfo&);

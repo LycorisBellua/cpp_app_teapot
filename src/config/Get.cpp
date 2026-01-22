@@ -1,7 +1,5 @@
 #include "Get.hpp"
 
-#include "Cgi.hpp"
-
 namespace {
 
   typedef std::set<std::string>::const_iterator fl_it;
@@ -45,7 +43,8 @@ namespace {
   ResponseData handleDirectory(const RouteInfo& data) {
     if (!data.location.index.empty()) {
       if (Filesystem::exists(data.full_path + data.location.index)) {
-        const std::pair<bool, std::string> indexbuf = Filesystem::readFile(data.full_path + data.location.index);
+        const std::pair<bool, std::string> indexbuf =
+            Filesystem::readFile(data.full_path + data.location.index);
         if (indexbuf.first) {
           Log::info("[GET/HEAD] Serving Index File: " + data.full_path + data.location.index);
           return ResponseData(200, indexbuf.second, "text/html");
@@ -86,7 +85,8 @@ namespace Get {
     else if (Filesystem::isRegularFile(data.full_path)) {
       return handleFile(data);
     }
-    Log::error("[GET/HEAD] Requested resource is not a directory or regular file: " + data.full_path);
+    Log::error("[GET/HEAD] Requested resource is not a directory or regular file: " +
+               data.full_path);
     return ResponseData(404, data.server.errors);
   }
 

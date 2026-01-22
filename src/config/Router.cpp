@@ -1,7 +1,5 @@
 #include "Router.hpp"
 
-
-
 namespace {
 
   typedef std::vector<ServerData>::const_iterator srv_it;
