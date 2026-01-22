@@ -119,7 +119,8 @@ ResponseData Router::handle(const RequestData& request) {
   }
   const RouteInfo& data = getRoute(request);
   if (data.error_code != 0) {
-    return (data.error_code == 400) ? ResponseData(400) : ResponseData(data.error_code, data.server.errors);
+    return (data.error_code == 400) ? ResponseData(400)
+                                    : ResponseData(data.error_code, data.server.errors);
   }
   if (request.method == "GET" || request.method == "HEAD") {
     return Get::handle(data);
@@ -169,7 +170,7 @@ RouteInfo Router::getRoute(const RequestData& request) const {
   }
   CgiPathSplit cgi_split = splitCgiPath(path, location->cgi_extension);
   route.full_path = Filesystem::normalisePaths(location->root + cgi_split.script_path.substr(1),
-                                                  Filesystem::getCurrentDir());
+                                               Filesystem::getCurrentDir());
   route.query = query;
   route.mime_type = getMime(cgi_split.script_path);
   route.path_info = cgi_split.path_info;
@@ -183,19 +184,33 @@ RouteInfo Router::getRoute(const RequestData& request) const {
 }
 
 const ServerData* Router::getServer(const RequestData& request) const {
-  const ServerData* default_server = NULL;
-  for (srv_it srv = servers.begin(); srv != servers.end(); ++srv) {
-    if (srv->port == request.port) {
-      default_server = default_server == NULL ? &(*srv) : default_server;
-      if (srv->name == request.host) {
-        return &(*srv);
-      }
+  const ServerData* result = NULL;
+  if (!request.host.empty() && request.port != 0) {
+    result = serverSearch(request.host, request.port);
+    if (result) {
+      return result;
+    }
+    result = serverSearch("0.0.0.0", request.port);
+    if (result) {
+      return result;
     }
   }
-  if (!default_server) {
-    throw RouterError("Unable to find matching server", request);
+  if (request.host.empty() && request.port != 0) {
+    result = serverFirstMatchingPort(request.port);
+    if (result) {
+      return result;
+    }
   }
-  return default_server;
+  if (!request.host.empty() && request.port == 0) {
+    result = serverFirstMatchingHost(request.host);
+    if (result) {
+      return result;
+    }
+  }
+  if (request.host.empty() && request.port == 0 && !servers.empty()) {
+    return &servers.front();
+  }
+  throw RouterError("No Matching server found for request", request);
 }
 
 const LocationData* Router::getLocation(const std::vector<LocationData>& locations,
@@ -224,6 +239,33 @@ const std::string Router::getMime(const std::string& path) const {
     found = mime.find(path.substr(ext_start));
   }
   return found == mime.end() ? "application/octet-stream" : found->second;
+}
+
+const ServerData* Router::serverSearch(const std::string& host, const int port) const {
+  for (srv_it server = servers.begin(); server != servers.end(); ++server) {
+    if (server->host == host && server->port == port) {
+      return &(*server);
+    }
+  }
+  return NULL;
+}
+
+const ServerData* Router::serverFirstMatchingPort(const int port) const {
+  for (srv_it server = servers.begin(); server != servers.end(); ++server) {
+    if (server->port == port) {
+      return &(*server);
+    }
+  }
+  return NULL;
+}
+
+const ServerData* Router::serverFirstMatchingHost(const std::string& host) const {
+  for (srv_it server = servers.begin(); server != servers.end(); ++server) {
+    if (server->host == host) {
+      return &(*server);
+    }
+  }
+  return NULL;
 }
 
 std::string Router::decodeUri(const std::string& uri_no_query, const RequestData& req) const {
@@ -335,12 +377,12 @@ void Router::verifyBodySize(const RequestData& request, const ServerData* server
 
 RouteInfo Router::errorReturn(int code, const ServerData* srv, const RequestData& req) const {
   if (srv) {
-    RouteInfo response(ServerData(), LocationData(), std::map<std::string, std::string>(), req);
+    RouteInfo response(*srv, LocationData(), std::map<std::string, std::string>(), req);
     response.error_code = code;
     return response;
   }
   else {
-    RouteInfo response(*srv, LocationData(), std::map<std::string, std::string>(), req);
+    RouteInfo response(ServerData(), LocationData(), std::map<std::string, std::string>(), req);
     response.error_code = code;
     return response;
   }

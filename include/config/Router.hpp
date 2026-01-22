@@ -51,6 +51,9 @@ class Router {
                                   const RequestData&) const;
   const std::string getMime(const std::string&) const;
 
+  const ServerData* serverSearch(const std::string& host, const int port) const;
+  const ServerData* serverFirstMatchingPort(const int port) const;
+  const ServerData* serverFirstMatchingHost(const std::string& host) const;
   std::string decodeUri(const std::string&, const RequestData&) const;
   std::string normalizePath(const std::string&, const RequestData&) const;
   void validMethod(const RequestData&, const LocationData*) const;
