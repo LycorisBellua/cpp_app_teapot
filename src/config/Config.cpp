@@ -38,6 +38,7 @@ namespace {
   typedef std::vector<LocationData>::iterator location_it;
   typedef std::string::const_iterator string_it;
   typedef std::map<int, std::string>::iterator error_it;
+  typedef std::set<std::pair<int, std::string> >::const_iterator port_host_it;
 
   std::vector<std::string> tokenizeLine(std::string line) {
     size_t comment_start = line.find_first_of("#");
@@ -165,7 +166,6 @@ Config::ServerDirective Config::strToServerDirective(const ParsingData& data) {
   if (types_map.empty()) {
     types_map["listen"] = PORT;
     types_map["host"] = HOST;
-    types_map["server_name"] = NAME;
     types_map["client_max_body_size"] = BODY;
     types_map["error_page_"] = ERR;
   }
@@ -183,9 +183,6 @@ void Config::parseServer(ParsingData& data) {
       break;
     case HOST:
       setHost(data);
-      break;
-    case NAME:
-      setName(data);
       break;
     case BODY:
       setBodySize(data);
@@ -303,7 +300,7 @@ void Config::setHost(const ParsingData& data) {
     throw ConfigError(data, "One host must be specified per server");
   }
   if (host[1] == "localhost") {
-    servers.back().host = host[1];
+    servers.back().host = "127.0.0.1";
     return;
   }
   if (host[1].find_first_not_of("1234567890.") != host[1].npos || host[1].length() < 7 || host[1].length() > 15) {
@@ -325,42 +322,6 @@ void Config::setHost(const ParsingData& data) {
     throw ConfigError(data, "Invalid IP address");
   }
   servers.back().host = host[1];
-}
-
-void Config::setName(const ParsingData& data) {
-  const std::string& name = data.tokens[1];
-  if (name.length() == 0) {
-    throw ConfigError(data, "Server name cannot be empty");
-  }
-  if (name.length() > 253) {
-    throw ConfigError(data, "Server name too long (max: 253 characters)");
-  }
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-.");
-  if (name.find_first_not_of(allowed) != name.npos) {
-    throw ConfigError(data, "Server name may contain alphanumeric characters and '-' and '.'");
-  }
-  if (name[0] == '-' || name[0] == '.' || name[name.length() - 1] == '-' || name[name.length() - 1] == '.') {
-    throw ConfigError(data, "Server name cannot begin or end with '-' or '.'");
-  }
-  int count = 0;
-  for (string_it it = name.begin(); it != name.end(); ++it) {
-    if (*it == '.') {
-      if ((it + 1) != name.end() && *(it + 1) == '.') {
-        throw ConfigError(data, "Server name must not have consecutive '.'");
-      }
-      if (count > 63 || count == 0) {
-        throw ConfigError(data, "Each label must be between 1 and 63 characters");
-      }
-      count = 0;
-    }
-    else {
-      ++count;
-    }
-  }
-  if (count > 63 || count == 0) {
-    throw ConfigError(data, "Each label must be between 1 and 63 characters");
-  }
-  servers.back().name = name;
 }
 
 void Config::setBodySize(const ParsingData& data) {
@@ -558,7 +519,7 @@ void Config::verifyRequiredData() {
     }
   }
 
-  verifyVirtualHosts();
+  verifyPortHostPairs();
   Log::info("Config file succesfully parsed: " + conf_path);
 }
 
@@ -597,22 +558,14 @@ void Config::verifyLocation(const LocationData& loc) const {
   }
 }
 
-void Config::verifyVirtualHosts() const {
-  for (c_server_it current = servers.begin(); current != servers.end(); ++current) {
-    for (c_server_it next = current + 1; next != servers.end(); ++next) {
-      if (next->port == current->port) {
-        const std::string& current_name = current->name;
-        const std::string& next_name = next->name;
-        std::stringstream port_number;
-        port_number << current->port;
-        if (current_name.length() == 0 || next_name.length() == 0) {
-          throw ConfigError("Multiple servers using port " + port_number.str() + ". Server names must be specified to use virtual hosts");
-        }
-        if (current_name == next_name) {
-          throw ConfigError("Multiple servers on port " + port_number.str() + ". Unique names are required for virtual hosting");
-        }
-      }
+void Config::verifyPortHostPairs() const {
+  std::set<std::pair<int, std::string> > port_host_pairs;
+  for (c_server_it server = servers.begin(); server != servers.end(); ++server) {
+    std::pair<int, std::string> current_server = std::make_pair(server->port, server->host);
+    if (port_host_pairs.find(current_server) != port_host_pairs.end()) {
+      throw ConfigError("Duplicate port/host pair found: " + Helper::nbrToString(server->port) + " " + server->host);
     }
+    port_host_pairs.insert(current_server);
   }
 }
 

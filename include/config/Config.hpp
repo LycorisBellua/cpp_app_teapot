@@ -17,6 +17,7 @@
 #include "Filesystem.hpp"  // IWYU pragma: keep
 #include "Log.hpp"         // IWYU pragma: keep
 #include "ServerData.hpp"
+#include "Helper.hpp"
 
 class Config {
  public:
@@ -74,7 +75,7 @@ class Config {
 
   void parseMime(ParsingData&);
 
-  enum ServerDirective { PORT, HOST, NAME, BODY, ERR, INVALID };
+  enum ServerDirective { PORT, HOST, BODY, ERR, INVALID };
   ServerDirective strToServerDirective(const ParsingData&);
   void parseServer(ParsingData&);
 
@@ -89,7 +90,6 @@ class Config {
   // Validate and set
   void setPort(const ParsingData&);
   void setHost(const ParsingData&);
-  void setName(const ParsingData&);
   void setBodySize(const ParsingData&);
   void setErrorPage(const ParsingData&);
   void setPath(const ParsingData&);
@@ -106,7 +106,7 @@ class Config {
   void verifyRequiredData();
   void verifyServer(const ServerData&) const;
   void verifyLocation(const LocationData&) const;
-  void verifyVirtualHosts() const;
+  void verifyPortHostPairs() const;
   void normalisePaths();
   void setDefaultMime();
 };
