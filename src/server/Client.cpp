@@ -34,8 +34,7 @@ bool Client::shouldCloseConnection() const {
 RequestData Client::getRequestData() const {
   	//TODO: Send BG color (`hex_bg_color_`) along with the request data.
 	// If it's an empty string, send "#FFFFFF".
-	//TODO: Send Client IP (`ip_`) along with the request data (needed for CGI).
-  return RequestData(req_.getStatus(), req_.getPort(), req_.getDomain(), req_.getURI(), req_.getMethod(), req_.getContentType(), req_.getBody());
+  return RequestData(req_.getStatus(), req_.getPort(), req_.getDomain(), req_.getURI(), ip_, req_.getVersion(), req_.getMethod(), req_.getContentType(), req_.getBody());
 }
 
 std::string Client::getBackgroundColor() const
