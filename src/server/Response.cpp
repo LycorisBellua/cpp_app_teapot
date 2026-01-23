@@ -7,12 +7,6 @@
 std::string Response::compose(const Router& router, const Client& c)
 {
 	/*
-		TODO: The CGI can return HTTP headers to be sent. There's now a data 
-		structure in the response structure containing all the properly 
-		formatted key/value pairs.
-		TODO: The CGI needs to be partly handled in the event loop.
-	*/
-	/*
 		TODO
 		- Client functions we have:
 			std::vector< std::pair<std::string, std::string> > getCookies() const;
@@ -56,13 +50,16 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 		str += Response::getCRLF();
 	else
 	{
-		str += Response::getDateLine();
-		str += Response::getContentLengthLine(res.content.length());
-		if (!res.content.empty() && !res.content_type.empty())
-			str += Response::getContentTypeLine(res.content_type);
-		//TODO: Add all elements of `res.headers` if not empty
+		str += getHeaderLine("Date", getCurrentDateGMT());
+		str += getHeaderLine("Content-Length",
+			Helper::nbrToString(res.content.length()));
+		if (!res.content.empty())
+			str += getHeaderLine("Content-Type", res.content_type);
+		std::set< std::pair<std::string, std::string> >::iterator it;
+		for (it = res.headers.begin(); it != res.headers.end(); ++it)
+			str += getHeaderLine(it->first, it->second);
 		if (should_close)
-			str += Response::getConnectionCloseLine();
+			str += getHeaderLine("Connection", "close");
 		str += Response::getCRLF();
 		if (!is_head)
 			str += res.content;
@@ -70,14 +67,9 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 	return str;
 }
 
-std::string Response::getCRLF()
-{
-	return "\r\n";
-}
-
 std::string Response::getStartLine(int status, const std::string& msg)
 {
-	std::string str = getVersion();
+	std::string str = "HTTP/1.1";
 	str += " ";
 	str += Helper::nbrToString(status);
 	str += " ";
@@ -86,14 +78,17 @@ std::string Response::getStartLine(int status, const std::string& msg)
 	return str;
 }
 
-std::string Response::getVersion()
+std::string Response::getHeaderLine(const std::string& key,
+	const std::string& value)
 {
-	return "HTTP/1.1";
+	if (key.empty() || value.empty())
+		return "";
+	return key + ": " + value + getCRLF();
 }
 
-std::string Response::getDateLine()
+std::string Response::getCRLF()
 {
-	return "Date: " + getCurrentDateGMT() + getCRLF();
+	return "\r\n";
 }
 
 std::string Response::getCurrentDateGMT()
@@ -105,19 +100,4 @@ std::string Response::getCurrentDateGMT()
 	char buffer[64] = {0};
 	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
 	return buffer;
-}
-
-std::string Response::getContentLengthLine(size_t length)
-{
-	return "Content-Length: " + Helper::nbrToString(length) + getCRLF();
-}
-
-std::string Response::getContentTypeLine(const std::string& type)
-{
-	return "Content-Type: " + type + getCRLF();
-}
-
-std::string Response::getConnectionCloseLine()
-{
-	return "Connection: close" + getCRLF();
 }
