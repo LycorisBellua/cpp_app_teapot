@@ -1,12 +1,7 @@
-#include "BackgroundColorCookie.hpp"
+#include "HexColorCode.hpp"
 #include "Helper.hpp"
 
-bool BackgroundColorCookie::isValidName(const std::string& str)
-{
-	return str == "background-color";
-}
-
-bool BackgroundColorCookie::isValidValue(const std::string& str)
+bool HexColorCode::isValid(const std::string& str)
 {
 	if (str.length() != 7 || str[0] != '#')
 		return false;

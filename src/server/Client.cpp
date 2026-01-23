@@ -1,7 +1,7 @@
 #include "Client.hpp"
 #include "Host.hpp"
+#include "HexColorCode.hpp"
 #include "Helper.hpp"
-#include "BackgroundColorCookie.hpp"
 #include <unistd.h>
 
 /* Public (Instance) -------------------------------------------------------- */
@@ -31,6 +31,16 @@ bool Client::isBufferEmpty() const
 bool Client::shouldCloseConnection() const
 {
 	return req_.getShouldCloseConnection();
+}
+
+std::string Client::getDomain() const
+{
+	return req_.getDomain();
+}
+
+int Client::getPort() const
+{
+	return req_.getPort();
 }
 
 RequestData Client::getRequestData() const
@@ -89,7 +99,7 @@ bool Client::parseRequest()
 
 bool Client::setBackgroundColor(const std::string& str)
 {
-	if (!BackgroundColorCookie::isValidValue(str))
+	if (!HexColorCode::isValid(str))
 		return false;
 	hex_bg_color_ = str;
 	return true;

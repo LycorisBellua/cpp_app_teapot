@@ -4,45 +4,54 @@
 
 /* Public (Static) ---------------------------------------------------------- */
 
-std::string Response::compose(const Router& router, const Client& c)
+std::string Response::compose(const Router& router, const Listener* listener,
+	Client& c)
 {
-	/*
-		TODO
-		- Client functions we have:
-			std::vector< std::pair<std::string, std::string> > getCookies() const;
-			std::string getHexBackgroundColor() const;
-			bool setHexBackgroundColor(const std::string& str);
-		- BackgroundColorCookie functions we have:
-			static bool isValidName(const std::string& str);
-			static bool isValidValue(const std::string& str);
-
-		- Select the listener.
-		- For each cookie, ask whether the listener has a copy of the cookie.
-			- If not, add the cookie to a list marked for "deletion" (response 
-			headers).
-				`Set-Cookie: weirdCookie=value; Max-Age=0; Path=/`
-			- If so, then call `c.setBackgroundColor(value)`.
-		- If there was no saved value, it means either no cookie was sent or 
-		none was valid.
-			- Generate a hex code that's not already in use (in uppercase).
-			- Store this cookie into the listener's cookie list.
-			- Be aware that you'll have to use the `Set-Cookie` response header.
-			- Call `c.setBackgroundColor(value)`.
-		- Once I receive the response body, if it's an HTML file (doctype is 
-		case insensitive), add the background color (<body> might already have 
-		a style option).
-	*/
 	const RequestData& req = c.getRequestData();
 	const ResponseData& res = router.handle(req);
 	bool is_head = req.method == "HEAD";
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
-	return Response::serialize(res, is_head, should_close);
+	std::vector<std::string> cookie_headers;
+	checkRequestCookies(listener, c, cookie_headers);
+	if (c.getBackgroundColor().empty())
+	{
+		/*
+			TODO
+			- Generate a hex code that's not already in use (in uppercase).
+			- Store this cookie into the listener's cookie list.
+			- Add the corresponding `Set-Cookie` response header.
+			- Call `c.setBackgroundColor(value)`.
+		*/
+	}
+	/*
+		TODO
+		- If the response body is an HTML file (doctype is case insensitive), 
+		add the background color (<body> might already have a style attribute).
+	*/
+	return Response::serialize(res, is_head, should_close, cookie_headers);
 }
 
 /* Private (Static) --------------------------------------------------------- */
 
+void Response::checkRequestCookies(const Listener* listener, Client& c,
+	std::vector<std::string>& cookie_headers)
+{
+	if (!listener)
+		return;
+	const std::vector< std::pair<std::string, std::string> >& cookies
+		= c.getCookies();
+	for (size_t i = 0; i < cookies.size(); ++i)
+	{
+		if (listener->hasThisCookie(cookies[i]))
+			c.setBackgroundColor(cookies[i].second);
+		else
+			cookie_headers.push_back(cookies[i].first + "=" + cookies[i].second
+				+ "; Max-Age=0; Path=/");
+	}
+}
+
 std::string Response::serialize(const ResponseData& res, bool is_head,
-	bool should_close)
+	bool should_close, const std::vector<std::string>& cookie_headers)
 {
 	std::string str;
 	str += Response::getStartLine(res.code, res.code_msg);
@@ -55,9 +64,12 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 			Helper::nbrToString(res.content.length()));
 		if (!res.content.empty())
 			str += getHeaderLine("Content-Type", res.content_type);
-		std::set< std::pair<std::string, std::string> >::iterator it;
-		for (it = res.headers.begin(); it != res.headers.end(); ++it)
-			str += getHeaderLine(it->first, it->second);
+		std::vector<std::string>::const_iterator itv;
+		for (itv = cookie_headers.begin(); itv != cookie_headers.end(); ++itv)
+			str += getHeaderLine("Set-Cookie", *itv);
+		std::set< std::pair<std::string, std::string> >::iterator its;
+		for (its = res.headers.begin(); its != res.headers.end(); ++its)
+			str += getHeaderLine(its->first, its->second);
 		if (should_close)
 			str += getHeaderLine("Connection", "close");
 		str += Response::getCRLF();

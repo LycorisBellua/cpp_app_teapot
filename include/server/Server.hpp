@@ -21,8 +21,9 @@ class Server
 		Server();
 
 		bool addListener(const std::string& ip, int port);
-		void closeListeners();
 		bool addListenerToEventHandler(int fd_listen);
+		const Listener* findListener(const std::string& ip, int port) const;
+		void closeListeners();
 		bool runEventLoop();
 		bool addConnection(int fd_listen);
 		void closeConnection(int fd);

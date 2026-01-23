@@ -96,6 +96,7 @@ void Request::resetData()
 	does_expect_100_ = false;
 	connection_header_found_ = false;
 	should_close_connection_ = false;
+	cookies_.clear();
 	body_ = "";
 }
 

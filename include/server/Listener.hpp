@@ -9,7 +9,10 @@ class Listener
 	public:
 		Listener(int fd, const std::string& ip, int port);
 
-		bool hasThisIPAndPort(const std::string& ip, int port) const;
+		bool hasThisIP(const std::string& ip) const;
+		bool hasThisPort(int port) const;
+		bool hasThisCookie(const std::pair<std::string, std::string>& pair)
+			const;
 
 	private:
 		Listener();
