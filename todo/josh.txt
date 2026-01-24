@@ -1,0 +1,8 @@
+Filesystem::generateIndex()
+ -> Confirm the url to prefix the file with
+
+RouteRequest
+  -> Change all std::string to const std::string& ??
+
+Log
+  -> Change to stdout / stderr only

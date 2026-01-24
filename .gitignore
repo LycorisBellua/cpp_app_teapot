@@ -9,3 +9,13 @@
 a.out
 webserv
 build
+
+# System/LSP Files
+**/.direnv
+**/.envrc
+**/compile_commands.json
+**/.cache
+
+**/.idea
+**/.clang-format
+**/.devcontainer
