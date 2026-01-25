@@ -7,9 +7,12 @@ class HexColorCode
 {
 	public:
 		static bool isValid(const std::string& str);
+		static std::string generate();
 
 	private:
 		HexColorCode();
+
+		static bool isHexChar(char c);
 };
 
 #endif

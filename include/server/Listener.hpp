@@ -14,6 +14,8 @@ class Listener
 		bool hasThisCookie(const std::pair<std::string, std::string>& pair)
 			const;
 
+		std::pair<std::string, std::string> createBackgroundColorCookie();
+
 	private:
 		Listener();
 

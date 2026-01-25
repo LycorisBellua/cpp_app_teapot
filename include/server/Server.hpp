@@ -22,7 +22,7 @@ class Server
 
 		bool addListener(const std::string& ip, int port);
 		bool addListenerToEventHandler(int fd_listen);
-		const Listener* findListener(const std::string& ip, int port) const;
+		Listener* findListener(const std::string& ip, int port);
 		void closeListeners();
 		bool runEventLoop();
 		bool addConnection(int fd_listen);

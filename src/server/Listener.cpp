@@ -1,5 +1,6 @@
 #include "Listener.hpp"
 #include "Host.hpp"
+#include "HexColorCode.hpp"
 #include <algorithm>
 
 /* Public (Instance) -------------------------------------------------------- */
@@ -23,4 +24,17 @@ bool Listener::hasThisCookie(const std::pair<std::string, std::string>& pair)
 	const
 {
 	return std::find(cookies_.begin(), cookies_.end(), pair) != cookies_.end();
+}
+
+std::pair<std::string, std::string> Listener::createBackgroundColorCookie()
+{
+	std::pair<std::string, std::string> cookie;
+	cookie.first = "background-color";
+	do
+	{
+		cookie.second = HexColorCode::generate();
+	}
+	while (this->hasThisCookie(cookie));
+	cookies_.push_back(cookie);
+	return cookie;
 }

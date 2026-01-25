@@ -4,7 +4,7 @@
 
 /* Public (Static) ---------------------------------------------------------- */
 
-std::string Response::compose(const Router& router, const Listener* listener,
+std::string Response::compose(const Router& router, Listener* listener,
 	Client& c)
 {
 	const RequestData& req = c.getRequestData();
@@ -13,16 +13,7 @@ std::string Response::compose(const Router& router, const Listener* listener,
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
 	std::vector<std::string> cookie_headers;
 	checkRequestCookies(listener, c, cookie_headers);
-	if (c.getBackgroundColor().empty())
-	{
-		/*
-			TODO
-			- Generate a hex code that's not already in use (in uppercase).
-			- Store this cookie into the listener's cookie list.
-			- Add the corresponding `Set-Cookie` response header.
-			- Call `c.setBackgroundColor(value)`.
-		*/
-	}
+	generateCookieIfMissing(listener, c, cookie_headers);
 	/*
 		TODO
 		- If the response body is an HTML file (doctype is case insensitive), 
@@ -36,18 +27,29 @@ std::string Response::compose(const Router& router, const Listener* listener,
 void Response::checkRequestCookies(const Listener* listener, Client& c,
 	std::vector<std::string>& cookie_headers)
 {
-	if (!listener)
-		return;
 	const std::vector< std::pair<std::string, std::string> >& cookies
 		= c.getCookies();
 	for (size_t i = 0; i < cookies.size(); ++i)
 	{
-		if (listener->hasThisCookie(cookies[i]))
+		if (listener && cookies[i].first == "background-color"
+			&& listener->hasThisCookie(cookies[i]))
 			c.setBackgroundColor(cookies[i].second);
 		else
 			cookie_headers.push_back(cookies[i].first + "=" + cookies[i].second
 				+ "; Max-Age=0; Path=/");
 	}
+}
+
+void Response::generateCookieIfMissing(Listener* listener, Client& c,
+	std::vector<std::string>& cookie_headers)
+{
+	if (!c.getBackgroundColor().empty())
+		return;
+	std::pair<std::string, std::string> new_cookie
+		= listener->createBackgroundColorCookie();
+	cookie_headers.push_back(new_cookie.first + "=" + new_cookie.second
+		+ "; Path=/");
+	c.setBackgroundColor(new_cookie.second);
 }
 
 std::string Response::serialize(const ResponseData& res, bool is_head,

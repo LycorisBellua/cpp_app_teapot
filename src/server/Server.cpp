@@ -82,13 +82,13 @@ bool Server::addListenerToEventHandler(int fd_listen)
 	return true;
 }
 
-const Listener* Server::findListener(const std::string& ip, int port) const
+Listener* Server::findListener(const std::string& ip, int port)
 {
 	bool search_ip = !ip.empty();
 	bool search_port = !!port;
-	std::map<int, Listener>::const_iterator it;
-	std::map<int, Listener>::const_iterator ite = listeners_.end();
-	std::map<int, Listener>::const_iterator it_any = ite;
+	std::map<int, Listener>::iterator it;
+	std::map<int, Listener>::iterator ite = listeners_.end();
+	std::map<int, Listener>::iterator it_any = ite;
 	for (it = listeners_.begin(); it != ite; ++it)
 	{
 		bool ip_match = !search_ip || it->second.hasThisIP(ip);
@@ -196,7 +196,7 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 
 void Server::sendResponse(int fd, Client& c)
 {
-	const Listener* listener = findListener(c.getDomain(), c.getPort());
+	Listener* listener = findListener(c.getDomain(), c.getPort());
 	std::string res = Response::compose(router_, listener, c);
 	write(fd, res.c_str(), res.length());
 	if (c.shouldCloseConnection())

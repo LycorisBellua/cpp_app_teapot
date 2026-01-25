@@ -10,13 +10,15 @@
 class Response
 {
 	public:
-		static std::string compose(const Router& router,
-			const Listener* listener, Client& c);
+		static std::string compose(const Router& router, Listener* listener,
+			Client& c);
 
 	private:
 		Response();
 
 		static void checkRequestCookies(const Listener* listener, Client& c,
+			std::vector<std::string>& cookie_headers);
+		static void generateCookieIfMissing(Listener* listener, Client& c,
 			std::vector<std::string>& cookie_headers);
 		static std::string serialize(const ResponseData& res, bool is_head,
 			bool should_close, const std::vector<std::string>& cookie_headers);
