@@ -20,6 +20,8 @@ class Response
 			std::vector<std::string>& cookie_headers);
 		static void generateCookieIfMissing(Listener* listener, Client& c,
 			std::vector<std::string>& cookie_headers);
+		static void embedBackgroundColor(const std::string& color,
+			std::string& body);
 		static std::string serialize(const ResponseData& res, bool is_head,
 			bool should_close, const std::vector<std::string>& cookie_headers);
 		static std::string getStartLine(int status, const std::string& msg);

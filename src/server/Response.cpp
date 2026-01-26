@@ -1,4 +1,5 @@
 #include "Response.hpp"
+#include "Cookie.hpp"
 #include "Helper.hpp"
 #include <ctime>
 
@@ -7,50 +8,18 @@
 std::string Response::compose(const Router& router, Listener* listener,
 	Client& c)
 {
-	const RequestData& req = c.getRequestData();
-	const ResponseData& res = router.handle(req);
+	RequestData req = c.getRequestData();
+	ResponseData res = router.handle(req);
 	bool is_head = req.method == "HEAD";
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
 	std::vector<std::string> cookie_headers;
-	checkRequestCookies(listener, c, cookie_headers);
-	generateCookieIfMissing(listener, c, cookie_headers);
-	/*
-		TODO
-		- If the response body is an HTML file (doctype is case insensitive), 
-		add the background color (<body> might already have a style attribute).
-	*/
+	Cookie::checkRequestCookies(listener, c, cookie_headers);
+	Cookie::generateCookieIfMissing(listener, c, cookie_headers);
+	Cookie::embedBackgroundColor(c.getBackgroundColor(), res.content);
 	return Response::serialize(res, is_head, should_close, cookie_headers);
 }
 
 /* Private (Static) --------------------------------------------------------- */
-
-void Response::checkRequestCookies(const Listener* listener, Client& c,
-	std::vector<std::string>& cookie_headers)
-{
-	const std::vector< std::pair<std::string, std::string> >& cookies
-		= c.getCookies();
-	for (size_t i = 0; i < cookies.size(); ++i)
-	{
-		if (listener && cookies[i].first == "background-color"
-			&& listener->hasThisCookie(cookies[i]))
-			c.setBackgroundColor(cookies[i].second);
-		else
-			cookie_headers.push_back(cookies[i].first + "=" + cookies[i].second
-				+ "; Max-Age=0; Path=/");
-	}
-}
-
-void Response::generateCookieIfMissing(Listener* listener, Client& c,
-	std::vector<std::string>& cookie_headers)
-{
-	if (!c.getBackgroundColor().empty())
-		return;
-	std::pair<std::string, std::string> new_cookie
-		= listener->createBackgroundColorCookie();
-	cookie_headers.push_back(new_cookie.first + "=" + new_cookie.second
-		+ "; Path=/");
-	c.setBackgroundColor(new_cookie.second);
-}
 
 std::string Response::serialize(const ResponseData& res, bool is_head,
 	bool should_close, const std::vector<std::string>& cookie_headers)

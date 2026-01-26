@@ -99,7 +99,7 @@ bool Client::parseRequest()
 
 bool Client::setBackgroundColor(const std::string& str)
 {
-	if (!HexColorCode::isValid(str))
+	if (!str.empty() && !HexColorCode::isValid(str))
 		return false;
 	hex_bg_color_ = str;
 	return true;

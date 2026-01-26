@@ -1,39 +1,27 @@
-TODO
-- The listener has an IP and a port.
-- Each IP/port pair has a list of cookies.
+COOKIE TESTS
+- [X] Cookie is generated if the request provides none.
+- [X] Embedding the background color into the HTML body tag.
+- [X] The same background color survives a browser refresh or reopening.
+- [X] Different cookie on different session (= different browser, 
+	  or "localhost" vs "127.0.0.1").
+- [X] If request provides wrong cookie (name and/or value), client is told to 
+	  delete it, and a new valid one is provided.
 
-- Use the domain/port values to know which cookie list to use:
-	* If host is empty and port is 0 -> Fetch the first server.
-	* If host is empty but we have the port -> Fetch the first server with this port.
-	* If we have the host but port is 0 -> Fetch the first server with this host.
-	* If we have both the host and the port -> Fetch the first server that matches with both.
-	* And if no such server has been found, we might have a server with "0.0.0.0" and with this exact port.
-	* Otherwise abort, there's no need to tell the client to delete any cookie, because the host is invalid anyway.
+TODO COOKIE
+- Maybe remove a cookie server-side if enough time passed (Max-Age).
+- If you do that, then also add a domain and a path to the cookie. Add the 
+whole thing, for a cookie is not just a KVP.
 
---------------------------------------------------------------------------------
+CONFIG TESTS
+- Accessing "0.0.0.0:8080" in the browser led to a server crash:
+	```
+	2026-01-26 15:58:17 ERROR
+	[Router] No Matching server found for request
+	Port: 8080
+	Host: 0.0.0.0
+	URI: /
+	Method: GET
+	
+	zsh: segmentation fault (core dumped)  ./webserv
+	```
 
-- Each domain (host/port pair) has its cookie list.
-
-- If no valid cookie was sent with the request, the server generates one. This 
-cookie is sent with the response. Then, for this ongoing connection, we don't 
-send a new cookie again, so have a boolean to remember that a cookie has just 
-been issued but the client doesn't "bother" with returning it to you (it could 
-be a case of pipelining, which explains that).
-
-- The cookie is a background color with a hex code, randomly generated:
-`Set-Cookie: background-color=#4468A6; Path=/`
-
---------------------------------------------------------------------------------
-
-- The background color is to be used with the HTML page that's being returned, 
-if it's an HTML page.
-Example:
-```
-<!DOCTYPE html>
-<html>
-<head>
-</head>
-<body style="background-color: #4468A6;">
-</body>
-</html>
-```
