@@ -1,81 +1,66 @@
 #include "Cookie.hpp"
 #include "Helper.hpp"
 
-/* Public (Static) ---------------------------------------------------------- */
+/* Public (Instance) -------------------------------------------------------- */
 
-void Cookie::checkRequestCookies(const Listener* listener, Client& c,
-	std::vector<std::string>& cookie_headers)
+Cookie::Cookie(const std::string& key, const std::string& value,
+	const std::string& domain, const std::string& path)
+	: creation_time_(std::time(0)),
+	key_(key), value_(value), domain_(domain), path_(path),
+	has_max_age_(false), max_age_(0),
+	has_expiration_date_(false), expiration_date_(0)
 {
-	const std::vector< std::pair<std::string, std::string> >& cookies
-		= c.getCookies();
-	bool any_valid = false;
-	for (size_t i = 0; i < cookies.size(); ++i)
-	{
-		if (listener && cookies[i].first == "background-color"
-			&& listener->hasThisCookie(cookies[i]))
-		{
-			c.setBackgroundColor(cookies[i].second);
-			any_valid = true;
-		}
-		else
-			cookie_headers.push_back(cookies[i].first + "=" + cookies[i].second
-				+ "; Max-Age=0; Path=/");
-	}
-	if (!any_valid)
-		c.setBackgroundColor("");
 }
 
-/* Generated cookie is kept by a client for only 300 seconds (= 5 minutes) */
-void Cookie::generateCookieIfMissing(Listener* listener, Client& c,
-	std::vector<std::string>& cookie_headers)
+Cookie::Cookie(const std::string& key, const std::string& value,
+	const std::string& domain, const std::string& path,
+	int max_age)
+	: creation_time_(std::time(0)),
+	key_(key), value_(value), domain_(domain), path_(path),
+	has_max_age_(true), max_age_(max_age),
+	has_expiration_date_(false), expiration_date_(0)
 {
-	if (!c.getBackgroundColor().empty())
-		return;
-	std::pair<std::string, std::string> new_cookie
-		= listener->createBackgroundColorCookie();
-	cookie_headers.push_back(new_cookie.first + "=" + new_cookie.second
-		+ "; Max-Age=300; Path=/");
-	c.setBackgroundColor(new_cookie.second);
 }
 
-/*
-	END RESULT:
-
-	`<body>`
-		-> `<body style="background-color: #RRGGBB;">`
-
-	`<body style="lorem: ipsum">`
-		-> `<body style="background-color: #RRGGBB;lorem: ipsum">`
-
-	`<body attr="">`
-		-> `<body style="background-color: #RRGGBB;" attr="">`
-*/
-void Cookie::embedBackgroundColor(const std::string& color, std::string& html)
+Cookie::Cookie(const std::string& key, const std::string& value,
+	const std::string& domain, const std::string& path,
+	std::time_t expiration_date)
+	: creation_time_(std::time(0)),
+	key_(key), value_(value), domain_(domain), path_(path),
+	has_max_age_(false), max_age_(0),
+	has_expiration_date_(true), expiration_date_(expiration_date)
 {
-	size_t body_tag = findBodyTag(html);
-	if (body_tag == std::string::npos)
-		return;
-	size_t opening_quote = insertStyleAttributeIfMissing(html, body_tag);
-	html.insert(opening_quote + 1, "background-color: " + color + ";");
 }
 
-/* Private (Static) --------------------------------------------------------- */
-
-size_t Cookie::findBodyTag(const std::string& html)
+std::string Cookie::getKey() const
 {
-	if (!Helper::insensitiveCmp("<!DOCTYPE html>", html.substr(0, 15)))
-		return std::string::npos;
-	return html.find("<body");
+	return key_;
 }
 
-size_t Cookie::insertStyleAttributeIfMissing(std::string& html, size_t body_tag)
+std::string Cookie::getValue() const
 {
-	size_t attribute;
-	if (html[body_tag + 5] == '>'
-		|| (attribute = html.find("style=", body_tag + 5)) == std::string::npos)
-	{
-		html.insert(body_tag + 5, " style=\"\"");
-		return body_tag + 12;
-	}
-	return attribute + 6;
+	return value_;
+}
+
+bool Cookie::hasExpired() const
+{
+	if (has_max_age_)
+		return std::time(0) > (creation_time_ + max_age_);
+	else if (has_expiration_date_)
+		return std::time(0) > expiration_date_;
+	return false;
+}
+
+std::string Cookie::getSetCookieValue() const
+{
+	std::string str = key_ + "=" + value_;
+	if (has_max_age_)
+		str += "; Max-Age=" + Helper::nbrToString(max_age_);
+	else if (has_expiration_date_)
+		str += "; Expires=" + Helper::getDateGMT(expiration_date_);
+	if (!domain_.empty())
+		str += "; Domain=" + domain_;
+	if (!path_.empty())
+		str += "; Path=" + path_;
+	return str;
 }

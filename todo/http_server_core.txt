@@ -1,17 +1,3 @@
-COOKIE TESTS
-- [X] Cookie is generated if the request provides none.
-- [X] Embedding the background color into the HTML body tag.
-- [X] The same background color survives a browser refresh or reopening.
-- [X] Different cookie on different session (= different browser, 
-	  or "localhost" vs "127.0.0.1").
-- [X] If request provides wrong cookie (name and/or value), client is told to 
-	  delete it, and a new valid one is provided.
-
-TODO COOKIE
-- Maybe remove a cookie server-side if enough time passed (Max-Age).
-- If you do that, then also add a domain and a path to the cookie. Add the 
-whole thing, for a cookie is not just a KVP.
-
 CONFIG TESTS
 - Accessing "0.0.0.0:8080" in the browser led to a server crash:
 	```

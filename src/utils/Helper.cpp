@@ -124,3 +124,13 @@ int Helper::rngMinmax(int *seed, int min, int max)
 	*seed = random;
 	return random % (max - min + 1) + min;
 }
+
+std::string Helper::getDateGMT(const std::time_t& time)
+{
+    std::tm *gmt = std::gmtime(&time);
+    if (!gmt)
+		return "";
+	char buffer[64] = {0};
+	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+	return buffer;
+}

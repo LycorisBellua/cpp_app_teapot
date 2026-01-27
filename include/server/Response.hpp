@@ -5,7 +5,6 @@
 #include "Client.hpp"
 #include "Listener.hpp"
 #include "RequestData.hpp"
-#include <string>
 
 class Response
 {
@@ -28,7 +27,6 @@ class Response
 		static std::string getHeaderLine(const std::string& key,
 			const std::string& value);
 		static std::string getCRLF();
-		static std::string getCurrentDateGMT();
 };
 
 #endif

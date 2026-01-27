@@ -20,21 +20,75 @@ bool Listener::hasThisPort(int port) const
 	return this->port_ == port;
 }
 
-bool Listener::hasThisCookie(const std::pair<std::string, std::string>& pair)
+bool Listener::hasThisCookie(const std::string& key, const std::string& value)
 	const
 {
-	return std::find(cookies_.begin(), cookies_.end(), pair) != cookies_.end();
+	std::vector<Cookie>::const_iterator it;
+	std::vector<Cookie>::const_iterator ite = cookies_.end();
+	for (it = cookies_.begin(); it != ite; ++it)
+	{
+		if (key == it->getKey() && value == it->getValue())
+			return true;
+	}
+	return false;
 }
 
-std::pair<std::string, std::string> Listener::createBackgroundColorCookie()
+Cookie Listener::createBackgroundColorCookie()
 {
-	std::pair<std::string, std::string> cookie;
-	cookie.first = "background-color";
+	std::string key = "background-color";
+	std::string value;
 	do
 	{
-		cookie.second = HexColorCode::generate();
+		value = HexColorCode::generate();
 	}
-	while (this->hasThisCookie(cookie));
+	while (this->hasThisCookie(key, value));
+	Cookie cookie(key, value, "", "/", 300);
 	cookies_.push_back(cookie);
 	return cookie;
+}
+
+void Listener::removeExpiredCookies()
+{
+	std::vector<Cookie>::iterator it;
+	std::vector<Cookie>::iterator ite = cookies_.end();
+	for (it = cookies_.begin(); it != ite;)
+	{
+		if (it->hasExpired())
+			it = cookies_.erase(it);
+		else
+			++it;
+	}
+}
+
+/* Public (Static) ---------------------------------------------------------- */
+
+void Listener::checkRequestCookies(const Listener* listener, Client& c,
+	std::vector<std::string>& cookie_headers)
+{
+	const std::vector< std::pair<std::string, std::string> >& cookies
+		= c.getCookies();
+	bool any_valid = false;
+	for (size_t i = 0; i < cookies.size(); ++i)
+	{
+		if (listener && cookies[i].first == "background-color"
+			&& listener->hasThisCookie(cookies[i].first, cookies[i].second))
+		{
+			c.setBackgroundColor(cookies[i].second);
+			any_valid = true;
+		}
+		else
+			cookie_headers.push_back(cookies[i].first + "=; Max-Age=0; Path=/");
+	}
+	if (!any_valid)
+		c.setBackgroundColor("");
+}
+
+void Listener::generateCookieIfMissing(Listener* listener, Client& c,
+	std::vector<std::string>& cookie_headers)
+{
+	if (!c.getBackgroundColor().empty())
+		return;
+	Cookie new_cookie = listener->createBackgroundColorCookie();
+	cookie_headers.push_back(new_cookie.getSetCookieValue());
+	c.setBackgroundColor(new_cookie.getValue());
 }

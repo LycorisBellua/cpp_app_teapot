@@ -8,7 +8,7 @@ This project is a small HTTP/1.1 web server written with C++98.
 
 ## Virtual hosting
 
-Virtual hosting allows the same IP and port to be used by different domains. 
+Virtual hosting allows the same IP and port to be used for different domains. 
 When the client sends a request, it indicates the target domain, and the server 
 knows which specific website to serve. If the IP is used instead of a domain, 
 then the first domain of the list becomes the target.  

@@ -1,7 +1,6 @@
 #include "Response.hpp"
-#include "Cookie.hpp"
+#include "HexColorCode.hpp"
 #include "Helper.hpp"
-#include <ctime>
 
 /* Public (Static) ---------------------------------------------------------- */
 
@@ -13,9 +12,11 @@ std::string Response::compose(const Router& router, Listener* listener,
 	bool is_head = req.method == "HEAD";
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
 	std::vector<std::string> cookie_headers;
-	Cookie::checkRequestCookies(listener, c, cookie_headers);
-	Cookie::generateCookieIfMissing(listener, c, cookie_headers);
-	Cookie::embedBackgroundColor(c.getBackgroundColor(), res.content);
+	if (listener)
+		listener->removeExpiredCookies();
+	Listener::checkRequestCookies(listener, c, cookie_headers);
+	Listener::generateCookieIfMissing(listener, c, cookie_headers);
+	HexColorCode::embedBackgroundColor(c.getBackgroundColor(), res.content);
 	return Response::serialize(res, is_head, should_close, cookie_headers);
 }
 
@@ -30,7 +31,7 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 		str += Response::getCRLF();
 	else
 	{
-		str += getHeaderLine("Date", getCurrentDateGMT());
+		str += getHeaderLine("Date", Helper::getDateGMT(std::time(0)));
 		str += getHeaderLine("Content-Length",
 			Helper::nbrToString(res.content.length()));
 		if (!res.content.empty())
@@ -72,15 +73,4 @@ std::string Response::getHeaderLine(const std::string& key,
 std::string Response::getCRLF()
 {
 	return "\r\n";
-}
-
-std::string Response::getCurrentDateGMT()
-{
-    std::time_t now = std::time(0);
-    std::tm *gmt = std::gmtime(&now);
-    if (!gmt)
-		return "";
-	char buffer[64] = {0};
-	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
-	return buffer;
 }

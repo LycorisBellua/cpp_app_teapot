@@ -1,24 +1,36 @@
 #ifndef COOKIE_HPP
 #define COOKIE_HPP
 
-#include "Listener.hpp"
-#include "Client.hpp"
-#include <vector>
+#include <string>
+#include <ctime>
 
 class Cookie
 {
 	public:
-		static void checkRequestCookies(const Listener* listener, Client& c,
-			std::vector<std::string>& cookie_headers);
-		static void generateCookieIfMissing(Listener* listener, Client& c,
-			std::vector<std::string>& cookie_headers);
-		static void embedBackgroundColor(const std::string& color,
-			std::string& html);
-	
+		explicit Cookie(const std::string& key, const std::string& value,
+			const std::string& domain, const std::string& path);
+		explicit Cookie(const std::string& key, const std::string& value,
+			const std::string& domain, const std::string& path,
+			int max_age);
+		explicit Cookie(const std::string& key, const std::string& value,
+			const std::string& domain, const std::string& path,
+			std::time_t expiration_date);
+
+		std::string getKey() const;
+		std::string getValue() const;
+		bool hasExpired() const;
+		std::string getSetCookieValue() const;
+
 	private:
-		static size_t findBodyTag(const std::string& html);
-		static size_t insertStyleAttributeIfMissing(std::string& html,
-			size_t body_tag);
+		std::time_t creation_time_;
+		std::string key_;
+		std::string value_;
+		std::string domain_;
+		std::string path_;
+		bool has_max_age_;
+		int max_age_;
+		bool has_expiration_date_;
+		std::time_t expiration_date_;
 };
 
 #endif
