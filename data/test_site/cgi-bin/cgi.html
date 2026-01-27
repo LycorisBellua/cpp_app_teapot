@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CGI Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .form-section {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 30px;
+            background: #f9f9f9;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .query-params {
+            margin-top: 10px;
+        }
+
+        .param-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .param-row input {
+            flex: 1;
+        }
+
+        .param-row button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .param-row button:hover {
+            background: #c82333;
+        }
+
+        .add-param-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .add-param-btn:hover {
+            background: #218838;
+        }
+
+        .method-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .method-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: normal;
+        }
+
+        button[type="submit"] {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        button[type="submit"]:hover {
+            background: #0052a3;
+        }
+
+        .response-section {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            padding: 30px;
+            background: #f9f9f9;
+            display: none;
+        }
+
+        .response-section.show {
+            display: block;
+        }
+
+        .response-headers,
+        .response-body {
+            background: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .response-status {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .response-status.success {
+            color: #28a745;
+        }
+
+        .response-status.error {
+            color: #dc3545;
+        }
+
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>CGI Test Page</h1>
+
+<div class="form-section">
+    <form id="cgiForm">
+        <div class="form-group">
+            <label for="scriptPath">CGI Script Path:</label>
+            <input type="text" id="scriptPath" placeholder="/cgi-bin/script.py" required>
+        </div>
+
+        <div class="form-group">
+            <label for="method">HTTP Method:</label>
+            <div class="method-group">
+                <label>
+                    <input type="radio" name="method" value="GET" checked>
+                    GET
+                </label>
+                <label>
+                    <input type="radio" name="method" value="POST">
+                    POST
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="displayMode">Display Mode:</label>
+            <div class="method-group">
+                <label>
+                    <input type="radio" name="displayMode" value="debug" checked>
+                    Debug (show headers/body)
+                </label>
+                <label>
+                    <input type="radio" name="displayMode" value="normal">
+                    Normal (follow redirects)
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Query Parameters:</label>
+            <div id="queryParams" class="query-params">
+                <div class="param-row">
+                    <input type="text" placeholder="key" class="param-key">
+                    <input type="text" placeholder="value" class="param-value">
+                    <button type="button" onclick="removeParam(this)">Remove</button>
+                </div>
+            </div>
+            <button type="button" class="add-param-btn" onclick="addParam()">+ Add Parameter</button>
+        </div>
+
+        <div class="form-group">
+            <label for="requestBody">Request Body:</label>
+            <textarea id="requestBody" placeholder="Enter request body (for POST requests)"></textarea>
+        </div>
+
+        <button type="submit">Send Request</button>
+    </form>
+</div>
+
+<div class="response-section" id="responseSection">
+    <h2>Response</h2>
+    <div class="response-status" id="responseStatus"></div>
+
+    <h3>Headers</h3>
+    <div class="response-headers" id="responseHeaders"></div>
+
+    <h3>Body</h3>
+    <div class="response-body" id="responseBody"></div>
+</div>
+
+<script>
+    function addParam() {
+        const container = document.getElementById('queryParams');
+        const row = document.createElement('div');
+        row.className = 'param-row';
+        row.innerHTML = `
+                <input type="text" placeholder="key" class="param-key">
+                <input type="text" placeholder="value" class="param-value">
+                <button type="button" onclick="removeParam(this)">Remove</button>
+            `;
+        container.appendChild(row);
+    }
+
+    function removeParam(button) {
+        button.parentElement.remove();
+    }
+
+    function buildQueryString() {
+        const params = new URLSearchParams();
+        const rows = document.querySelectorAll('.param-row');
+
+        rows.forEach(row => {
+            const key = row.querySelector('.param-key').value.trim();
+            const value = row.querySelector('.param-value').value.trim();
+            if (key) {
+                params.append(key, value);
+            }
+        });
+
+        const queryString = params.toString();
+        return queryString ? '?' + queryString : '';
+    }
+
+    document.getElementById('cgiForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const scriptPath = document.getElementById('scriptPath').value.trim();
+        const method = document.querySelector('input[name="method"]:checked').value;
+        const displayMode = document.querySelector('input[name="displayMode"]:checked').value;
+        const body = document.getElementById('requestBody').value;
+        const queryString = buildQueryString();
+
+        const url = scriptPath + queryString;
+
+        // Normal mode: just navigate or submit
+        if (displayMode === 'normal') {
+            if (method === 'GET') {
+                window.location.href = url;
+            } else if (method === 'POST') {
+                // Create and submit a form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'data';
+                input.value = body;
+                form.appendChild(input);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+            return;
+        }
+
+        // Debug mode: show full response
+        const responseSection = document.getElementById('responseSection');
+        const responseStatus = document.getElementById('responseStatus');
+        const responseHeaders = document.getElementById('responseHeaders');
+        const responseBody = document.getElementById('responseBody');
+
+        try {
+            const options = {
+                method: method,
+                redirect: 'manual'
+            };
+
+            if (method === 'POST' && body) {
+                options.body = body;
+                options.headers = {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                };
+            }
+
+            const response = await fetch(url, options);
+            const responseText = await response.text();
+
+            // Show response
+            responseSection.classList.add('show');
+
+            // Status
+            responseStatus.textContent = `${response.status} ${response.statusText}`;
+            responseStatus.className = 'response-status ' + (response.ok ? 'success' : 'error');
+
+            // Headers
+            let headersText = '';
+            response.headers.forEach((value, key) => {
+                headersText += `${key}: ${value}\n`;
+            });
+            responseHeaders.textContent = headersText || 'No headers';
+
+            // Body
+            responseBody.textContent = responseText || '(empty)';
+
+            // Handle redirects
+            if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
+                const location = response.headers.get('location');
+                if (location) {
+                    responseBody.textContent += `\n\n[Redirect detected to: ${location}]`;
+                }
+            }
+
+            // Scroll to response
+            responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        } catch (error) {
+            responseSection.classList.add('show');
+            responseStatus.textContent = 'Request Failed';
+            responseStatus.className = 'response-status error';
+            responseHeaders.textContent = 'N/A';
+            responseBody.textContent = error.message;
+        }
+    });
+</script>
+</body>
+</html>

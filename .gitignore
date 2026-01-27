@@ -19,3 +19,4 @@ build
 **/.idea
 **/.clang-format
 **/.devcontainer
+**/.venv

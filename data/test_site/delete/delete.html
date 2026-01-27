@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delete Files</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+    }
+
+    .delete-form {
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      padding: 30px;
+      background: #f9f9f9;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #dc3545;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+
+    button:hover {
+      background: #c82333;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+
+    .note {
+      margin-top: 20px;
+      padding: 12px;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      color: #856404;
+    }
+  </style>
+</head>
+<body>
+<h1>Delete Files</h1>
+
+<div class="delete-form">
+  <label for="filename">Enter filename to delete:</label>
+  <input type="text" id="filename" placeholder="e.g., file_1.jpg">
+
+  <button id="deleteBtn">Delete File</button>
+
+  <div class="note">
+    ⚠️ This action cannot be undone. Make sure you enter the correct filename.
+  </div>
+</div>
+
+<div class="status" id="status"></div>
+
+<script>
+  const filenameInput = document.getElementById('filename');
+  const deleteBtn = document.getElementById('deleteBtn');
+  const status = document.getElementById('status');
+
+  deleteBtn.addEventListener('click', async () => {
+    const filename = filenameInput.value.trim();
+
+    if (!filename) {
+      status.textContent = 'Please enter a filename';
+      status.className = 'status error';
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete "${filename}"?`)) {
+      return;
+    }
+
+    deleteBtn.disabled = true;
+    deleteBtn.textContent = 'Deleting...';
+
+    try {
+      const response = await fetch(`/files/${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        status.textContent = `Successfully deleted "${filename}"`;
+        status.className = 'status success';
+        filenameInput.value = '';
+      } else {
+        throw new Error('Delete failed');
+      }
+    } catch (error) {
+      status.textContent = `Failed to delete "${filename}". Make sure the file exists.`;
+      status.className = 'status error';
+    } finally {
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = 'Delete File';
+    }
+  });
+
+  // Allow Enter key to submit
+  filenameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      deleteBtn.click();
+    }
+  });
+</script>
+</body>
+</html>

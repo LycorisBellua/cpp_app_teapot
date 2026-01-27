@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Upload</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+    }
+
+    .upload-area {
+      border: 2px dashed #ccc;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      background: #f9f9f9;
+    }
+
+    .upload-area:hover {
+      background: #f0f0f0;
+    }
+
+    .upload-area.dragover {
+      border-color: #666;
+      background: #e8e8e8;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .file-list {
+      margin: 20px 0;
+    }
+
+    .file-item {
+      padding: 10px;
+      background: #f5f5f5;
+      margin: 5px 0;
+      border-radius: 4px;
+    }
+
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background: #0052a3;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+<h1>Upload Files</h1>
+
+<div class="upload-area" id="uploadArea">
+  <p>Drag and drop files here or click to browse</p>
+  <button type="button" onclick="document.getElementById('fileInput').click()">
+    Choose Files
+  </button>
+  <input type="file" id="fileInput" multiple>
+</div>
+
+<div class="file-list" id="fileList"></div>
+
+<button id="uploadBtn" disabled>Upload</button>
+<div class="status" id="status"></div>
+
+<script>
+  let files = [];
+  const uploadArea = document.getElementById('uploadArea');
+  const fileInput = document.getElementById('fileInput');
+  const fileList = document.getElementById('fileList');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const status = document.getElementById('status');
+
+  uploadArea.addEventListener('click', (e) => {
+    if (e.target !== fileInput) fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    files = Array.from(e.target.files);
+    updateFileList();
+  });
+
+  uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  });
+
+  uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+  });
+
+  uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    files = Array.from(e.dataTransfer.files);
+    updateFileList();
+  });
+
+  function updateFileList() {
+    if (files.length === 0) {
+      fileList.innerHTML = '';
+      uploadBtn.disabled = true;
+      return;
+    }
+
+    fileList.innerHTML = files.map(f => `
+                <div class="file-item">${f.name} (${formatSize(f.size)})</div>
+            `).join('');
+
+    uploadBtn.disabled = false;
+    status.className = 'status';
+  }
+
+  function formatSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
+  uploadBtn.addEventListener('click', async () => {
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        uploadBtn.textContent = `Uploading... (${i + 1}/${files.length})`;
+
+        const response = await fetch('/files', {
+          method: 'POST',
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream',
+            'Content-Disposition': `attachment; filename="${file.name}"`
+          },
+          body: file
+        });
+
+        if (!response.ok) throw new Error(`Failed: ${file.name}`);
+      }
+
+      status.textContent = `Uploaded ${files.length} file(s) successfully!`;
+      status.className = 'status success';
+      files = [];
+      fileInput.value = '';
+      updateFileList();
+    } catch (error) {
+      status.textContent = 'Upload failed: ' + error.message;
+      status.className = 'status error';
+    } finally {
+      uploadBtn.textContent = 'Upload';
+    }
+  });
+</script>
+</body>
+</html>

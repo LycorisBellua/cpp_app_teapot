@@ -10,19 +10,31 @@ namespace {
       return "";
     }
     std::stringstream html;
-    html << "<!doctype html><html><head><title>Index</title></head>"
-         << "<body style=\"text-align: center\">"
-         << "<h1><strong>Index</strong></h1>";
+    html << "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
+         << "<title>Index</title>"
+         << "<style>"
+         << "body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }"
+         << "h1 { margin-bottom: 30px; }"
+         << ".file-list { border: 2px solid #ccc; border-radius: 8px; padding: 20px; background: #f9f9f9; }"
+         << ".file-item { padding: 10px; background: #fff; margin: 5px 0; border-radius: 4px; }"
+         << ".file-item a { text-decoration: none; color: #0066cc; }"
+         << ".file-item a:hover { text-decoration: underline; }"
+         << "</style></head>"
+         << "<body><h1>Index of " << uri_path << "</h1>"
+         << "<div class=\"file-list\">";
+
     std::string fixed_uri_path = uri_path;
     if (uri_path[uri_path.length() - 1] != '/') {
       fixed_uri_path.push_back('/');
     }
+
     for (fl_it file = file_list.begin(); file != file_list.end(); ++file) {
       if (*file != "." && *file != "..") {
-        html << "<p><a href=" << fixed_uri_path << *file << ">" << *file << "</a></p>";
+        html << "<div class=\"file-item\"><a href=\"" << fixed_uri_path << *file << "\">" << *file << "</a></div>";
       }
     }
-    html << "</body></html>";
+
+    html << "</div></body></html>";
     return html.str();
   }
 

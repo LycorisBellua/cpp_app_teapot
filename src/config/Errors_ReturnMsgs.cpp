@@ -75,11 +75,20 @@ namespace {
 
   std::string getDefaultErrorPage(const int code) {
     std::stringstream html;
-    html << "<!doctype html><head><title>" << code << "</title></head>"
-         << "<body style=\"text-align: center\">"
-         << "<h1><strong>Error</strong></h1>"
-         << "<h2><strong>" << code << "</strong></h2>"
-         << "<p>" << getDefaultMessage(code) << "</p></body></html>";
+    html << "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
+         << "<title>Error " << code << "</title>"
+         << "<style>"
+         << "body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }"
+         << "h1 { margin-bottom: 20px; }"
+         << ".error-box { border: 2px solid #ccc; border-radius: 8px; padding: 30px; background: #f9f9f9; text-align: center; }"
+         << ".error-code { font-size: 48px; color: #dc3545; margin: 20px 0; }"
+         << ".error-message { color: #666; }"
+         << "</style></head>"
+         << "<body><h1>Error</h1>"
+         << "<div class=\"error-box\">"
+         << "<div class=\"error-code\">" << code << "</div>"
+         << "<div class=\"error-message\">" << getDefaultMessage(code) << "</div>"
+         << "</div></body></html>";
     return html.str();
   }
 
