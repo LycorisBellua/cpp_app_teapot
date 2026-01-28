@@ -6,6 +6,7 @@ Before locking the project:
 - The compiler must be the `c++` shortcut.
 - Source files in the makefile are to be hardcoded, not fetched automatically.
 - Check forbidden functions with `nm`.
+- Remove unused header inclusions.
 - Remove the todo/ directory.
 - Remove the tests/ directory, or at least the intra testers.
 

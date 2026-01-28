@@ -1,5 +1,10 @@
-- Issue with the cookies? Why does the color change when I go for example from 
-localhost:8080 to localhost:9999 and then back to 8080?
+- For the server blocks, instead of calling it a Listener, call it a Host. Each 
+Host has a list of Listeners, and a list of cookies. Indeed, cookie jars are 
+per domain/IP, not per port.
+- To test that it works well, within the browser access localhost:8080 and 
+localhost:9999. The color must remain the same, because the domain is the same.
+
+--------------------------------------------------------------------------------
 
 - Merge.
 
@@ -22,3 +27,7 @@ localhost:8080 to localhost:9999 and then back to 8080?
 - Test three different types of CGI.
 - Figure out a list of tests to check whether the CGI feature breaks for when 
 we'll rework it.
+
+- Rework the CGI feature to be subject-compliant.
+
+- Any "TODO" mention left within the project?

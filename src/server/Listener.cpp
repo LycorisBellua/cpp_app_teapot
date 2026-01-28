@@ -1,5 +1,4 @@
 #include "Listener.hpp"
-#include "Host.hpp"
 #include "HexColorCode.hpp"
 #include <algorithm>
 

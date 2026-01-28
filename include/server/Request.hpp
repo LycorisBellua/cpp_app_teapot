@@ -66,6 +66,19 @@ struct Request
 
 		static bool isRecognizedMethod(const std::string& str);
 		static bool isRecognizedVersion(const std::string& str);
+		static bool parseUri(std::string& uri, std::string& domain, int& port);
+		static bool isOriginForm(const std::string& uri);
+		static bool processAbsoluteForm(std::string& uri, std::string& domain,
+			int& port);
+		static bool setScheme(const std::string& uri, std::string& scheme);
+		static bool setPath(const std::string& uri, const std::string& scheme,
+			std::string& path);
+		static bool setDomainAndPort(const std::string& uri,
+			const std::string& scheme, std::string& domain,
+			std::string& str_port);
+		static int parsePort(const std::string& port,
+			const std::string& scheme);
+		static bool isValidDomain(const std::string& domain);
 };
 
 #endif

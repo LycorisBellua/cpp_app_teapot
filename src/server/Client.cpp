@@ -1,5 +1,4 @@
 #include "Client.hpp"
-#include "Host.hpp"
 #include "HexColorCode.hpp"
 #include "Helper.hpp"
 #include <unistd.h>
