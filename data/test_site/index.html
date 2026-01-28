@@ -11,18 +11,15 @@
       margin: 50px auto;
       padding: 20px;
     }
-
     h1 {
       margin-bottom: 30px;
       text-align: center;
     }
-
     .links {
       display: flex;
       flex-direction: column;
       gap: 20px;
     }
-
     .link-card {
       border: 2px solid #ccc;
       border-radius: 8px;
@@ -33,13 +30,11 @@
       background: #f9f9f9;
       transition: all 0.2s;
     }
-
     .link-card:hover {
       background: #f0f0f0;
       border-color: #666;
       transform: translateY(-2px);
     }
-
     .link-card h2 {
       margin: 0;
       font-size: 24px;
@@ -48,18 +43,18 @@
 </head>
 <body>
 <h1>Webserv Test</h1>
-
 <div class="links">
   <a href="/files" class="link-card">
     <h2>📋 List Files</h2>
   </a>
-
   <a href="/upload" class="link-card">
     <h2>📤 Upload Files</h2>
   </a>
-
   <a href="/delete" class="link-card">
     <h2>🗑️ Delete Files</h2>
+  </a>
+  <a href="/cgi-bin" class="link-card">
+    <h2>⚙️ CGI Test</h2>
   </a>
 </div>
 </body>

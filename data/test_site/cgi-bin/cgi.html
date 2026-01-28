@@ -167,8 +167,8 @@
 <div class="form-section">
     <form id="cgiForm">
         <div class="form-group">
-            <label for="scriptPath">CGI Script Path:</label>
-            <input type="text" id="scriptPath" placeholder="/cgi-bin/script.py" required>
+            <label for="scriptPath">CGI Script Name:</label>
+            <input type="text" id="scriptPath" placeholder="script.py" required>
         </div>
 
         <div class="form-group">
@@ -267,7 +267,8 @@
     document.getElementById('cgiForm').addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const scriptPath = document.getElementById('scriptPath').value.trim();
+        const scriptName = document.getElementById('scriptPath').value.trim();
+        const scriptPath = '/cgi-bin/' + scriptName;
         const method = document.querySelector('input[name="method"]:checked').value;
         const displayMode = document.querySelector('input[name="displayMode"]:checked').value;
         const body = document.getElementById('requestBody').value;
