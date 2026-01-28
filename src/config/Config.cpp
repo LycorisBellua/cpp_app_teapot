@@ -39,6 +39,7 @@ namespace {
   typedef std::string::const_iterator string_it;
   typedef std::map<int, std::string>::iterator error_it;
   typedef std::set<std::pair<int, std::string> >::const_iterator port_host_it;
+  typedef std::map<std::string, std::string>::iterator cgi_it;
 
   std::vector<std::string> tokenizeLine(std::string line) {
     size_t comment_start = line.find_first_of("#");
@@ -206,8 +207,7 @@ Config::LocationDirective Config::strToLocationDirective(const ParsingData& data
     types_map["index"] = IND;
     types_map["autoindex"] = AUTOIND;
     types_map["upload_path"] = UPLOAD;
-    types_map["cgi_extension"] = CGI_EXT;
-    types_map["cgi_interpreter"] = CGI_INT;
+    types_map["cgi"] = CGI;
     types_map["redirect"] = REDIR;
   }
   std::map<std::string, LocationDirective>::const_iterator it = types_map.find(type);
@@ -215,7 +215,7 @@ Config::LocationDirective Config::strToLocationDirective(const ParsingData& data
 }
 
 void Config::parseLocation(ParsingData& data) {
-  if (findToken(data.location_processed, data.tokens[0])) {
+  if (data.tokens[0] != "cgi" && findToken(data.location_processed, data.tokens[0])) {
     throw ConfigError(data, "Duplicate Location Directive");
   }
   switch (strToLocationDirective(data)) {
@@ -237,11 +237,8 @@ void Config::parseLocation(ParsingData& data) {
     case UPLOAD:
       setUploadPath(data);
       break;
-    case CGI_EXT:
-      setCgiExtension(data);
-      break;
-    case CGI_INT:
-      setCgiInterpreter(data);
+    case CGI:
+      setCgi(data);
       break;
     case REDIR:
       setRedirect(data);
@@ -457,7 +454,27 @@ void Config::setUploadPath(const ParsingData& data) {
   servers.back().locations.back().upload_path = path[1];
 }
 
-void Config::setCgiExtension(const ParsingData& data) {
+void Config::setCgi(const ParsingData& data) {
+  const std::vector<std::string>& cgi = data.tokens;
+  if (cgi.size() != 3 || cgi[1].empty() || cgi[2].empty()) {
+    throw ConfigError(data, "Invalid cgi directive");
+  }
+  if (cgi[1].length() < 2 || cgi[1][0] != '.' || cgi[1].substr(1).find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUBWXYZ1234567890") != std::string::npos) {
+    throw ConfigError(data, "Invalid cgi extension: " + cgi[1]);
+  }
+  if (!Filesystem::exists(cgi[2])) {
+    throw ConfigError(data, "CGI interpreter does not exist: " + cgi[2]);
+  }
+  if (Filesystem::isDir(cgi[2])) {
+    throw ConfigError(data, "CGI interpreter is a directory: " + cgi[2]);
+  }
+  if (!Filesystem::isExecutable(cgi[2])) {
+    throw ConfigError(data, "CGI interpreter is not executable: " + cgi[2]);
+  }
+  servers.back().locations.back().cgi.insert(std::make_pair(cgi[1], cgi[2]));
+}
+
+/*void Config::setCgiExtension(const ParsingData& data) {
   const std::vector<std::string> cgi_ext = data.tokens;
   if (cgi_ext.size() != 2 || cgi_ext[1].empty() || cgi_ext[1] != ".py") {
     throw ConfigError(data, "One CGI extension must be specified (.py)");
@@ -480,7 +497,7 @@ void Config::setCgiInterpreter(const ParsingData& data) {
     throw ConfigError(data, "Provided CGI Interpreter is not executable");
   }
   servers.back().locations.back().cgi_interpreter = cgi_int[1];
-}
+}*/
 
 void Config::setRedirect(const ParsingData& data) {
   const std::vector<std::string> redir = data.tokens;
@@ -540,20 +557,13 @@ void Config::verifyLocation(const LocationData& loc) const {
   if (loc.redirect.first != 0) {
     return;
   }
-  // If one cgi field is present, the other must be
-  if (!loc.cgi_extension.empty() && loc.cgi_interpreter.empty()) {
-    throw ConfigError("Location " + loc.path + ": cgi extension specified without cgi interpreter");
-  }
-  if (loc.cgi_extension.empty() && !loc.cgi_interpreter.empty()) {
-    throw ConfigError("Location " + loc.path + ": cgi_interpreter specified without cgi extension");
-  }
   // Root required if not redirect
   if (loc.root.empty()) {
     throw ConfigError("Location " + loc.path + ": root must be specified for all non-redirect locations");
   }
   if (std::find(loc.allowed_methods.begin(), loc.allowed_methods.end(), "POST") != loc.allowed_methods.end()) {
-    if (loc.cgi_interpreter.empty() && loc.upload_path.empty()) {
-      throw ConfigError("Location " + loc.path + ": CGI interpreter or upload_path must be specified for POST locations");
+    if (loc.cgi.empty() && loc.upload_path.empty()) {
+      throw ConfigError("Location " + loc.path + ": CGI or upload_path must be specified for POST locations");
     }
   }
 }
@@ -579,8 +589,10 @@ void Config::normalisePaths() {
       if (!l->root.empty()) {
         l->root = Filesystem::normalisePaths(l->root, current_dir);
       }
-      if (!l->cgi_interpreter.empty()) {
-        l->cgi_interpreter = Filesystem::normalisePaths(l->cgi_interpreter, current_dir);
+      if (!l->cgi.empty()) {
+        for (cgi_it c = l->cgi.begin(); c != l->cgi.end(); ++c) {
+          c->second = Filesystem::normalisePaths(c->second, current_dir);
+        }
       }
       if (!l->upload_path.empty()) {
         l->upload_path = Filesystem::normalisePaths(l->upload_path, l->root);

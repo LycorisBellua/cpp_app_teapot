@@ -9,8 +9,7 @@ LocationData::LocationData(const LocationData& src)
       index(src.index),
       autoindex(src.autoindex),
       upload_path(src.upload_path),
-      cgi_extension(src.cgi_extension),
-      cgi_interpreter(src.cgi_interpreter),
+      cgi(src.cgi),
       redirect(src.redirect) {}
 
 LocationData::~LocationData() {}
@@ -23,8 +22,7 @@ LocationData& LocationData::operator=(const LocationData& src) {
     this->index = src.index;
     this->autoindex = src.autoindex;
     this->upload_path = src.upload_path;
-    this->cgi_extension = src.cgi_extension;
-    this->cgi_interpreter = src.cgi_interpreter;
+    this->cgi = src.cgi;
     this->redirect = src.redirect;
   }
   return *this;

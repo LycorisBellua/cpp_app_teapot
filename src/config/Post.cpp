@@ -280,12 +280,12 @@ namespace {
   }
 
   bool isCgi(const RouteInfo& data) {
-    const std::string& cgi_ext = data.location.cgi_extension;
-    if (cgi_ext.empty()) {
+    const std::map<std::string, std::string>& cgi = data.location.cgi;
+    if (cgi.empty()) {
       return false;
     }
     std::string extension = Filesystem::getfileExtension(data.full_path);
-    return extension == cgi_ext;
+    return cgi.find(extension) != cgi.end();
   }
 
   bool bodySizeCheck(const RouteInfo& data) {

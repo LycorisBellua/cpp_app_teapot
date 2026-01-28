@@ -1,4 +1,5 @@
 #include "Cgi.hpp"
+#include <string.h>
 
 namespace {
   typedef std::vector<std::string>::iterator str_vec_it;
@@ -138,6 +139,7 @@ namespace {
   }
 
   ResponseData cgiOutput(const RouteInfo& data, const std::string& output) {
+    Log::info("OUTPUT: " + output);
     ResponseData response;
     response.headers = splitHeaders(output);
     if (response.headers.empty()) {
@@ -154,7 +156,7 @@ namespace {
     return response;
   }
 
-  ResponseData runScript(const RouteInfo& data, const std::vector<char*>& envPointers) {
+  /*ResponseData runScript(const RouteInfo& data, const std::vector<char*>& envPointers) {
     int stdin_pipe[2];
     int stdout_pipe[2];
 
@@ -182,7 +184,7 @@ namespace {
     }
 
     std::vector<char*> args;
-    args.push_back(const_cast<char*>(data.location.cgi_interpreter.c_str()));
+    args.push_back(const_cast<char*>(data.cgi.interpreter.c_str()));
     args.push_back(const_cast<char*>(data.full_path.c_str()));
     args.push_back(NULL);
 
@@ -194,7 +196,7 @@ namespace {
       close(stdin_pipe[0]);
       dup2(stdout_pipe[1], STDOUT_FILENO);
       close(stdout_pipe[1]);
-      execve(data.location.cgi_interpreter.c_str(), args.data(), envPointers.data());
+      execve(data.cgi.interpreter.c_str(), args.data(), envPointers.data());
       _exit(1);
     }
 
@@ -228,7 +230,133 @@ namespace {
     }
 
     return cgiOutput(data, output);
+  }*/
+
+ResponseData runScript(const RouteInfo& data, const std::vector<char*>& envPointers) {
+  // Log all environment variables
+  Log::info("[CGI] Environment variables:");
+  for (size_t i = 0; envPointers[i] != NULL; i++) {
+    Log::info("[CGI] env[" + Helper::nbrToString(i) + "]: " + std::string(envPointers[i]));
   }
+
+  int stdin_pipe[2];
+  int stdout_pipe[2];
+  int stderr_pipe[2];
+
+  if (pipe(stdin_pipe) == -1) {
+    Log::error("[CGI] Failed to set up stdin pipe");
+    return ResponseData(500, data.server.errors);
+  }
+
+  if (pipe(stdout_pipe) == -1) {
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
+    Log::error("[CGI] Failed to set up stdout pipe");
+    return ResponseData(500, data.server.errors);
+  }
+
+  if (pipe(stderr_pipe) == -1) {
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
+    Log::error("[CGI] Failed to set up stderr pipe");
+    return ResponseData(500, data.server.errors);
+  }
+
+  const pid_t pid = fork();
+
+  if (pid == -1) {
+    Log::error("[CGI] Failed to fork");
+    close(stdin_pipe[0]);
+    close(stdin_pipe[1]);
+    close(stdout_pipe[0]);
+    close(stdout_pipe[1]);
+    close(stderr_pipe[0]);
+    close(stderr_pipe[1]);
+    return ResponseData(500, data.server.errors);
+  }
+
+  std::vector<char*> args;
+  args.push_back(const_cast<char*>(data.cgi.interpreter.c_str()));
+  args.push_back(const_cast<char*>(data.full_path.c_str()));
+  args.push_back(NULL);
+
+  // Child
+  if (pid == 0) {
+    close(stdin_pipe[1]);
+    close(stdout_pipe[0]);
+    close(stderr_pipe[0]);
+    dup2(stdin_pipe[0], STDIN_FILENO);
+    close(stdin_pipe[0]);
+    dup2(stdout_pipe[1], STDOUT_FILENO);
+    close(stdout_pipe[1]);
+    dup2(stderr_pipe[1], STDERR_FILENO);
+    close(stderr_pipe[1]);
+
+    // DEBUG: Write before execve
+    const char* msg = "Child: About to call execve\n";
+    write(STDERR_FILENO, msg, strlen(msg));
+
+    execve(data.cgi.interpreter.c_str(), args.data(), envPointers.data());
+
+    // If we get here, execve failed
+    const char* fail_msg = "Child: execve failed!\n";
+    write(STDERR_FILENO, fail_msg, strlen(fail_msg));
+    _exit(1);
+  }
+
+  // Parent
+  close(stdin_pipe[0]);
+  close(stdout_pipe[1]);
+  close(stderr_pipe[1]);
+
+  if (data.request.method == "POST" && !data.request.body.empty()) {
+    write(stdin_pipe[1], data.request.body.c_str(), data.request.body.size());
+  }
+  close(stdin_pipe[1]);
+
+  char buffer[4096];
+  std::string output;
+  ssize_t bytes_read;
+  while ((bytes_read = read(stdout_pipe[0], buffer, sizeof(buffer))) > 0) {
+    output.append(buffer, bytes_read);
+  }
+  close(stdout_pipe[0]);
+
+  // Read stderr
+  std::string error_output;
+  char err_buffer[4096];
+  ssize_t err_bytes;
+  while ((err_bytes = read(stderr_pipe[0], err_buffer, sizeof(err_bytes))) > 0) {
+    error_output.append(err_buffer, err_bytes);
+  }
+  close(stderr_pipe[0]);
+
+  int status;
+  waitpid(pid, &status, 0);
+
+  // Log stderr if not empty
+  if (!error_output.empty()) {
+    Log::error("[CGI] stderr output: " + error_output);
+  } else {
+    Log::info("[CGI] No stderr output");
+  }
+
+  if (WIFEXITED(status)) {
+    int exit_code = WEXITSTATUS(status);
+    if (exit_code != 0) {
+      Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
+      return ResponseData(500, data.server.errors);
+    }
+  } else if (WIFSIGNALED(status)) {
+    int signal = WTERMSIG(status);
+    Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
+    return ResponseData(500, data.server.errors);
+  }
+
+  return cgiOutput(data, output);
+}
 
   std::vector<char*> getEnvPointers(std::vector<std::string>& envStrings) {
     std::vector<char*> result;
@@ -247,26 +375,28 @@ namespace {
       result.push_back("CONTENT_TYPE=" + c_type);
     }
     result.push_back("GATEWAY_INTERFACE=CGI/1.1");
-    result.push_back("PATH_INFO=" + data.path_info);
-    if (!data.path_info.empty()) {
-      result.push_back("PATH_TRANSLATED=" + data.path_translated);
+    result.push_back("PATH_INFO=" + data.cgi.path_info);
+    if (!data.cgi.path_info.empty()) {
+      result.push_back("PATH_TRANSLATED=" + data.cgi.path_translated);
     }
     result.push_back("QUERY_STRING=" + data.query);
     result.push_back("REMOTE_ADDR=" + data.request.client_ip);
     result.push_back("REMOTE_HOST=" + data.request.client_ip);
     result.push_back("REQUEST_METHOD=" + data.request.method);
-    result.push_back("SCRIPT_NAME=" + data.script_name);
+    result.push_back("SCRIPT_NAME=" + data.cgi.script_name);
     result.push_back("SERVER_NAME=" + data.request.host);
     result.push_back("SERVER_PORT=" + Helper::nbrToString(data.request.port));
     result.push_back("SERVER_PROTOCOL=" + data.request.protocol);
     result.push_back("SERVER_SOFTWARE=webserv");
+    result.push_back("REDIRECT_STATUS=200");
+    result.push_back("SCRIPT_FILENAME=" + data.full_path);
 
     return result;
   }
 
   std::vector<char*> getArgs(const RouteInfo& data) {
     std::vector<char*> result;
-    result.push_back(const_cast<char*>(data.location.cgi_interpreter.c_str()));
+    result.push_back(const_cast<char*>(data.cgi.interpreter.c_str()));
     result.push_back(const_cast<char*>(data.full_path.c_str()));
     result.push_back(NULL);
     return result;

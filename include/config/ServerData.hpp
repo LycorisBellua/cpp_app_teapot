@@ -13,8 +13,7 @@ struct LocationData {
   std::string index;
   bool autoindex;
   std::string upload_path;
-  std::string cgi_extension;
-  std::string cgi_interpreter;
+  std::map<std::string, std::string> cgi;
   std::pair<int, std::string> redirect;
 
   LocationData();

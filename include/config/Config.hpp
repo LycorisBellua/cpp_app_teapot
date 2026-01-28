@@ -79,7 +79,7 @@ class Config {
   ServerDirective strToServerDirective(const ParsingData&);
   void parseServer(ParsingData&);
 
-  enum LocationDirective { LOC, MET, ROOT, IND, AUTOIND, UPLOAD, CGI_EXT, CGI_INT, REDIR, INVLD };
+  enum LocationDirective { LOC, MET, ROOT, IND, AUTOIND, UPLOAD, CGI, REDIR, INVLD };
   LocationDirective strToLocationDirective(const ParsingData&);
   void parseLocation(ParsingData&);
 
@@ -98,8 +98,7 @@ class Config {
   void setIndex(const ParsingData&);
   void setAutoIndex(const ParsingData&);
   void setUploadPath(const ParsingData&);
-  void setCgiExtension(const ParsingData&);
-  void setCgiInterpreter(const ParsingData&);
+  void setCgi(const ParsingData&);
   void setRedirect(const ParsingData&);
 
   // Final Verification
