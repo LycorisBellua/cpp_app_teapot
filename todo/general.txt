@@ -1,0 +1,24 @@
+- Issue with the cookies? Why does the color change when I go for example from 
+localhost:8080 to localhost:9999 and then back to 8080?
+
+- Merge.
+
+- Test this to make sure the error is gone:
+	Accessing "0.0.0.0:8080" in the browser led to a server crash:
+	```
+	2026-01-26 15:58:17 ERROR
+	[Router] No Matching server found for request
+	Port: 8080
+	Host: 0.0.0.0
+	URI: /
+	Method: GET
+	
+	zsh: segmentation fault (core dumped)  ./webserv
+	```
+- Test HEAD method in the CLI (it must work when GET is allowed):
+	`curl -v --http1.1 -X HEAD http://localhost:8080/`
+	`printf "HEAD / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n" | nc localhost 8080`
+- Test the DELETE method wthin the browser.
+- Test three different types of CGI.
+- Figure out a list of tests to check whether the CGI feature breaks for when 
+we'll rework it.
