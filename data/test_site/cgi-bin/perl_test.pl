@@ -3,9 +3,8 @@
 use strict;
 use warnings;
 
-# CGI scripts must output HTTP headers first
 print "Content-Type: text/html\r\n";
-print "\r\n";  # Blank line separates headers from body
+print "\r\n";
 
 # HTML content
 print "<html>\n";
@@ -14,7 +13,6 @@ print "<body>\n";
 print "<h1>Hello from Perl CGI!</h1>\n";
 print "<p>This is a basic CGI script.</p>\n";
 
-# Display some environment variables
 print "<h2>Environment Variables:</h2>\n";
 print "<ul>\n";
 print "<li>REQUEST_METHOD: $ENV{REQUEST_METHOD}</li>\n";
