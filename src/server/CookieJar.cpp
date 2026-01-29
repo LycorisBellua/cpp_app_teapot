@@ -21,7 +21,7 @@ bool CookieJar::hasThisCookie(const std::string& key, const std::string& value)
 	return false;
 }
 
-Cookie CookieJar::createBackgroundColorCookie()
+const Cookie& CookieJar::createBackgroundColorCookie()
 {
 	std::string key = "background-color";
 	std::string value;
@@ -30,9 +30,8 @@ Cookie CookieJar::createBackgroundColorCookie()
 		value = HexColorCode::generate();
 	}
 	while (this->hasThisCookie(key, value));
-	Cookie cookie(key, value, "", "/", 300);
-	cookies_.push_back(cookie);
-	return cookie;
+	cookies_.push_back(Cookie(key, value, "", "/", 300));
+	return cookies_.back();
 }
 
 void CookieJar::removeExpiredCookies()
@@ -76,7 +75,7 @@ void CookieJar::generateCookieIfMissing(CookieJar* jar, Client& c,
 {
 	if (!c.getBackgroundColor().empty())
 		return;
-	Cookie new_cookie = jar->createBackgroundColorCookie();
+	const Cookie& new_cookie = jar->createBackgroundColorCookie();
 	cookie_headers.push_back(new_cookie.getSetCookieValue());
 	c.setBackgroundColor(new_cookie.getValue());
 }

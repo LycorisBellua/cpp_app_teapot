@@ -369,9 +369,10 @@ std::string Router::normalizePath(const std::string& path, const RequestData& re
 
 void Router::validMethod(const RequestData& req, const LocationData* location) const {
   const std::vector<std::string>& am = location->allowed_methods;
-  strvec_it method = std::find(am.begin(), am.end(), req.method);
+  std::string method_str = (req.method == "HEAD") ? "GET" : req.method;
+  strvec_it method = std::find(am.begin(), am.end(), method_str);
 
-  bool is_valid = (method != am.end()) || (am.empty() && methodImplemented(req.method));
+  bool is_valid = (method != am.end()) || (am.empty() && methodImplemented(method_str));
   if (!is_valid) {
     throw RouterError("Invalid Method for matched location", req);
   }

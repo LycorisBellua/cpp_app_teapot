@@ -1,7 +1,5 @@
 #include "Post.hpp"
 
-// TODO: finish multi-part. for binary uploads, check request level content disposition
-
 namespace {
 
   typedef std::map<std::string, std::string>::const_iterator map_it;
@@ -311,7 +309,6 @@ namespace Post {
       // return handleUpload(data);
       return simpleUpload(data);
     }
-    // TODO: Check fallback return code
     return ResponseData(400, data.server.errors);
 
     /*    const std::string filename = generateFilename(data.location.upload_path);

@@ -14,7 +14,7 @@ class CookieJar
 		bool hasThisCookie(const std::string& key, const std::string& value)
 			const;
 
-		Cookie createBackgroundColorCookie();
+		const Cookie& createBackgroundColorCookie();
 		void removeExpiredCookies();
 
 		static void checkRequestCookies(const CookieJar* jar, Client& c,
