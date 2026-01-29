@@ -12,7 +12,7 @@ namespace {
   }
 
   char decodeHex(const std::string& hex) {
-    return static_cast<char>(strtol(hex.c_str(), NULL, 16));
+    return static_cast<char>(std::strtol(hex.c_str(), NULL, 16));
   }
 
   std::string removeQuery(const std::string& uri) {

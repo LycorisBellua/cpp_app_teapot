@@ -2,25 +2,19 @@
 #define RESPONSE_HPP
 
 #include "Router.hpp"
+#include "CookieJar.hpp"
 #include "Client.hpp"
-#include "Listener.hpp"
 #include "RequestData.hpp"
 
 class Response
 {
 	public:
-		static std::string compose(const Router& router, Listener* listener,
+		static std::string compose(const Router& router, CookieJar* jar,
 			Client& c);
 
 	private:
 		Response();
 
-		static void checkRequestCookies(const Listener* listener, Client& c,
-			std::vector<std::string>& cookie_headers);
-		static void generateCookieIfMissing(Listener* listener, Client& c,
-			std::vector<std::string>& cookie_headers);
-		static void embedBackgroundColor(const std::string& color,
-			std::string& body);
 		static std::string serialize(const ResponseData& res, bool is_head,
 			bool should_close, const std::vector<std::string>& cookie_headers);
 		static std::string getStartLine(int status, const std::string& msg);

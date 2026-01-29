@@ -4,6 +4,7 @@
 #include "Listener.hpp"
 #include "Client.hpp"
 #include "Router.hpp"
+#include "CookieJar.hpp"
 #include <map>
 
 class Server
@@ -17,13 +18,14 @@ class Server
 		int fd_epoll_;
 		std::map<int, Listener> listeners_;
 		std::map<int, Client> clients_;
+		std::map<std::string, CookieJar> jars_;
 	
 		Server();
 
 		bool addListener(const std::string& ip, int port);
 		bool addListenerToEventHandler(int fd_listen);
-		Listener* findListener(const std::string& ip, int port);
 		void closeListeners();
+		CookieJar* findCookieJar(const std::string& ip);
 		bool runEventLoop();
 		bool addConnection(int fd_listen);
 		void closeConnection(int fd);

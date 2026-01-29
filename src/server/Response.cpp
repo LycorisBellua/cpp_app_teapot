@@ -4,18 +4,17 @@
 
 /* Public (Static) ---------------------------------------------------------- */
 
-std::string Response::compose(const Router& router, Listener* listener,
-	Client& c)
+std::string Response::compose(const Router& router, CookieJar* jar, Client& c)
 {
 	RequestData req = c.getRequestData();
 	ResponseData res = router.handle(req);
 	bool is_head = req.method == "HEAD";
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
 	std::vector<std::string> cookie_headers;
-	if (listener)
-		listener->removeExpiredCookies();
-	Listener::checkRequestCookies(listener, c, cookie_headers);
-	Listener::generateCookieIfMissing(listener, c, cookie_headers);
+	if (jar)
+		jar->removeExpiredCookies();
+	CookieJar::checkRequestCookies(jar, c, cookie_headers);
+	CookieJar::generateCookieIfMissing(jar, c, cookie_headers);
 	HexColorCode::embedBackgroundColor(c.getBackgroundColor(), res.content);
 	return Response::serialize(res, is_head, should_close, cookie_headers);
 }

@@ -14,7 +14,7 @@ It handles:
 - GET, HEAD, POST and DELETE methods.
 - Fixed-length request bodies.
 - Chunked request bodies.
-- CGI scripts (e.g.: Python, PHP, JS...).
+- CGI scripts (e.g.: Python, PHP, Perl...).
 - Cookies, with the simple example of giving each client session a unique 
 background color.
 
@@ -106,7 +106,10 @@ In the browser of your choice, type in any of these URLs:
 - `http://0.0.0.0:8080/`
 
 Besides the index, here are the relevant routes:
-- TODO: List the routes.
+- `/files`
+- `/upload`
+- `/delete`
+- `/cgi-bin`
 
 ## Resources
 

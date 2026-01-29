@@ -23,7 +23,7 @@ namespace {
     output_file.write(body.c_str(), body.size());
     if (!output_file.good()) {
       output_file.close();
-      remove(filepath.c_str());
+      std::remove(filepath.c_str());
       Log::error("[POST] File Not Created: Could not write to File Stream:\n" + filepath);
       return false;
     }
@@ -43,10 +43,10 @@ namespace {
   }
 
   std::string getUploadBase() {
-    time_t now = time(0);
-    struct tm* timeinfo = localtime(&now);
+    time_t now = std::time(0);
+    struct tm* timeinfo = std::localtime(&now);
     char buffer[100];
-    strftime(buffer, sizeof(buffer), "%Y%m%d_%H%M%S", timeinfo);
+    std::strftime(buffer, sizeof(buffer), "%Y%m%d_%H%M%S", timeinfo);
     std::stringstream base;
     base << "upload_" << buffer;
     return base.str();
