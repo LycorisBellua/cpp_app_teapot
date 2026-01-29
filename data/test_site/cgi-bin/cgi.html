@@ -318,10 +318,20 @@
             }
 
             const response = await fetch(url, options);
-            const responseText = await response.text();
 
             // Show response
             responseSection.classList.add('show');
+
+            // Handle opaque redirects (browser hides details for security)
+            if (response.type === 'opaqueredirect') {
+                responseStatus.textContent = '3xx Redirect (exact code hidden by browser)';
+                responseStatus.className = 'response-status';
+                responseHeaders.textContent = '(Browser security policy hides redirect headers)\n\nNote: Switch to "Normal" mode to follow the redirect and see the final destination.';
+                responseBody.textContent = 'Redirect detected but details are hidden by browser CORS policy.\nUse "Normal" mode to follow the redirect.';
+                return;
+            }
+
+            const responseText = await response.text();
 
             // Status
             responseStatus.textContent = `${response.status} ${response.statusText}`;
@@ -336,14 +346,6 @@
 
             // Body
             responseBody.textContent = responseText || '(empty)';
-
-            // Handle redirects
-            if (response.type === 'opaqueredirect' || (response.status >= 300 && response.status < 400)) {
-                const location = response.headers.get('location');
-                if (location) {
-                    responseBody.textContent += `\n\n[Redirect detected to: ${location}]`;
-                }
-            }
 
             // Scroll to response
             responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
