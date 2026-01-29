@@ -16,6 +16,8 @@ class Client
 		bool isFullyParsed() const;
 		bool isBufferEmpty() const;
 		bool shouldCloseConnection() const;
+		std::string getDomain() const;
+		int getPort() const;
 		RequestData getRequestData() const;
 		std::string getBackgroundColor() const;
 		std::vector< std::pair<std::string, std::string> > getCookies() const;

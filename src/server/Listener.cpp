@@ -1,5 +1,4 @@
 #include "Listener.hpp"
-#include "Host.hpp"
 
 /* Public (Instance) -------------------------------------------------------- */
 
@@ -8,7 +7,12 @@ Listener::Listener(int fd, const std::string& ip, int port)
 {
 }
 
-bool Listener::hasThisIPAndPort(const std::string& ip, int port) const
+bool Listener::hasThisIP(const std::string& ip) const
 {
-	return this->ip_ == ip && this->port_ == port;
+	return this->ip_ == ip;
+}
+
+bool Listener::hasThisPort(int port) const
+{
+	return this->port_ == port;
 }

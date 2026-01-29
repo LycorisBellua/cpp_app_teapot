@@ -111,12 +111,26 @@ bool Helper::isPrintableAscii(const std::string& str)
 	return true;
 }
 
-bool Helper::isHexChar(char c)
+int Helper::rngMinmax(int *seed, int min, int max)
 {
-	if (std::isdigit(c))
-		return true;
-	else if (!std::isalpha(c))
-		return false;
-	c = std::toupper(static_cast<unsigned char>(c));
-	return c >= 'A' && c <= 'F';
+	unsigned int random;
+
+	if (!*seed)
+		*seed = 1;
+	random = *seed;
+	random ^= random << 13;
+	random ^= random >> 17;
+	random ^= random << 5;
+	*seed = random;
+	return random % (max - min + 1) + min;
+}
+
+std::string Helper::getDateGMT(const std::time_t& time)
+{
+    std::tm *gmt = std::gmtime(&time);
+    if (!gmt)
+		return "";
+	char buffer[64] = {0};
+	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+	return buffer;
 }

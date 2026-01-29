@@ -1,51 +1,28 @@
 #include "Response.hpp"
+#include "HexColorCode.hpp"
 #include "Helper.hpp"
-#include <ctime>
 
 /* Public (Static) ---------------------------------------------------------- */
 
-std::string Response::compose(const Router& router, const Client& c)
+std::string Response::compose(const Router& router, CookieJar* jar, Client& c)
 {
-	/*
-		TODO: The CGI can return HTTP headers to be sent. There's now a data 
-		structure in the response structure containing all the properly 
-		formatted key/value pairs.
-		TODO: The CGI needs to be partly handled in the event loop.
-	*/
-	/*
-		TODO
-		- Client functions we have:
-			std::vector< std::pair<std::string, std::string> > getCookies() const;
-			std::string getHexBackgroundColor() const;
-			bool setHexBackgroundColor(const std::string& str);
-		- BackgroundColorCookie functions we have:
-			static bool isValidName(const std::string& str);
-			static bool isValidValue(const std::string& str);
-
-		- Select the listener.
-		- For each cookie, ask whether the listener has a copy of the cookie.
-			- If not, add the cookie to a list marked for "deletion" (response 
-			headers).
-				`Set-Cookie: weirdCookie=value; Max-Age=0; Path=/`
-			- If so, then call `c.setBackgroundColor(value)`.
-		- If there was no saved value, it means either no cookie was sent or 
-		none was valid.
-			- Generate a hex code that's not already in use (in uppercase).
-			- Store this cookie into the listener's cookie list.
-			- Be aware that you'll have to use the `Set-Cookie` response header.
-			- Call `c.setBackgroundColor(value)`.
-	*/
-	const RequestData& req = c.getRequestData();
-	const ResponseData& res = router.handle(req);
+	RequestData req = c.getRequestData();
+	ResponseData res = router.handle(req);
 	bool is_head = req.method == "HEAD";
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
-	return Response::serialize(res, is_head, should_close);
+	std::vector<std::string> cookie_headers;
+	if (jar)
+		jar->removeExpiredCookies();
+	CookieJar::checkRequestCookies(jar, c, cookie_headers);
+	CookieJar::generateCookieIfMissing(jar, c, cookie_headers);
+	HexColorCode::embedBackgroundColor(c.getBackgroundColor(), res.content);
+	return Response::serialize(res, is_head, should_close, cookie_headers);
 }
 
 /* Private (Static) --------------------------------------------------------- */
 
 std::string Response::serialize(const ResponseData& res, bool is_head,
-	bool should_close)
+	bool should_close, const std::vector<std::string>& cookie_headers)
 {
 	std::string str;
 	str += Response::getStartLine(res.code, res.code_msg);
@@ -53,13 +30,19 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 		str += Response::getCRLF();
 	else
 	{
-		str += Response::getDateLine();
-		str += Response::getContentLengthLine(res.content.length());
-		if (!res.content.empty() && !res.content_type.empty())
-			str += Response::getContentTypeLine(res.content_type);
-		//TODO: Add all elements of `res.headers` if not empty
+		str += getHeaderLine("Date", Helper::getDateGMT(std::time(0)));
+		str += getHeaderLine("Content-Length",
+			Helper::nbrToString(res.content.length()));
+		if (!res.content.empty())
+			str += getHeaderLine("Content-Type", res.content_type);
+		std::vector<std::string>::const_iterator itv;
+		for (itv = cookie_headers.begin(); itv != cookie_headers.end(); ++itv)
+			str += getHeaderLine("Set-Cookie", *itv);
+		std::set< std::pair<std::string, std::string> >::iterator its;
+		for (its = res.headers.begin(); its != res.headers.end(); ++its)
+			str += getHeaderLine(its->first, its->second);
 		if (should_close)
-			str += Response::getConnectionCloseLine();
+			str += getHeaderLine("Connection", "close");
 		str += Response::getCRLF();
 		if (!is_head)
 			str += res.content;
@@ -67,14 +50,9 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 	return str;
 }
 
-std::string Response::getCRLF()
-{
-	return "\r\n";
-}
-
 std::string Response::getStartLine(int status, const std::string& msg)
 {
-	std::string str = getVersion();
+	std::string str = "HTTP/1.1";
 	str += " ";
 	str += Helper::nbrToString(status);
 	str += " ";
@@ -83,38 +61,15 @@ std::string Response::getStartLine(int status, const std::string& msg)
 	return str;
 }
 
-std::string Response::getVersion()
+std::string Response::getHeaderLine(const std::string& key,
+	const std::string& value)
 {
-	return "HTTP/1.1";
-}
-
-std::string Response::getDateLine()
-{
-	return "Date: " + getCurrentDateGMT() + getCRLF();
-}
-
-std::string Response::getCurrentDateGMT()
-{
-    std::time_t now = std::time(0);
-    std::tm *gmt = std::gmtime(&now);
-    if (!gmt)
+	if (key.empty() || value.empty())
 		return "";
-	char buffer[64] = {0};
-	std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
-	return buffer;
+	return key + ": " + value + getCRLF();
 }
 
-std::string Response::getContentLengthLine(size_t length)
+std::string Response::getCRLF()
 {
-	return "Content-Length: " + Helper::nbrToString(length) + getCRLF();
-}
-
-std::string Response::getContentTypeLine(const std::string& type)
-{
-	return "Content-Type: " + type + getCRLF();
-}
-
-std::string Response::getConnectionCloseLine()
-{
-	return "Connection: close" + getCRLF();
+	return "\r\n";
 }

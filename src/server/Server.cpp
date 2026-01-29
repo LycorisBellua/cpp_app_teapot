@@ -19,7 +19,8 @@ Server::Server(const std::string& config_path)
 	{
 		const std::string& ip = it->first;
 		int port = it->second;
-		addListener(ip, port);
+		if (addListener(ip, port) && jars_.find(ip) == jars_.end())
+			jars_.insert(std::make_pair(ip, CookieJar(ip)));
 	}
 	if (listeners_.empty())
 		Log::error("Error: Server: constructor: listener list is empty");
@@ -42,7 +43,7 @@ bool Server::addListener(const std::string& ip, int port)
 	std::map<int, Listener>::iterator ite = listeners_.end();
 	for (it = listeners_.begin(); it != ite; ++it)
 	{
-		if (it->second.hasThisIPAndPort(ip, port))
+		if (it->second.hasThisIP(ip) && it->second.hasThisPort(port))
 		{
 			Log::error("Error: Server: addListener: listener already exists");
 			return false;
@@ -69,14 +70,6 @@ bool Server::addListener(const std::string& ip, int port)
 	return true;
 }
 
-void Server::closeListeners()
-{
-	std::map<int, Listener>::iterator it;
-	std::map<int, Listener>::iterator ite = listeners_.end();
-	for (it = listeners_.begin(); it != ite; ++it)
-		close(it->first);
-}
-
 bool Server::addListenerToEventHandler(int fd_listen)
 {
 	epoll_event ev;
@@ -88,6 +81,23 @@ bool Server::addListenerToEventHandler(int fd_listen)
 		return false;
 	}
 	return true;
+}
+
+void Server::closeListeners()
+{
+	std::map<int, Listener>::iterator it;
+	std::map<int, Listener>::iterator ite = listeners_.end();
+	for (it = listeners_.begin(); it != ite; ++it)
+		close(it->first);
+}
+
+CookieJar* Server::findCookieJar(const std::string& ip)
+{
+	std::map<std::string, CookieJar>::iterator ite = jars_.end();
+	std::map<std::string, CookieJar>::iterator it = jars_.find(ip);
+	if (it == ite)
+		it = jars_.find("0.0.0.0");
+	return it != ite ? &it->second : NULL;
 }
 
 bool Server::runEventLoop()
@@ -177,7 +187,8 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 
 void Server::sendResponse(int fd, Client& c)
 {
-	std::string res = Response::compose(router_, c);
+	CookieJar* jar = findCookieJar(c.getDomain());
+	std::string res = Response::compose(router_, jar, c);
 	write(fd, res.c_str(), res.length());
 	if (c.shouldCloseConnection())
 		closeConnection(fd);

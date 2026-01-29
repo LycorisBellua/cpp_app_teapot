@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <ctime>
 
 class Helper
 {
@@ -28,7 +29,8 @@ class Helper
 			str2);
 		static std::string touppercase(const std::string& str);
 		static bool isPrintableAscii(const std::string& str);
-		static bool isHexChar(char c);
+		static int rngMinmax(int *seed, int min, int max);
+		static std::string getDateGMT(const std::time_t& time);
 	
 	private:
 		Helper();
