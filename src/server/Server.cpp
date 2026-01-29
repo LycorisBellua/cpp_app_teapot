@@ -35,6 +35,24 @@ Server::~Server()
 	closeListeners();
 }
 
+bool Server::addCgiFdToEventHandler(int fd, int io_type)
+{
+	if (io_type != 0 && io_type != 1)
+	{
+		Log::error("Error: Server: addCgiFdToEventHandler: bad io_type");
+		return false;
+	}
+	epoll_event ev;
+	ev.events = io_type == 0 ? EPOLLIN : EPOLLOUT;
+	ev.data.fd = fd;
+	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd, &ev))
+	{
+		Log::error("Error: Server: addCgiFdToEventHandler: epoll_ctl");
+		return false;
+	}
+	return true;
+}
+
 /* Private (Instance) ------------------------------------------------------- */
 
 bool Server::addListener(const std::string& ip, int port)

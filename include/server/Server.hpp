@@ -13,6 +13,8 @@ class Server
 		Server(const std::string& config_path);
 		~Server();
 
+		bool Server::addCgiFdToEventHandler(int fd, int io_type);
+
 	private:
 		const Router router_;
 		int fd_epoll_;

@@ -6,7 +6,7 @@
 /* Public (Instance) -------------------------------------------------------- */
 
 Client::Client(const std::string& ip, int fd)
-	: ip_(ip), fd_(fd), req_buffer_(""), hex_bg_color_("")
+	: route_info(NULL), ip_(ip), fd_(fd), req_buffer_(""), hex_bg_color_("")
 {
 	resetParsingData();
 	updateLastActivity();
@@ -74,6 +74,7 @@ void Client::updateLastActivity()
 
 void Client::resetParsingData()
 {
+	route_info = NULL;
 	start_line_found_ = false;
 	end_line_found_ = false;
 	body_end_found_ = false;

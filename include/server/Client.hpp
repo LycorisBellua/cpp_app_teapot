@@ -10,6 +10,8 @@
 class Client
 {
 	public:
+		RouteInfo* route_info;
+
 		Client(const std::string& ip, int fd);
 
 		std::time_t getLastActivity() const;

@@ -22,9 +22,9 @@ class Router {
   Router(const Router&);
   ~Router();
 
-  ResponseData handle(const RequestData&) const;
   std::set<std::pair<std::string, int> > getPorts() const;
-
+  RouteInfo getRoute(const RequestData& request) const;
+  
  private:
   // Class Data
   const std::vector<ServerData> servers;
@@ -45,7 +45,6 @@ class Router {
     std::string err_msg;
   };
 
-  RouteInfo getRoute(const RequestData& request) const;
   const ServerData* getServer(const RequestData&) const;
   const LocationData* getLocation(const std::vector<LocationData>&, const std::string&,
                                   const RequestData&) const;

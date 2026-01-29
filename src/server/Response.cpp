@@ -6,7 +6,44 @@
 
 std::string Response::compose(const Router& router, CookieJar* jar, Client& c)
 {
-	RequestData req = c.getRequestData();
+	if (!c.route_info)
+	{
+		RequestData req = c.getRequestData();
+		if (req.error_code != 0) {
+    		return ResponseData(req.error_code);
+  		}
+		c.route_info = &router.getRoute(req);
+		if (c.route_info.error_code != 0)
+		{
+    	return (c.route_info.error_code == 400 || c.route_info.error_code == 404) ? ResponseData(c.route_info.error_code)
+                                    : ResponseData(c.route_info.error_code, c.route_info.server.errors);
+  		}
+	}
+	if (c.route_info->cgi.is_cgi)
+	{
+		// Do stuff
+		return "";
+	}
+	else if (request.method == "GET" || request.method == "HEAD") {
+    return Get::handle(data);
+  }
+  else if (request.method == "POST") {
+    return Post::handle(data);
+  }
+  else if (request.method == "DELETE") {
+    return Delete::handle(data);
+  }
+  return ResponseData(500);
+
+
+	/*
+		TODO:
+		- We need to get RouteInfo in all cases.
+		- If it's CGI, do not proceed with the response (but do stuff).
+		- Otherwise, call a function that will turn RouteInfo into ResponseData, 
+		and proceed with the response.
+	*/
+
 	ResponseData res = router.handle(req);
 	bool is_head = req.method == "HEAD";
 	bool should_close = c.shouldCloseConnection() || res.code == 400;
