@@ -196,8 +196,9 @@ namespace {
     close(stdout_pipe[1]);
     data.cgi.fd_output = stdin_pipe[1];
     data.cgi.fd_input = stdout_pipe[0];
-    Server::getInstance("")->addFdToEventHandler(data.cgi.fd_output, false, true);
-    Server::getInstance("")->addFdToEventHandler(data.cgi.fd_input, true, false);
+    Server::getInstance()->addFdToEventHandler(data.cgi.fd_output, false, true);
+    Server::getInstance()->addFdToEventHandler(data.cgi.fd_input, true, false);
+	Server::getInstance()->addCgiProcess(data.cgi.pid, data.request.client_fd);
     return NULL;
   }
 
@@ -264,7 +265,7 @@ namespace Cgi {
     if (data.request.method == "POST" && !data.request.body.empty()) {
       write(data.cgi.fd_output, data.request.body.c_str(), data.request.body.size());
     }
-    Server::getInstance("")->removeFdFromEventHandler(data.cgi.fd_output);
+    Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_output);
     close(data.cgi.fd_output);
     data.cgi.fd_output = -1;
   }
@@ -276,7 +277,7 @@ namespace Cgi {
 		if (bytes_read > 0) {
 			data.cgi.output.append(buffer, bytes_read);
 		} else {
-			Server::getInstance("")->removeFdFromEventHandler(data.cgi.fd_input);
+			Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_input);
 			close(data.cgi.fd_input);
 			data.cgi.fd_input = -1;
 		}

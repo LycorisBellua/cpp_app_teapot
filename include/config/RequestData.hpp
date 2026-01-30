@@ -23,7 +23,7 @@ struct ResponseData {
 };
 
 struct RequestData {
-  const Client& client;
+	int client_fd;
   int error_code;
   int port;
   std::string host;
@@ -34,6 +34,6 @@ struct RequestData {
   std::string content_type;
   std::string body;
 
-  RequestData(const Client& client, int error_code, int port, const std::string& host, const std::string& uri, const std::string& client_ip, const std::string& protocol, const std::string& method, const std::string& content_type,
+  RequestData(int client_fd, int error_code, int port, const std::string& host, const std::string& uri, const std::string& client_ip, const std::string& protocol, const std::string& method, const std::string& content_type,
               const std::string& body);
 };

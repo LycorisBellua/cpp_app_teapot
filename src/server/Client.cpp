@@ -71,7 +71,7 @@ int Client::getPort() const
 RequestData Client::getRequestData() const
 {
 	return RequestData(
-		*this,
+		fd_,
 		req_.getStatus(),
 		req_.getPort(),
 		req_.getDomain(),
@@ -101,6 +101,11 @@ void Client::updateLastActivity()
 
 void Client::resetParsingData()
 {
+	if (isCgiRunning())
+	{
+		close(route_info->cgi.fd_input);
+		close(route_info->cgi.fd_output);
+	}
 	delete route_info;
 	route_info = NULL;
 	delete response_data;

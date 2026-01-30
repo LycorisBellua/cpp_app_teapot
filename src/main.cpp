@@ -17,7 +17,8 @@ int main(int argc, char** argv)
 	try
 	{
 		const std::string default_config_path = "configs/test_site.conf";
-		Server::getInstance(argc == 2 ? argv[1] : default_config_path);
+		Server::getInstance(argc == 2 ? argv[1]
+			: default_config_path)->runEventLoop();
 	}
 	catch (const std::exception& e)
 	{

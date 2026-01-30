@@ -10,13 +10,15 @@
 class Server
 {
 	public:
+		static Server* getInstance();
 		static Server* getInstance(const std::string& config_path);
 
 		~Server();
 
 		bool addFdToEventHandler(int fd, bool input, bool output);
 		void removeFdFromEventHandler(int fd);
-		void addCgiProcess(pid_t pid, const Client& c);
+		void addCgiProcess(pid_t pid, int fd_client);
+		bool runEventLoop();
 
 	private:
 		static Server* singleton_;
@@ -24,7 +26,7 @@ class Server
 		int fd_epoll_;
 		std::map<int, Listener> listeners_;
 		std::map<int, Client> clients_;
-		std::map<pid_t, Client> cgi_processes_;
+		std::map<pid_t, int> cgi_processes_;
 		std::map<std::string, CookieJar> jars_;
 	
 		Server();
@@ -33,7 +35,6 @@ class Server
 		bool addListener(const std::string& ip, int port);
 		void closeListeners();
 		CookieJar* findCookieJar(const std::string& ip);
-		bool runEventLoop();
 		bool addConnection(int fd_listen);
 		void closeConnection(int fd);
 		void closeIdleConnections(int idle_timeout_sec);

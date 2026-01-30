@@ -12,6 +12,13 @@ Server* Server::singleton_ = NULL;
 
 /* Public (Static) ---------------------------------------------------------- */
 
+Server* Server::getInstance()
+{
+	if (!singleton_)
+		return NULL;
+	return singleton_;
+}
+
 Server* Server::getInstance(const std::string& config_path)
 {
 	if (!singleton_)
@@ -26,18 +33,13 @@ Server::Server(const std::string& config_path)
 {
 	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
 	std::set<std::pair<std::string, int> >::const_iterator it;
-	std::set<std::pair<std::string, int> >::const_iterator ite = ip_ports.end();
-	for (it = ip_ports.begin(); it != ite; ++it)
+	for (it = ip_ports.begin(); it != ip_ports.end(); ++it)
 	{
 		const std::string& ip = it->first;
 		int port = it->second;
 		if (addListener(ip, port) && jars_.find(ip) == jars_.end())
 			jars_.insert(std::make_pair(ip, CookieJar(ip)));
 	}
-	if (listeners_.empty())
-		Log::error("Error: Server: constructor: listener list is empty");
-	else
-		runEventLoop();
 }
 
 Server::~Server()
@@ -74,65 +76,23 @@ void Server::removeFdFromEventHandler(int fd)
 	epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
 }
 
-void Server::addCgiProcess(pid_t pid, const Client& c)
+void Server::addCgiProcess(pid_t pid, int fd_client)
 {
-	cgi_processes_.insert(std::make_pair(pid, c));
-}
-
-/* Private (Instance) ------------------------------------------------------- */
-
-bool Server::addListener(const std::string& ip, int port)
-{
-	std::map<int, Listener>::iterator it;
-	std::map<int, Listener>::iterator ite = listeners_.end();
-	for (it = listeners_.begin(); it != ite; ++it)
-	{
-		if (it->second.hasThisIP(ip) && it->second.hasThisPort(port))
-		{
-			Log::error("Error: Server: addListener: listener already exists");
-			return false;
-		}
-	}
-	int fd_listen = Socket::createListener(ip, port);
-	if (fd_listen < 0 || !addFdToEventHandler(fd_listen, true, false))
-	{
-		Log::error("Error: Server: addListener: can't create listener or add "
-			"it to event handler");
-		close(fd_listen);
-		return false;
-	}
-	std::pair<std::map<int, Listener>::iterator, bool> result =
-		listeners_.insert(std::make_pair(fd_listen,
-			Listener(fd_listen, ip, port)));
-	if (!result.second)
-	{
-		Log::error("Error: Server: addListener: can't add listener to map");
-		close(fd_listen);
-		removeFdFromEventHandler(fd_listen);
-		return false;
-	}
-	return true;
-}
-
-void Server::closeListeners()
-{
-	std::map<int, Listener>::iterator it;
-	std::map<int, Listener>::iterator ite = listeners_.end();
-	for (it = listeners_.begin(); it != ite; ++it)
-		close(it->first);
-}
-
-CookieJar* Server::findCookieJar(const std::string& ip)
-{
-	std::map<std::string, CookieJar>::iterator ite = jars_.end();
-	std::map<std::string, CookieJar>::iterator it = jars_.find(ip);
-	if (it == ite)
-		it = jars_.find("0.0.0.0");
-	return it != ite ? &it->second : NULL;
+	cgi_processes_.insert(std::make_pair(pid, fd_client));
 }
 
 bool Server::runEventLoop()
 {
+	if (!singleton_)
+	{
+		Log::error("Error: Server: runEventLoop: singleton not set");
+		return false;
+	}
+	else if (listeners_.empty())
+	{
+		Log::error("Error: Server: runEventLoop: listener list is empty");
+		return false;
+	}
 	const int max_events = 64;
 	const int epoll_timeout_ms = 1000;
 	const int idle_timeout_sec = 30;
@@ -178,6 +138,55 @@ bool Server::runEventLoop()
 	return true;
 }
 
+/* Private (Instance) ------------------------------------------------------- */
+
+bool Server::addListener(const std::string& ip, int port)
+{
+	std::map<int, Listener>::iterator it;
+	for (it = listeners_.begin(); it != listeners_.end(); ++it)
+	{
+		if (it->second.hasThisIP(ip) && it->second.hasThisPort(port))
+		{
+			Log::error("Error: Server: addListener: listener already exists");
+			return false;
+		}
+	}
+	int fd_listen = Socket::createListener(ip, port);
+	if (fd_listen < 0 || !addFdToEventHandler(fd_listen, true, false))
+	{
+		Log::error("Error: Server: addListener: can't create listener or add "
+			"it to event handler");
+		close(fd_listen);
+		return false;
+	}
+	std::pair<std::map<int, Listener>::iterator, bool> result =
+		listeners_.insert(std::make_pair(fd_listen,
+			Listener(fd_listen, ip, port)));
+	if (!result.second)
+	{
+		Log::error("Error: Server: addListener: can't add listener to map");
+		close(fd_listen);
+		removeFdFromEventHandler(fd_listen);
+		return false;
+	}
+	return true;
+}
+
+void Server::closeListeners()
+{
+	std::map<int, Listener>::iterator it;
+	for (it = listeners_.begin(); it != listeners_.end(); ++it)
+		close(it->first);
+}
+
+CookieJar* Server::findCookieJar(const std::string& ip)
+{
+	std::map<std::string, CookieJar>::iterator it = jars_.find(ip);
+	if (it == jars_.end())
+		it = jars_.find("0.0.0.0");
+	return it != jars_.end() ? &it->second : NULL;
+}
+
 bool Server::addConnection(int fd_listen)
 {
 	int fd_client = -1;
@@ -220,8 +229,7 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 void Server::handleCgiIO(int fd)
 {
 	std::map<int, Client>::iterator it;
-	std::map<int, Client>::iterator ite = clients_.end();
-	for (it = clients_.begin(); it != ite; ++it)
+	for (it = clients_.begin(); it != clients_.end(); ++it)
 	{
 		Client& c = it->second;
 		if (fd == c.getCgiFdOutput())
@@ -240,17 +248,31 @@ void Server::handleCgiIO(int fd)
 
 void Server::handleCgiCompletion()
 {
-	std::map<pid_t, Client>::iterator it;
-	std::map<pid_t, Client>::iterator ite = cgi_processes_.end();
-	for (it = cgi_processes_.begin(); it != ite;)
+	std::map<pid_t, int>::iterator it;
+	for (it = cgi_processes_.begin(); it != cgi_processes_.end();)
 	{
-		Client& c = it->second;
+		int client_fd = it->second;
+		std::map<int, Client>::iterator client_it = clients_.find(client_fd);
+		if (client_it == clients_.end()) // Client disconnected
+		{
+			int status;
+			pid_t res = waitpid(it->first, &status, WNOHANG);
+			if (res)
+			{
+				std::map<pid_t, int>::iterator it_next = it;
+				++it_next;
+				cgi_processes_.erase(it);
+				it = it_next;
+			}
+			continue;
+		}
+		Client& c = client_it->second;
 		c.response_data = Cgi::reapCgiProcess(*c.route_info);
 		if (!c.response_data)
 			++it;
 		else
 		{
-			std::map<pid_t, Client>::iterator it_next = it;
+			std::map<pid_t, int>::iterator it_next = it;
 			++it_next;
 			cgi_processes_.erase(it);
 			it = it_next;
