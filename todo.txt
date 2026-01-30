@@ -1,13 +1,12 @@
-- Remove placeholder files once actual files are added to the directory
-- No need to include the actual path of header files thanks to `-Iinclude` in 
-the makefile.
+- Serve the basic first website as well, on port 9999, and within the same 
+config file.
+- Test with ASAN (fsanitize), then comment it again in the makefile.
 
 Before locking the project:
 - The compiler must be the `c++` shortcut.
 - Source files in the makefile are to be hardcoded, not fetched automatically.
 - Remove unused header inclusions.
-- Remove the todo/ directory.
-- Remove the tests/ directory, or at least the intra testers.
+- Remove this todo file.
 
 README (for the intra only, not GitHub):
 - Remove the first line `# Teapot`.

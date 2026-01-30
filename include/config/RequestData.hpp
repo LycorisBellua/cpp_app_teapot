@@ -5,8 +5,6 @@
 #include <map>
 #include "Errors_ReturnMsgs.hpp"
 
-class Client;
-
 struct ResponseData {
   int code;
   std::string code_msg;

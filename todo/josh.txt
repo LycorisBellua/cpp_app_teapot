@@ -1,3 +1,0 @@
-The response is correct, but it doesn't display properly in the web page: test_redirect.py, test_redirect_with_body.py, test_redirect_with_status.py
-	printf "GET /cgi-bin/test_redirect.py HTTP/1.1\r\nHost: localhost:8080\r\n\r\n" | nc localhost 8080
-

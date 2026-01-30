@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 		const std::string default_config_path = "configs/default.conf";
 		Server* server = Server::getInstance(argc == 2 ? argv[1]
 			: default_config_path);
-		server->runEventLoop();
+		server->run();
 		delete server;
 	}
 	catch (const std::exception& e)
