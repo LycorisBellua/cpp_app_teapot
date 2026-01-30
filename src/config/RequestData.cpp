@@ -1,10 +1,11 @@
 #include "RequestData.hpp"
 
-RequestData::RequestData(int error_code, int port, const std::string &host, const std::string &uri,
+RequestData::RequestData(const Client& client, int error_code, int port, const std::string &host, const std::string &uri,
                          const std::string& client_ip, const std::string& protocol,
                          const std::string &method, const std::string &content_type,
                          const std::string &body)
-    : error_code(error_code),
+    : client(client),
+      error_code(error_code),
       port(port),
       host(host),
       uri(uri),

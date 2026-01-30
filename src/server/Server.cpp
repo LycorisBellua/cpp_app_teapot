@@ -3,9 +3,21 @@
 #include "Socket.hpp"
 #include "Log.hpp"
 #include "Response.hpp"
+#include "Cgi.hpp"
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
+
+Server* Server::singleton_ = NULL;
+
+/* Public (Static) ---------------------------------------------------------- */
+
+Server* Server::getInstance(const std::string& config_path)
+{
+	if (!singleton_)
+		singleton_ = new Server(config_path);
+	return singleton_;
+}
 
 /* Public (Instance) -------------------------------------------------------- */
 
@@ -35,22 +47,36 @@ Server::~Server()
 	closeListeners();
 }
 
-bool Server::addCgiFdToEventHandler(int fd, int io_type)
+bool Server::addFdToEventHandler(int fd, bool input, bool output)
 {
-	if (io_type != 0 && io_type != 1)
+	if (!input && !output)
 	{
-		Log::error("Error: Server: addCgiFdToEventHandler: bad io_type");
+		Log::error("Error: Server: addFdToEventHandler: no I/O specified");
 		return false;
 	}
 	epoll_event ev;
-	ev.events = io_type == 0 ? EPOLLIN : EPOLLOUT;
+	ev.events = 0;
+	if (input)
+		ev.events |= EPOLLIN;
+	if (output)
+		ev.events |= EPOLLOUT;
 	ev.data.fd = fd;
 	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd, &ev))
 	{
-		Log::error("Error: Server: addCgiFdToEventHandler: epoll_ctl");
+		Log::error("Error: Server: addFdToEventHandler: epoll_ctl");
 		return false;
 	}
 	return true;
+}
+
+void Server::removeFdFromEventHandler(int fd)
+{
+	epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
+}
+
+void Server::addCgiProcess(pid_t pid, const Client& c)
+{
+	cgi_processes_.insert(std::make_pair(pid, c));
 }
 
 /* Private (Instance) ------------------------------------------------------- */
@@ -68,7 +94,7 @@ bool Server::addListener(const std::string& ip, int port)
 		}
 	}
 	int fd_listen = Socket::createListener(ip, port);
-	if (fd_listen < 0 || !addListenerToEventHandler(fd_listen))
+	if (fd_listen < 0 || !addFdToEventHandler(fd_listen, true, false))
 	{
 		Log::error("Error: Server: addListener: can't create listener or add "
 			"it to event handler");
@@ -82,20 +108,7 @@ bool Server::addListener(const std::string& ip, int port)
 	{
 		Log::error("Error: Server: addListener: can't add listener to map");
 		close(fd_listen);
-		epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd_listen, NULL);
-		return false;
-	}
-	return true;
-}
-
-bool Server::addListenerToEventHandler(int fd_listen)
-{
-	epoll_event ev;
-	ev.events = EPOLLIN;
-	ev.data.fd = fd_listen;
-	if (epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_listen, &ev))
-	{
-		Log::error("Error: Server: addListenerToEventHandler");
+		removeFdFromEventHandler(fd_listen);
 		return false;
 	}
 	return true;
@@ -135,6 +148,8 @@ bool Server::runEventLoop()
 		for (int i = 0; i < n; ++i)
 		{
 			int fd = events[i].data.fd;
+			bool can_read = events[i].events & EPOLLIN;
+			bool can_write = events[i].events & EPOLLOUT;
 			if (listeners_.find(fd) != listeners_.end())
 			{
 				if (!addConnection(fd))
@@ -143,20 +158,22 @@ bool Server::runEventLoop()
 			}
 			std::map<int, Client>::iterator client = clients_.find(fd);
 			if (client == clients_.end())
+			{
+				handleCgiIO(fd);
 				continue;
+			}
 			Client& c = client->second;
-			bool can_read = events[i].events & EPOLLIN;
-			bool can_write = events[i].events & EPOLLOUT;
 			if ((can_read || !c.isBufferEmpty()) && !c.isFullyParsed()
 				&& !c.parseRequest())
 			{
 				closeConnection(fd);
 				continue;
 			}
-			if (can_write && c.isFullyParsed())
+			if (can_write && c.isFullyParsed() && !c.isCgiRunning())
 				sendResponse(fd, c);
 		}
 		closeIdleConnections(idle_timeout_sec);
+		handleCgiCompletion();
 	}
 	return true;
 }
@@ -167,10 +184,7 @@ bool Server::addConnection(int fd_listen)
 	sockaddr_in addr = {};
 	if (!Socket::acceptConnection(fd_listen, fd_client, addr))
 		return false;
-	epoll_event cev;
-	cev.events = EPOLLIN | EPOLLOUT;
-	cev.data.fd = fd_client;
-	epoll_ctl(fd_epoll_, EPOLL_CTL_ADD, fd_client, &cev);
+	addFdToEventHandler(fd_client, true,  true);
 	std::map<int, Client>::iterator old_elem = clients_.find(fd_client);
 	if (old_elem != clients_.end())
 		clients_.erase(old_elem);
@@ -182,7 +196,7 @@ bool Server::addConnection(int fd_listen)
 void Server::closeConnection(int fd)
 {
 	close(fd);
-	epoll_ctl(fd_epoll_, EPOLL_CTL_DEL, fd, NULL);
+	removeFdFromEventHandler(fd);
 	clients_.erase(fd);
 }
 
@@ -203,10 +217,53 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 	}
 }
 
+void Server::handleCgiIO(int fd)
+{
+	std::map<int, Client>::iterator it;
+	std::map<int, Client>::iterator ite = clients_.end();
+	for (it = clients_.begin(); it != ite; ++it)
+	{
+		Client& c = it->second;
+		if (fd == c.getCgiFdOutput())
+		{
+			Cgi::writeToCgi(*c.route_info);
+			break;
+		}
+		else if (fd == c.getCgiFdInput())
+		{
+			if (c.getCgiFdOutput() < 0)
+				Cgi::readFromCgi(*c.route_info);
+			break;
+		}
+	}
+}
+
+void Server::handleCgiCompletion()
+{
+	std::map<pid_t, Client>::iterator it;
+	std::map<pid_t, Client>::iterator ite = cgi_processes_.end();
+	for (it = cgi_processes_.begin(); it != ite;)
+	{
+		Client& c = it->second;
+		c.response_data = Cgi::reapCgiProcess(*c.route_info);
+		if (!c.response_data)
+			++it;
+		else
+		{
+			std::map<pid_t, Client>::iterator it_next = it;
+			++it_next;
+			cgi_processes_.erase(it);
+			it = it_next;
+		}
+	}
+}
+
 void Server::sendResponse(int fd, Client& c)
 {
 	CookieJar* jar = findCookieJar(c.getDomain());
 	std::string res = Response::compose(router_, jar, c);
+	if (c.isCgiRunning())
+		return;
 	write(fd, res.c_str(), res.length());
 	if (c.shouldCloseConnection())
 		closeConnection(fd);

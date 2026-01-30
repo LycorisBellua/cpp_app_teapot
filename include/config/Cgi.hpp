@@ -11,5 +11,8 @@
 #include "RouteInfo.hpp"
 
 namespace Cgi {
-  ResponseData handle(const RouteInfo&);
+	ResponseData* handle(RouteInfo&);
+	void writeToCgi(RouteInfo& data);
+	void readFromCgi(RouteInfo&);
+	ResponseData* reapCgiProcess(RouteInfo&);
 }

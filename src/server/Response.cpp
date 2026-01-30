@@ -6,57 +6,65 @@
 
 std::string Response::compose(const Router& router, CookieJar* jar, Client& c)
 {
-	if (!c.route_info)
-	{
-		RequestData req = c.getRequestData();
-		if (req.error_code != 0) {
-    		return ResponseData(req.error_code);
-  		}
-		c.route_info = &router.getRoute(req);
-		if (c.route_info.error_code != 0)
-		{
-    	return (c.route_info.error_code == 400 || c.route_info.error_code == 404) ? ResponseData(c.route_info.error_code)
-                                    : ResponseData(c.route_info.error_code, c.route_info.server.errors);
-  		}
-	}
-	if (c.route_info->cgi.is_cgi)
-	{
-		// Do stuff
+	setRouteInfoAndResponseData(router, c);
+	if (!c.response_data)
 		return "";
-	}
-	else if (request.method == "GET" || request.method == "HEAD") {
-    return Get::handle(data);
-  }
-  else if (request.method == "POST") {
-    return Post::handle(data);
-  }
-  else if (request.method == "DELETE") {
-    return Delete::handle(data);
-  }
-  return ResponseData(500);
-
-
-	/*
-		TODO:
-		- We need to get RouteInfo in all cases.
-		- If it's CGI, do not proceed with the response (but do stuff).
-		- Otherwise, call a function that will turn RouteInfo into ResponseData, 
-		and proceed with the response.
-	*/
-
-	ResponseData res = router.handle(req);
-	bool is_head = req.method == "HEAD";
-	bool should_close = c.shouldCloseConnection() || res.code == 400;
+	bool is_head = c.getMethod() == "HEAD";
+	bool should_close = c.shouldCloseConnection()
+		|| c.response_data->code == 400;
 	std::vector<std::string> cookie_headers;
 	if (jar)
 		jar->removeExpiredCookies();
 	CookieJar::checkRequestCookies(jar, c, cookie_headers);
 	CookieJar::generateCookieIfMissing(jar, c, cookie_headers);
-	HexColorCode::embedBackgroundColor(c.getBackgroundColor(), res.content);
-	return Response::serialize(res, is_head, should_close, cookie_headers);
+	HexColorCode::embedBackgroundColor(c.getBackgroundColor(),
+		c.response_data->content);
+	return Response::serialize(*c.response_data, is_head, should_close,
+		cookie_headers);
 }
 
 /* Private (Static) --------------------------------------------------------- */
+
+void Response::setRouteInfoAndResponseData(const Router& router, Client& c)
+{
+	if (c.isCgiRunning() || c.response_data)
+		return;
+	if (!c.route_info)
+	{
+		RequestData req = c.getRequestData();
+		if (req.error_code)
+		{
+			c.response_data = new ResponseData(req.error_code);
+			return;
+		}
+		c.route_info = new RouteInfo(router.getRoute(req));
+		if (c.route_info->error_code)
+		{
+			if (c.route_info->error_code == 400
+				|| c.route_info->error_code == 404)
+				c.response_data = new ResponseData(c.route_info->error_code);
+			else
+				c.response_data = new ResponseData(c.route_info->error_code,
+					c.route_info->server.errors);
+			return;
+		}
+	}
+	if (c.isCgiRunning())
+	{
+		c.response_data = Cgi::handle(*c.route_info);
+		if (c.response_data)
+      		c.route_info->cgi.is_cgi = false;
+	}
+	else if (c.route_info->request.method == "GET"
+		|| c.route_info->request.method == "HEAD")
+		c.response_data = new ResponseData(Get::handle(*c.route_info));
+	else if (c.route_info->request.method == "POST")
+		c.response_data = new ResponseData(Post::handle(*c.route_info));
+	else if (c.route_info->request.method == "DELETE")
+		c.response_data = new ResponseData(Delete::handle(*c.route_info));
+	else
+		c.response_data = new ResponseData(500);
+}
 
 std::string Response::serialize(const ResponseData& res, bool is_head,
 	bool should_close, const std::vector<std::string>& cookie_headers)

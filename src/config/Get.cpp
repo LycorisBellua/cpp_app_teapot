@@ -74,23 +74,11 @@ namespace {
     return ResponseData(403, data.server.errors);
   }
 
-  bool isCgi(const RouteInfo& data) {
-    const std::map<std::string, std::string>& cgi = data.location.cgi;
-    if (cgi.empty()) {
-      return false;
-    }
-    std::string extension = Filesystem::getfileExtension(data.full_path);
-    return cgi.find(extension) != cgi.end();
-  }
-
 }
 
 namespace Get {
 
   ResponseData handle(const RouteInfo& data) {
-    if (isCgi(data)) {
-      return Cgi::handle(data);
-    }
     if (Filesystem::isDir(data.full_path)) {
       return handleDirectory(data);
     }

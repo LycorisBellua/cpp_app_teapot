@@ -17,7 +17,7 @@ bool HexColorCode::isValid(const std::string& str)
 
 std::string HexColorCode::generate()
 {
-	static int seed = 42;
+	static int seed = std::time(0);
 	std::string str = "#RRGGBB";
 	for (size_t i = 1; i < 7; ++i)
 		str[i] = "0123456789ABCDEF"[Helper::rngMinmax(&seed, 0, 15)];

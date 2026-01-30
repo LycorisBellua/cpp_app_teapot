@@ -15,6 +15,8 @@ class Response
 	private:
 		Response();
 
+		static void setRouteInfoAndResponseData(const Router& router,
+			Client& c);
 		static std::string serialize(const ResponseData& res, bool is_head,
 			bool should_close, const std::vector<std::string>& cookie_headers);
 		static std::string getStartLine(int status, const std::string& msg);

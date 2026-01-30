@@ -3,6 +3,7 @@
 
 #include "Request.hpp"
 #include "RouteInfo.hpp"
+#include "RequestData.hpp"
 #include <string>
 #include <vector>
 #include <ctime>
@@ -11,13 +12,19 @@ class Client
 {
 	public:
 		RouteInfo* route_info;
+		ResponseData* response_data;
 
 		Client(const std::string& ip, int fd);
+		~Client();
 
 		std::time_t getLastActivity() const;
 		bool isFullyParsed() const;
 		bool isBufferEmpty() const;
+		bool isCgiRunning() const;
+		int getCgiFdInput() const;
+		int getCgiFdOutput() const;
 		bool shouldCloseConnection() const;
+		std::string getMethod() const;
 		std::string getDomain() const;
 		int getPort() const;
 		RequestData getRequestData() const;

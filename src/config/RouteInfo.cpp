@@ -1,6 +1,6 @@
 #include "RouteInfo.hpp"
 
-CgiInfo::CgiInfo() : is_cgi(false) {}
+CgiInfo::CgiInfo() : is_cgi(false), pid(-1), fd_input(-1), fd_output(-1) {}
 
 RouteInfo::RouteInfo(const ServerData& srv, const LocationData& loc, const std::map<std::string, std::string>& mime,
                              const RequestData& request)
