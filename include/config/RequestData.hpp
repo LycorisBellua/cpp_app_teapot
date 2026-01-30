@@ -5,6 +5,8 @@
 #include <map>
 #include "Errors_ReturnMsgs.hpp"
 
+class Client;
+
 struct ResponseData {
   int code;
   std::string code_msg;
@@ -21,6 +23,7 @@ struct ResponseData {
 };
 
 struct RequestData {
+	int client_fd;
   int error_code;
   int port;
   std::string host;
@@ -31,6 +34,6 @@ struct RequestData {
   std::string content_type;
   std::string body;
 
-  RequestData(int error_code, int port, const std::string& host, const std::string& uri, const std::string& client_ip, const std::string& protocol, const std::string& method, const std::string& content_type,
+  RequestData(int client_fd, int error_code, int port, const std::string& host, const std::string& uri, const std::string& client_ip, const std::string& protocol, const std::string& method, const std::string& content_type,
               const std::string& body);
 };

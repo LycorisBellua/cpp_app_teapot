@@ -12,8 +12,7 @@ bool CookieJar::hasThisCookie(const std::string& key, const std::string& value)
 	const
 {
 	std::vector<Cookie>::const_iterator it;
-	std::vector<Cookie>::const_iterator ite = cookies_.end();
-	for (it = cookies_.begin(); it != ite; ++it)
+	for (it = cookies_.begin(); it != cookies_.end(); ++it)
 	{
 		if (key == it->getKey() && value == it->getValue())
 			return true;
@@ -37,8 +36,7 @@ const Cookie& CookieJar::createBackgroundColorCookie()
 void CookieJar::removeExpiredCookies()
 {
 	std::vector<Cookie>::iterator it;
-	std::vector<Cookie>::iterator ite = cookies_.end();
-	for (it = cookies_.begin(); it != ite;)
+	for (it = cookies_.begin(); it != cookies_.end();)
 	{
 		if (it->hasExpired())
 			it = cookies_.erase(it);

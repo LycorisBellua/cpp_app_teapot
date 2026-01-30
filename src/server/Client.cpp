@@ -6,10 +6,16 @@
 /* Public (Instance) -------------------------------------------------------- */
 
 Client::Client(const std::string& ip, int fd)
-	: ip_(ip), fd_(fd), req_buffer_(""), hex_bg_color_("")
+	: route_info(NULL), response_data(NULL), ip_(ip), fd_(fd), req_buffer_(""),
+	hex_bg_color_("")
 {
 	resetParsingData();
 	updateLastActivity();
+}
+
+Client::~Client()
+{
+	resetParsingData();
 }
 
 std::time_t Client::getLastActivity() const
@@ -27,9 +33,29 @@ bool Client::isBufferEmpty() const
 	return req_buffer_.empty();
 }
 
+bool Client::isCgiRunning() const
+{
+	return route_info && route_info->cgi.is_cgi;
+}
+
+int Client::getCgiFdInput() const
+{
+	return !isCgiRunning() ? -1 : route_info->cgi.fd_input;
+}
+
+int Client::getCgiFdOutput() const
+{
+	return !isCgiRunning() ? -1 : route_info->cgi.fd_output;
+}
+
 bool Client::shouldCloseConnection() const
 {
 	return req_.getShouldCloseConnection();
+}
+
+std::string Client::getMethod() const
+{
+	return req_.getMethod();
 }
 
 std::string Client::getDomain() const
@@ -45,6 +71,7 @@ int Client::getPort() const
 RequestData Client::getRequestData() const
 {
 	return RequestData(
+		fd_,
 		req_.getStatus(),
 		req_.getPort(),
 		req_.getDomain(),
@@ -74,6 +101,15 @@ void Client::updateLastActivity()
 
 void Client::resetParsingData()
 {
+	if (isCgiRunning())
+	{
+		close(route_info->cgi.fd_input);
+		close(route_info->cgi.fd_output);
+	}
+	delete route_info;
+	route_info = NULL;
+	delete response_data;
+	response_data = NULL;
 	start_line_found_ = false;
 	end_line_found_ = false;
 	body_end_found_ = false;

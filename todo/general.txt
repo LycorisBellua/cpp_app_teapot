@@ -1,4 +1,1 @@
-- Once the dev branch is good. Add `dev` to `main`. I hope there's no issue.
-
 - Stop the server with `signal` (Ctrl-C).
-- Rework the CGI feature to be subject-compliant.
