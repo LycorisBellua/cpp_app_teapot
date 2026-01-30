@@ -1,11 +1,6 @@
 #include "Log.hpp"
 #include "Server.hpp"
 
-/*
-	TODO: The CGI feature needs to non-blocking, and its I/O needs to be 
-	checked for readiness by the epoll event loop.
-*/
-
 int main(int argc, char** argv)
 {
 	if (argc > 2)

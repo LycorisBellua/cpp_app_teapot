@@ -31,7 +31,7 @@ struct RouteInfo {
   const ServerData& server;
   const LocationData& location;
   const std::map<std::string, std::string> mime_list;
-  const RequestData& request;
+  RequestData request;
 
   RouteInfo(const ServerData&, const LocationData&, const std::map<std::string, std::string>& mime, const RequestData&);
 };

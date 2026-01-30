@@ -1,2 +1,1 @@
 - Stop the server with `signal` (Ctrl-C).
-- Rework the CGI feature to be subject-compliant.
