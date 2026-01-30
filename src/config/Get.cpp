@@ -13,9 +13,11 @@ namespace {
     html << "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">"
          << "<title>Index</title>"
          << "<style>"
-         << "body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }"
+         << "body { font-family: system-ui, -apple-system, sans-serif; max-width: 600px; margin: "
+            "50px auto; padding: 20px; }"
          << "h1 { margin-bottom: 30px; }"
-         << ".file-list { border: 2px solid #ccc; border-radius: 8px; padding: 20px; background: #f9f9f9; }"
+         << ".file-list { border: 2px solid #ccc; border-radius: 8px; padding: 20px; background: "
+            "#f9f9f9; }"
          << ".file-item { padding: 10px; background: #fff; margin: 5px 0; border-radius: 4px; }"
          << ".file-item a { text-decoration: none; color: #0066cc; }"
          << ".file-item a:hover { text-decoration: underline; }"
@@ -30,7 +32,8 @@ namespace {
 
     for (fl_it file = file_list.begin(); file != file_list.end(); ++file) {
       if (*file != "." && *file != "..") {
-        html << "<div class=\"file-item\"><a href=\"" << fixed_uri_path << *file << "\">" << *file << "</a></div>";
+        html << "<div class=\"file-item\"><a href=\"" << fixed_uri_path << *file << "\">" << *file
+             << "</a></div>";
       }
     }
 
@@ -74,23 +77,11 @@ namespace {
     return ResponseData(403, data.server.errors);
   }
 
-  bool isCgi(const RouteInfo& data) {
-    const std::map<std::string, std::string>& cgi = data.location.cgi;
-    if (cgi.empty()) {
-      return false;
-    }
-    std::string extension = Filesystem::getfileExtension(data.full_path);
-    return cgi.find(extension) != cgi.end();
-  }
-
 }
 
 namespace Get {
 
   ResponseData handle(const RouteInfo& data) {
-    if (isCgi(data)) {
-      return Cgi::handle(data);
-    }
     if (Filesystem::isDir(data.full_path)) {
       return handleDirectory(data);
     }

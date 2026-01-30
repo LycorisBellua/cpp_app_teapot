@@ -33,9 +33,9 @@ namespace {
     return method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD";
   }
 
-
-
-  CgiInfo splitCgiPath(const std::string& path, const std::map<std::string, std::string>& cgi_interpreters) {
+  CgiInfo splitCgiPath(const std::string& path,
+                       const std::map<std::string, std::string>& cgi_interpreters,
+                       const std::string& requested_method) {
     CgiInfo result;
     result.script_path = path;
 
@@ -43,7 +43,6 @@ namespace {
       return result;
     }
 
-    // Try each registered CGI extension
     std::map<std::string, std::string>::const_iterator it;
     for (it = cgi_interpreters.begin(); it != cgi_interpreters.end(); ++it) {
       const std::string& ext = it->first;
@@ -55,14 +54,15 @@ namespace {
 
       size_t script_end = ext_pos + ext.length();
 
-      // Must be at end of path or followed by '/'
       if (script_end < path.length() && path[script_end] != '/') {
-        continue;  // Try next extension
+        continue;
       }
 
       result.script_path = path.substr(0, script_end);
-      result.interpreter = it->second;  // Store the interpreter
-      result.is_cgi = true;
+      result.interpreter = it->second;
+      if (requested_method == "GET" || requested_method == "POST") {
+        result.is_cgi = true;
+      }
       if (script_end < path.length()) {
         result.path_info = path.substr(script_end);
       }
@@ -70,7 +70,6 @@ namespace {
       return result;
     }
 
-    // No CGI extension found
     return result;
   }
 
@@ -127,8 +126,9 @@ ResponseData Router::handle(const RequestData& request) const {
   }
   const RouteInfo& data = getRoute(request);
   if (data.error_code != 0) {
-    return (data.error_code == 400 || data.error_code == 404) ? ResponseData(data.error_code)
-                                    : ResponseData(data.error_code, data.server.errors);
+    return (data.error_code == 400 || data.error_code == 404)
+               ? ResponseData(data.error_code)
+               : ResponseData(data.error_code, data.server.errors);
   }
   if (request.method == "GET" || request.method == "HEAD") {
     return Get::handle(data);
@@ -176,14 +176,14 @@ RouteInfo Router::getRoute(const RequestData& request) const {
     route.error_code = location->redirect.first;
     return route;
   }
-  CgiInfo cgi = splitCgiPath(path, location->cgi);
+  CgiInfo cgi = splitCgiPath(path, location->cgi, request.method);
   route.full_path = Filesystem::normalisePaths(location->root + cgi.script_path.substr(1),
                                                Filesystem::getCurrentDir());
   route.query = query;
   route.mime_type = getMime(cgi.script_path);
   if (!cgi.path_info.empty()) {
-    cgi.path_translated = Filesystem::normalisePaths(
-        location->root + cgi.path_info.substr(1), Filesystem::getCurrentDir());
+    cgi.path_translated = Filesystem::normalisePaths(location->root + cgi.path_info.substr(1),
+                                                     Filesystem::getCurrentDir());
   }
   cgi.script_name = cgi.script_path;
   route.cgi = cgi;

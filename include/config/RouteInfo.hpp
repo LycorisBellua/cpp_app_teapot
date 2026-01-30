@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "ServerData.hpp"
 #include "RequestData.hpp"
+#include "ServerData.hpp"
 
 struct CgiInfo {
   bool is_cgi;
@@ -29,5 +29,6 @@ struct RouteInfo {
   const std::map<std::string, std::string> mime_list;
   const RequestData& request;
 
-  RouteInfo(const ServerData&, const LocationData&, const std::map<std::string, std::string>& mime, const RequestData&);
+  RouteInfo(const ServerData&, const LocationData&, const std::map<std::string, std::string>& mime,
+            const RequestData&);
 };
