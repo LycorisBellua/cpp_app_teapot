@@ -120,7 +120,6 @@ std::set<std::pair<std::string, int> > Router::getPorts() const {
   return ports;
 }
 
-/* ---------- Private ---------- */
 RouteInfo Router::getRoute(const RequestData& request) const {
   const std::string query = getQuery(request.uri);
   std::string path;
@@ -169,6 +168,7 @@ RouteInfo Router::getRoute(const RequestData& request) const {
   return route;
 }
 
+/* ---------- Private ---------- */
 const ServerData* Router::getServer(const RequestData& request) const {
   const ServerData* result = NULL;
   if (!request.host.empty() && request.port != 0) {
