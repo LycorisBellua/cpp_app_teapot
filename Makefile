@@ -1,5 +1,5 @@
-NAME = webserv
-DBG_NAME = webserv-debug
+NAME = teapot
+DBG_NAME = teapot-debug
 
 SRC_DIR = ./src/
 CONFIG_SRC_DIR = ./src/config/

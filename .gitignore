@@ -7,7 +7,7 @@
 *.o
 *.a
 a.out
-webserv
+teapot
 build
 
 # System/LSP Files

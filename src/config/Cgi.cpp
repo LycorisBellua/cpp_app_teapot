@@ -238,7 +238,7 @@ namespace {
     result.push_back("SERVER_NAME=" + data.request.host);
     result.push_back("SERVER_PORT=" + Helper::nbrToString(data.request.port));
     result.push_back("SERVER_PROTOCOL=" + data.request.protocol);
-    result.push_back("SERVER_SOFTWARE=webserv");
+    result.push_back("SERVER_SOFTWARE=teapot");
     result.push_back("REDIRECT_STATUS=200");
     result.push_back("SCRIPT_FILENAME=" + data.full_path);
 

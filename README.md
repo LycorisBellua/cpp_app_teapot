@@ -87,10 +87,10 @@ sessions.
 **Teapot** is a Linux-only project. Here is how to compile and run it:  
 
 ```
-git clone https://github.com/LycorisBellua/cpp_app_webserv.git
-cd cpp_app_webserv
+git clone https://github.com/LycorisBellua/cpp_app_teapot.git
+cd cpp_app_teapot
 make
-./webserv configs/default.conf
+./teapot configs/default.conf
 ```
 
 While the server is running, you can use a client to send requests. This can be 

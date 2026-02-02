@@ -1,8 +1,0 @@
-README (for the intra only, not GitHub):
-- Remove the first line `# Teapot`.
-- Modify the new first line (with our names) to be subject compliant:
-	The very first line must be italicized and read: This project has been 
-	created as part of the 42 curriculum by <login1>[, <login2>[, <login3>[...]]].
-- Change all mentions of "Teapot" into "Webserv".
-- Remove the detail blocks.
-- Modify the git clone link to be the vogsphere.
