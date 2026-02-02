@@ -14,7 +14,7 @@ It handles:
 - GET, HEAD, POST and DELETE methods.
 - Fixed-length request bodies.
 - Chunked request bodies.
-- CGI scripts (e.g.: Python, PHP, Perl...).
+- CGI scripts (e.g.: Python, PHP and Perl).
 - Cookies, with the simple example of giving each client session a unique 
 background color.
 

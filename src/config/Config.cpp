@@ -474,49 +474,17 @@ void Config::setCgi(const ParsingData& data) {
   servers.back().locations.back().cgi.insert(std::make_pair(cgi[1], cgi[2]));
 }
 
-/*void Config::setCgiExtension(const ParsingData& data) {
-  const std::vector<std::string> cgi_ext = data.tokens;
-  if (cgi_ext.size() != 2 || cgi_ext[1].empty() || cgi_ext[1] != ".py") {
-    throw ConfigError(data, "One CGI extension must be specified (.py)");
-  }
-  servers.back().locations.back().cgi_extension = cgi_ext[1];
-}
-
-void Config::setCgiInterpreter(const ParsingData& data) {
-  const std::vector<std::string>& cgi_int = data.tokens;
-  if (cgi_int.size() != 2 || cgi_int[1].empty()) {
-    throw ConfigError(data, "One CGI Interpreter must be specified");
-  }
-  if (!Filesystem::exists(cgi_int[1])) {
-    throw ConfigError(data, "Provided CGI Interpreter does not exist");
-  }
-  if (!Filesystem::isRegularFile(cgi_int[1])) {
-    throw ConfigError(data, "Provided CGI Interpreter is not a file");
-  }
-  if (!Filesystem::isExecutable(cgi_int[1])) {
-    throw ConfigError(data, "Provided CGI Interpreter is not executable");
-  }
-  servers.back().locations.back().cgi_interpreter = cgi_int[1];
-}*/
-
 void Config::setRedirect(const ParsingData& data) {
   const std::vector<std::string> redir = data.tokens;
-  if (redir.size() != 3 || redir[1].empty() || redir[2].empty() || redir[2][0] != '/') {
+  if (redir.size() != 3 || redir[1].empty() || redir[2].empty()) {
     throw ConfigError(data, "A valid response code and path must be specified");
   }
   if (redir[1] != "301" && redir[1] != "302") {
     throw ConfigError(data, "Invalid Response Code");
   }
-  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
+  std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.:/");
   if (redir[2].find_first_not_of(allowed) != redir[2].npos) {
     throw ConfigError(data, "Invalid characters in path");
-  }
-  size_t dot = redir[2].find_first_of('.');
-  if (dot != redir[2].npos) {
-    std::string extension = redir[2].substr(dot + 1);
-    if (extension.find_first_of('.') != extension.npos) {
-      throw ConfigError(". is only valid for a file extension");
-    }
   }
   servers.back().locations.back().redirect = std::make_pair(std::atoi(redir[1].c_str()), redir[2]);
 }
@@ -629,5 +597,6 @@ void Config::setDefaultMime() {
   mime_types[".zip"] = "application/zip";
   mime_types[".tar"] = "application/x-tar";
   mime_types[".gz"] = "application/gzip";
+  mime_types[".md"] = "text/markdown";
   Log::info("Using default mime types");
 }
