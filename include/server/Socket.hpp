@@ -10,6 +10,7 @@ class Socket
 		static int createListener(const std::string& ip, int port);
 		static bool acceptConnection(int fd_listen, int& fd_client,
 			sockaddr_in& addr);
+		static bool makeFdNonBlocking(int fd);
 		static std::string getStringIP(const sockaddr_in& addr);
 
 	private:

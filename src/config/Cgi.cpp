@@ -1,5 +1,6 @@
 #include "Cgi.hpp"
 #include "Server.hpp"
+#include "Socket.hpp"
 
 namespace {
   typedef std::vector<std::string>::iterator str_vec_it;
@@ -196,6 +197,8 @@ namespace {
     close(stdout_pipe[1]);
     data.cgi.fd_output = stdin_pipe[1];
     data.cgi.fd_input = stdout_pipe[0];
+	Socket::makeFdNonBlocking(data.cgi.fd_output);
+	Socket::makeFdNonBlocking(data.cgi.fd_input);
     Server::getInstance()->addFdToEventHandler(data.cgi.fd_output, false, true);
     Server::getInstance()->addFdToEventHandler(data.cgi.fd_input, true, false);
 	Server::getInstance()->addCgiProcess(data.cgi.pid, data.request.client_fd);
@@ -291,18 +294,21 @@ namespace Cgi {
     }
     data.cgi.pid = -1;
 	data.cgi.is_cgi = false;
-    if (res < 0) {
-      if (WIFEXITED(status)) {
-        int exit_code = WEXITSTATUS(status);
-         if (exit_code != 0) {
-           Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
-        }
-      } else if (WIFSIGNALED(status)) {
-        int signal = WTERMSIG(status);
-        Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
-      }
-      return new ResponseData(500, data.server.errors);
-    }
-    return new ResponseData(cgiOutput(data));
+	if (res > 0)
+	{
+		if (WIFEXITED(status))
+		{
+			int exit_code = WEXITSTATUS(status);
+			if (exit_code == 0)
+				return new ResponseData(cgiOutput(data));
+			Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
+		}
+      	else if (WIFSIGNALED(status))
+		{
+			int signal = WTERMSIG(status);
+			Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
+		}
+	}
+	return new ResponseData(500, data.server.errors);
   }
 }

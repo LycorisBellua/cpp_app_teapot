@@ -1,5 +1,3 @@
-- Serve the basic first website as well, on port 9999, and within the same 
-config file.
 - Test with ASAN (fsanitize), then comment it again in the makefile.
 
 Before locking the project:

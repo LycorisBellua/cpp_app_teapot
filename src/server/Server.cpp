@@ -7,7 +7,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <signal.h>
-#include <fcntl.h>
 #include <sys/epoll.h>
 
 Server* Server::singleton_ = NULL;
@@ -277,7 +276,12 @@ void Server::handleCgiCompletion()
 		{
 			int status;
 			pid_t res = waitpid(it->first, &status, WNOHANG);
-			if (res)
+			if (!res)
+			{
+				kill(it->first, SIGKILL);
+				++it;
+			}
+			else
 			{
 				std::map<pid_t, int>::iterator it_next = it;
 				++it_next;

@@ -29,11 +29,20 @@ bool Socket::acceptConnection(int fd_listen, int& fd_client, sockaddr_in& addr)
 		Log::error("Error: Socket: acceptConnection: accept");
 		return false;
 	}
-	else if (fcntl(fd_client, F_SETFL, O_NONBLOCK) < 0)
+	else if (!makeFdNonBlocking(fd_client))
 	{
 		close(fd_client);
 		fd_client = -1;
-		Log::error("Error: Socket: acceptConnection: fcntl");
+		return false;
+	}
+	return true;
+}
+
+bool Socket::makeFdNonBlocking(int fd)
+{
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) < 0)
+	{
+		Log::error("Error: Socket: makeFdNonBlocking");
 		return false;
 	}
 	return true;
