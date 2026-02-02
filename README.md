@@ -96,6 +96,11 @@ make
 While the server is running, you can use a client to send requests. This can be 
 another CLI window, or a browser.  
 
+We have two static websites. The first is on port 8080 and showcases the 
+project's features, and the second is on port 8082 and lists and redirects 
+users to the official documentation. In the following examples, replace 8080 
+with 8082 to check the second one.  
+
 Here are a few CLI examples to get the index page:
 - `curl -v --http1.1 -X GET http://localhost:8080/`
 - `printf "GET / HTTP/1.1\r\nHost: localhost:8080\r\n\r\n" | nc localhost 8080`
@@ -106,10 +111,11 @@ In the browser of your choice, type in any of these URLs:
 - `http://0.0.0.0:8080/`
 
 Besides the index, here are the relevant routes:
-- `/files`
-- `/upload`
-- `/delete`
-- `/cgi-bin`
+- \[8080\] `/files`
+- \[8080\] `/upload`
+- \[8080\] `/delete`
+- \[8080\] `/cgi-bin`
+- \[8082\] `/rfc`
 
 ## Resources
 
