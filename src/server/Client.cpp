@@ -101,7 +101,7 @@ void Client::updateLastActivity()
 
 void Client::resetParsingData()
 {
-	if (isCgiRunning())
+	if (route_info)
 	{
 		close(route_info->cgi.fd_input);
 		close(route_info->cgi.fd_output);

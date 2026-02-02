@@ -15,13 +15,14 @@ class Server
 
 		~Server();
 
+		bool run();
 		bool addFdToEventHandler(int fd, bool input, bool output);
 		void removeFdFromEventHandler(int fd);
 		void addCgiProcess(pid_t pid, int fd_client);
-		bool runEventLoop();
 
 	private:
 		static Server* singleton_;
+		static bool is_running_;
 		const Router router_;
 		int fd_epoll_;
 		std::map<int, Listener> listeners_;
@@ -32,8 +33,10 @@ class Server
 		Server();
 		Server(const std::string& config_path);
 
+		static void signalHandler(int signum);
 		bool addListener(const std::string& ip, int port);
 		void closeListeners();
+		bool runEventLoop();
 		CookieJar* findCookieJar(const std::string& ip);
 		bool addConnection(int fd_listen);
 		void closeConnection(int fd);

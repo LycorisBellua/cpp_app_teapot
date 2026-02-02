@@ -1,6 +1,7 @@
 #include "Cgi.hpp"
 
 #include "Server.hpp"
+#include "Socket.hpp"
 
 namespace {
   typedef std::vector<std::string>::iterator str_vec_it;
@@ -199,6 +200,8 @@ namespace {
     close(stdout_pipe[1]);
     data.cgi.fd_output = stdin_pipe[1];
     data.cgi.fd_input = stdout_pipe[0];
+	Socket::makeFdNonBlocking(data.cgi.fd_output);
+	Socket::makeFdNonBlocking(data.cgi.fd_input);
     Server::getInstance()->addFdToEventHandler(data.cgi.fd_output, false, true);
     Server::getInstance()->addFdToEventHandler(data.cgi.fd_input, true, false);
     Server::getInstance()->addCgiProcess(data.cgi.pid, data.request.client_fd);
@@ -270,7 +273,6 @@ namespace Cgi {
     Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_output);
     close(data.cgi.fd_output);
     data.cgi.fd_output = -1;
-    /**/ Log::error("END OF WRITE TO CGI");
   }
 
   void readFromCgi(RouteInfo& data) {
@@ -278,40 +280,37 @@ namespace Cgi {
     ssize_t bytes_read = read(data.cgi.fd_input, buffer, sizeof(buffer));
     if (bytes_read > 0) {
       data.cgi.output.append(buffer, bytes_read);
-      /**/ Log::error(data.cgi.output);
     }
     else {
       Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_input);
       close(data.cgi.fd_input);
       data.cgi.fd_input = -1;
-      /**/ Log::error("Close reading FD");
     }
-    /**/ Log::error("END OF READ FROM CGI");
   }
 
   ResponseData* reapCgiProcess(RouteInfo& data) {
     int status;
-    /**/ Log::error("BEFORE WAITPID");
     pid_t res = waitpid(data.cgi.pid, &status, WNOHANG);
-    /**/ Log::error("AFTER WAITPID");
     if (!res) {
       return NULL;  // Child is still running, try again later
     }
     data.cgi.pid = -1;
-    data.cgi.is_cgi = false;
-    if (res < 0) {
-      if (WIFEXITED(status)) {
-        int exit_code = WEXITSTATUS(status);
-        if (exit_code != 0) {
-          Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
-        }
-      }
-      else if (WIFSIGNALED(status)) {
-        int signal = WTERMSIG(status);
-        Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
-      }
-      return new ResponseData(500, data.server.errors);
-    }
-    return new ResponseData(cgiOutput(data));
+	data.cgi.is_cgi = false;
+	if (res > 0)
+	{
+		if (WIFEXITED(status))
+		{
+			int exit_code = WEXITSTATUS(status);
+			if (exit_code == 0)
+				return new ResponseData(cgiOutput(data));
+			Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
+		}
+      	else if (WIFSIGNALED(status))
+		{
+			int signal = WTERMSIG(status);
+			Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
+		}
+	}
+	return new ResponseData(500, data.server.errors);
   }
 }

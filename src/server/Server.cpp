@@ -4,18 +4,13 @@
 #include "Log.hpp"
 #include "Response.hpp"
 #include "Cgi.hpp"
+#include <iostream>
 #include <unistd.h>
-#include <fcntl.h>
+#include <signal.h>
 #include <sys/epoll.h>
-#include <unistd.h>
-
-#include "Config.hpp"
-#include "Log.hpp"
-#include "Response.hpp"
-#include "Server.hpp"
-#include "Socket.hpp"
 
 Server* Server::singleton_ = NULL;
+bool Server::is_running_ = false;
 
 /* Public (Static) ---------------------------------------------------------- */
 
@@ -35,25 +30,29 @@ Server* Server::getInstance(const std::string& config_path)
 
 /* Public (Instance) -------------------------------------------------------- */
 
-Server::Server(const std::string& config_path)
-	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
-{
-	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
-	std::set<std::pair<std::string, int> >::const_iterator it;
-	for (it = ip_ports.begin(); it != ip_ports.end(); ++it)
-	{
-		const std::string& ip = it->first;
-		int port = it->second;
-		if (addListener(ip, port) && jars_.find(ip) == jars_.end())
-			jars_.insert(std::make_pair(ip, CookieJar(ip)));
-	}
-}
-
 Server::~Server()
 {
 	closeIdleConnections(0);
 	close(fd_epoll_);
 	closeListeners();
+}
+
+bool Server::run()
+{
+	if (!singleton_)
+	{
+		Log::error("Error: Server: runEventLoop: singleton not set");
+		return false;
+	}
+	else if (listeners_.empty())
+	{
+		Log::error("Error: Server: runEventLoop: listener list is empty");
+		return false;
+	}
+	is_running_ = true;
+	bool success = runEventLoop();
+	std::cout << std::endl;
+	return success;
 }
 
 bool Server::addFdToEventHandler(int fd, bool input, bool output)
@@ -88,64 +87,30 @@ void Server::addCgiProcess(pid_t pid, int fd_client)
 	cgi_processes_.insert(std::make_pair(pid, fd_client));
 }
 
-bool Server::runEventLoop()
+/* Private (Static) --------------------------------------------------------- */
+
+void Server::signalHandler(int signum)
 {
-	if (!singleton_)
-	{
-		Log::error("Error: Server: runEventLoop: singleton not set");
-		return false;
-	}
-	else if (listeners_.empty())
-	{
-		Log::error("Error: Server: runEventLoop: listener list is empty");
-		return false;
-	}
-	const int max_events = 64;
-	const int epoll_timeout_ms = 1000;
-	const int idle_timeout_sec = 30;
-	epoll_event events[max_events];
-	while (1)
-	{
-		int n = epoll_wait(fd_epoll_, events, max_events, epoll_timeout_ms);
-		if (n < 0)
-		{
-			Log::error("Error: Server: runEventLoop: epoll_wait");
-			return false;
-		}
-		for (int i = 0; i < n; ++i)
-		{
-			int fd = events[i].data.fd;
-			bool can_read = events[i].events & EPOLLIN;
-			bool can_write = events[i].events & EPOLLOUT;
-			if (listeners_.find(fd) != listeners_.end())
-			{
-				if (!addConnection(fd))
-					return false;
-				continue;
-			}
-			std::map<int, Client>::iterator client = clients_.find(fd);
-			if (client == clients_.end())
-			{
-				handleCgiIO(fd);
-				continue;
-			}
-			Client& c = client->second;
-			if ((can_read || !c.isBufferEmpty()) && !c.isFullyParsed()
-				&& !c.parseRequest())
-			{
-				closeConnection(fd);
-				continue;
-			}
-			if (can_write && c.isFullyParsed() && !c.isCgiRunning())
-				sendResponse(fd, c);
-		}
-		closeIdleConnections(idle_timeout_sec);
-		handleCgiCompletion();
-	}
-	return true;
+	if (signum == SIGINT)
+		is_running_ = false;
 }
 
 /* Private (Instance) ------------------------------------------------------- */
+
+Server::Server(const std::string& config_path)
+	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
+{
+	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
+	std::set<std::pair<std::string, int> >::const_iterator it;
+	for (it = ip_ports.begin(); it != ip_ports.end(); ++it)
+	{
+		const std::string& ip = it->first;
+		int port = it->second;
+		if (addListener(ip, port) && jars_.find(ip) == jars_.end())
+			jars_.insert(std::make_pair(ip, CookieJar(ip)));
+	}
+	signal(SIGINT, &signalHandler);
+}
 
 bool Server::addListener(const std::string& ip, int port)
 {
@@ -186,6 +151,55 @@ void Server::closeListeners()
 		close(it->first);
 }
 
+bool Server::runEventLoop()
+{
+	const int max_events = 64;
+	const int epoll_timeout_ms = 1000;
+	const int idle_timeout_sec = 30;
+	epoll_event events[max_events];
+	while (is_running_)
+	{
+		int n = epoll_wait(fd_epoll_, events, max_events, epoll_timeout_ms);
+		if (n < 0)
+		{
+			if (!is_running_)
+				return true;
+			Log::error("Error: Server: runEventLoop: epoll_wait");
+			return false;
+		}
+		for (int i = 0; i < n; ++i)
+		{
+			int fd = events[i].data.fd;
+			bool can_read = events[i].events & EPOLLIN;
+			bool can_write = events[i].events & EPOLLOUT;
+			if (listeners_.find(fd) != listeners_.end())
+			{
+				if (!addConnection(fd))
+					return false;
+				continue;
+			}
+			std::map<int, Client>::iterator client = clients_.find(fd);
+			if (client == clients_.end())
+			{
+				handleCgiIO(fd);
+				continue;
+			}
+			Client& c = client->second;
+			if ((can_read || !c.isBufferEmpty()) && !c.isFullyParsed()
+				&& !c.parseRequest())
+			{
+				closeConnection(fd);
+				continue;
+			}
+			if (can_write && c.isFullyParsed() && !c.isCgiRunning())
+				sendResponse(fd, c);
+		}
+		closeIdleConnections(idle_timeout_sec);
+		handleCgiCompletion();
+	}
+	return true;
+}
+
 CookieJar* Server::findCookieJar(const std::string& ip)
 {
 	std::map<std::string, CookieJar>::iterator it = jars_.find(ip);
@@ -216,19 +230,21 @@ void Server::closeConnection(int fd)
 	clients_.erase(fd);
 }
 
-void Server::closeIdleConnections(int idle_timeout_sec) {
-  std::time_t now = std::time(0);
-  std::map<int, Client>::iterator it = clients_.begin();
-  while (it != clients_.end()) {
-    if (now - it->second.getLastActivity() < idle_timeout_sec) {
-      ++it;
-    }
-    else {
-      std::map<int, Client>::iterator to_erase = it;
-      ++it;
-      closeConnection(to_erase->first);
-    }
-  }
+void Server::closeIdleConnections(int idle_timeout_sec)
+{
+	std::time_t now = std::time(0);
+	std::map<int, Client>::iterator it = clients_.begin();
+	while (it != clients_.end())
+	{
+		if (now - it->second.getLastActivity() < idle_timeout_sec)
+			++it;
+		else
+		{
+			std::map<int, Client>::iterator to_erase = it;
+			++it;
+			closeConnection(to_erase->first);
+		}
+	}
 }
 
 void Server::handleCgiIO(int fd)
@@ -262,7 +278,12 @@ void Server::handleCgiCompletion()
 		{
 			int status;
 			pid_t res = waitpid(it->first, &status, WNOHANG);
-			if (res)
+			if (!res)
+			{
+				kill(it->first, SIGKILL);
+				++it;
+			}
+			else
 			{
 				std::map<pid_t, int>::iterator it_next = it;
 				++it_next;
