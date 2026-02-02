@@ -1,4 +1,5 @@
 #include "Cgi.hpp"
+
 #include "Server.hpp"
 
 namespace {
@@ -19,7 +20,8 @@ namespace {
 
   bool setStatus(const std::pair<std::string, std::string>& status_header, ResponseData& response) {
     std::vector<std::string> tokens = Helper::splitAtWhitespace(status_header.second);
-    if (tokens.empty() || tokens[0].size() != 3 || tokens[0].find_first_not_of("1234567890") != std::string::npos) {
+    if (tokens.empty() || tokens[0].size() != 3 ||
+        tokens[0].find_first_not_of("1234567890") != std::string::npos) {
       Log::error("[CGI] Invalid status header" + status_header.first + " " + status_header.second);
       return false;
     }
@@ -155,7 +157,8 @@ namespace {
     return response;
   }
 
-  ResponseData* runScript(RouteInfo& data, const std::vector<char*>& envPointers, const std::vector<char*>& args) {
+  ResponseData* runScript(RouteInfo& data, const std::vector<char*>& envPointers,
+                          const std::vector<char*>& args) {
     int stdin_pipe[2];
     int stdout_pipe[2];
 
@@ -198,7 +201,7 @@ namespace {
     data.cgi.fd_input = stdout_pipe[0];
     Server::getInstance()->addFdToEventHandler(data.cgi.fd_output, false, true);
     Server::getInstance()->addFdToEventHandler(data.cgi.fd_input, true, false);
-	Server::getInstance()->addCgiProcess(data.cgi.pid, data.request.client_fd);
+    Server::getInstance()->addCgiProcess(data.cgi.pid, data.request.client_fd);
     return NULL;
   }
 
@@ -215,7 +218,8 @@ namespace {
     std::vector<std::string> result;
     if (data.request.method == "POST") {
       result.push_back("CONTENT_LENGTH=" + Helper::nbrToString(data.request.body.size()));
-      std::string c_type = (data.request.content_type.empty()) ? "application/octet-stream" : data.request.content_type;
+      std::string c_type = (data.request.content_type.empty()) ? "application/octet-stream"
+                                                               : data.request.content_type;
       result.push_back("CONTENT_TYPE=" + c_type);
     }
     result.push_back("GATEWAY_INTERFACE=CGI/1.1");
@@ -247,12 +251,11 @@ namespace {
   }
 }
 
-
 namespace Cgi {
   ResponseData* handle(RouteInfo& data) {
     if (!Filesystem::exists(data.full_path)) {
       Log::error("[CGI] Requested Script does not exist: " + data.full_path);
-	  return new ResponseData(404, data.server.errors);
+      return new ResponseData(404, data.server.errors);
     }
     std::vector<std::string> envStrings = getEnvStrings(data);
     std::vector<char*> envPointers = getEnvPointers(envStrings);
@@ -260,44 +263,50 @@ namespace Cgi {
     return runScript(data, envPointers, args);
   }
 
-  void writeToCgi(RouteInfo& data)
-  {
+  void writeToCgi(RouteInfo& data) {
     if (data.request.method == "POST" && !data.request.body.empty()) {
       write(data.cgi.fd_output, data.request.body.c_str(), data.request.body.size());
     }
     Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_output);
     close(data.cgi.fd_output);
     data.cgi.fd_output = -1;
+    /**/ Log::error("END OF WRITE TO CGI");
   }
 
-	void readFromCgi(RouteInfo& data)
-	{
-		char buffer[4096];
-		ssize_t bytes_read = read(data.cgi.fd_input, buffer, sizeof(buffer));
-		if (bytes_read > 0) {
-			data.cgi.output.append(buffer, bytes_read);
-		} else {
-			Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_input);
-			close(data.cgi.fd_input);
-			data.cgi.fd_input = -1;
-		}
-	}
+  void readFromCgi(RouteInfo& data) {
+    char buffer[4096];
+    ssize_t bytes_read = read(data.cgi.fd_input, buffer, sizeof(buffer));
+    if (bytes_read > 0) {
+      data.cgi.output.append(buffer, bytes_read);
+      /**/ Log::error(data.cgi.output);
+    }
+    else {
+      Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_input);
+      close(data.cgi.fd_input);
+      data.cgi.fd_input = -1;
+      /**/ Log::error("Close reading FD");
+    }
+    /**/ Log::error("END OF READ FROM CGI");
+  }
 
   ResponseData* reapCgiProcess(RouteInfo& data) {
     int status;
+    /**/ Log::error("BEFORE WAITPID");
     pid_t res = waitpid(data.cgi.pid, &status, WNOHANG);
+    /**/ Log::error("AFTER WAITPID");
     if (!res) {
-      return NULL; // Child is still running, try again later
+      return NULL;  // Child is still running, try again later
     }
     data.cgi.pid = -1;
-	data.cgi.is_cgi = false;
+    data.cgi.is_cgi = false;
     if (res < 0) {
       if (WIFEXITED(status)) {
         int exit_code = WEXITSTATUS(status);
-         if (exit_code != 0) {
-           Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
+        if (exit_code != 0) {
+          Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
         }
-      } else if (WIFSIGNALED(status)) {
+      }
+      else if (WIFSIGNALED(status)) {
         int signal = WTERMSIG(status);
         Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
       }

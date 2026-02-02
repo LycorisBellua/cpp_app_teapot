@@ -117,7 +117,7 @@ std::string Response::getHeaderLine(const std::string& key, const std::string& v
   if (key.empty() || value.empty()) {
     return "";
   }
-  return key + ": " + valuPagee + getCRLF();
+  return key + ": " + value + getCRLF();
 }
 
 std::string Response::getCRLF() {
