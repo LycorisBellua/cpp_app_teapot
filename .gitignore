@@ -10,7 +10,7 @@ a.out
 teapot
 build
 
-# System/LSP Files
+# System/LSP files
 **/.direnv
 **/.envrc
 **/compile_commands.json
