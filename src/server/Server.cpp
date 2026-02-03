@@ -178,21 +178,21 @@ bool Server::runEventLoop()
 					return false;
 				continue;
 			}
-			std::map<int, Client>::iterator client = clients_.find(fd);
-			if (client == clients_.end())
+			std::map<int, Client>::iterator it_client = clients_.find(fd);
+			if (it_client == clients_.end())
 			{
 				handleCgiIO(fd);
 				continue;
 			}
-			Client& c = client->second;
+			Client& c = it_client->second;
 			if ((can_read || !c.isBufferEmpty()) && !c.isFullyParsed()
 				&& !c.parseRequest())
 			{
-				closeConnection(fd);
+				closeConnection(it_client);
 				continue;
 			}
 			if (can_write && c.isFullyParsed() && !c.isCgiRunning())
-				sendResponse(fd, c);
+				sendResponse(it_client);
 		}
 		closeIdleConnections(idle_timeout_sec);
 		handleCgiCompletion();
@@ -223,11 +223,23 @@ bool Server::addConnection(int fd_listen)
 	return true;
 }
 
-void Server::closeConnection(int fd)
+void Server::closeConnection(const std::map<int, Client>::iterator& it)
 {
+	int fd = it->first;
+	Client& c = it->second;
 	close(fd);
 	removeFdFromEventHandler(fd);
-	clients_.erase(fd);
+	if (c.isCgiRunning())
+	{
+		std::map<pid_t, int>::iterator it_cgi =
+			cgi_processes_.find(c.route_info->cgi.pid);
+		if (it_cgi != cgi_processes_.end())
+		{
+			it_cgi->second = -1;
+			kill(it_cgi->first, SIGKILL);
+		}
+	}
+	clients_.erase(it);
 }
 
 void Server::closeIdleConnections(int idle_timeout_sec)
@@ -242,7 +254,7 @@ void Server::closeIdleConnections(int idle_timeout_sec)
 		{
 			std::map<int, Client>::iterator to_erase = it;
 			++it;
-			closeConnection(to_erase->first);
+			closeConnection(to_erase);
 		}
 	}
 }
@@ -279,10 +291,7 @@ void Server::handleCgiCompletion()
 			int status;
 			pid_t res = waitpid(it->first, &status, WNOHANG);
 			if (!res)
-			{
-				kill(it->first, SIGKILL);
 				++it;
-			}
 			else
 			{
 				std::map<pid_t, int>::iterator it_next = it;
@@ -306,15 +315,17 @@ void Server::handleCgiCompletion()
 	}
 }
 
-void Server::sendResponse(int fd, Client& c)
+void Server::sendResponse(const std::map<int, Client>::iterator& it)
 {
+	int fd = it->first;
+	Client& c = it->second;
 	CookieJar* jar = findCookieJar(c.getDomain());
 	std::string res = Response::compose(router_, jar, c);
 	if (c.isCgiRunning())
 		return;
 	ssize_t len = write(fd, res.c_str(), res.length());
 	if (len < 0 || (size_t)len != res.length() || c.shouldCloseConnection())
-		closeConnection(fd);
+		closeConnection(it);
 	else
 	{
 		c.resetParsingData();

@@ -39,11 +39,11 @@ class Server
 		bool runEventLoop();
 		CookieJar* findCookieJar(const std::string& ip);
 		bool addConnection(int fd_listen);
-		void closeConnection(int fd);
+		void closeConnection(const std::map<int, Client>::iterator& it);
 		void closeIdleConnections(int idle_timeout_sec);
 		void handleCgiIO(int fd);
 		void handleCgiCompletion();
-		void sendResponse(int fd, Client& c);
+		void sendResponse(const std::map<int, Client>::iterator& it);
 };
 
 #endif
