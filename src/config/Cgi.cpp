@@ -252,6 +252,17 @@ namespace {
     result.push_back(NULL);
     return result;
   }
+
+  void onIoError(RouteInfo& data)
+  {
+    Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_output);
+    close(data.cgi.fd_output);
+    data.cgi.fd_output = -1;
+    Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_input);
+    close(data.cgi.fd_input);
+    data.cgi.fd_input = -1;
+    kill(data.cgi.pid, SIGKILL);
+  }
 }
 
 namespace Cgi {
@@ -268,7 +279,11 @@ namespace Cgi {
 
   void writeToCgi(RouteInfo& data) {
     if (data.request.method == "POST" && !data.request.body.empty()) {
-      write(data.cgi.fd_output, data.request.body.c_str(), data.request.body.size());
+      ssize_t len = write(data.cgi.fd_output, data.request.body.c_str(), data.request.body.size());
+      if (len < 0 || (size_t)len != data.request.body.size()) {
+        onIoError(data);
+        return;
+      }
     }
     Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_output);
     close(data.cgi.fd_output);
@@ -280,11 +295,12 @@ namespace Cgi {
     ssize_t bytes_read = read(data.cgi.fd_input, buffer, sizeof(buffer));
     if (bytes_read > 0) {
       data.cgi.output.append(buffer, bytes_read);
-    }
-    else {
+    } else if (!bytes_read) {
       Server::getInstance()->removeFdFromEventHandler(data.cgi.fd_input);
       close(data.cgi.fd_input);
       data.cgi.fd_input = -1;
+    } else {
+      onIoError(data);
     }
   }
 

@@ -312,8 +312,8 @@ void Server::sendResponse(int fd, Client& c)
 	std::string res = Response::compose(router_, jar, c);
 	if (c.isCgiRunning())
 		return;
-	write(fd, res.c_str(), res.length());
-	if (c.shouldCloseConnection())
+	ssize_t len = write(fd, res.c_str(), res.length());
+	if (len < 0 || (size_t)len != res.length() || c.shouldCloseConnection())
 		closeConnection(fd);
 	else
 	{

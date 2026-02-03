@@ -71,6 +71,9 @@ namespace Filesystem {
     std::string content(end, '\0');
     file.read(&content[0], end);
     file.close();
+	if (!file.good()) {
+		return std::make_pair(false, "");
+	}
     return std::make_pair(true, content);
   }
 
