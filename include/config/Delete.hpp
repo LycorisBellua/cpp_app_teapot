@@ -1,16 +1,14 @@
 #pragma once
 
-#include <errno.h>  // IWYU pragma: keep
+#include <errno.h>
 #include <unistd.h>
 
-#include "Errors_ReturnMsgs.hpp"  // IWYU pragma: keep
-#include "Filesystem.hpp"         // IWYU pragma: keep
-#include "Log.hpp"                // IWYU pragma: keep
+#include "Errors_ReturnMsgs.hpp"
+#include "Filesystem.hpp"
+#include "Log.hpp"
 #include "RequestData.hpp"
 #include "RouteInfo.hpp"
 
 namespace Delete {
-
   ResponseData handle(const RouteInfo&);
-
 }

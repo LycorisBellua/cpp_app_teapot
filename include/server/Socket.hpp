@@ -1,5 +1,4 @@
-#ifndef SOCKET_HPP
-#define SOCKET_HPP
+#pragma once
 
 #include <string>
 #include <netinet/in.h>
@@ -22,5 +21,3 @@ class Socket
 		static bool resolveIPv4(const std::string& ip, sockaddr_in& out);
 		static bool listenForClients(int fd_listen);
 };
-
-#endif

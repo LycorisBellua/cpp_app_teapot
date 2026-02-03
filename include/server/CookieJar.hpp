@@ -1,5 +1,4 @@
-#ifndef COOKIE_JAR_HPP
-#define COOKIE_JAR_HPP
+#pragma once
 
 #include "Cookie.hpp"
 #include "Client.hpp"
@@ -28,5 +27,3 @@ class CookieJar
 		const std::string ip_;
 		std::vector<Cookie> cookies_;
 };
-
-#endif

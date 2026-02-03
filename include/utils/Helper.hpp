@@ -1,5 +1,4 @@
-#ifndef HELPER_HPP
-#define HELPER_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -77,5 +76,3 @@ std::string Helper::nbrToString(T nbr)
 		return "";
 	return oss.str();
 }
-
-#endif

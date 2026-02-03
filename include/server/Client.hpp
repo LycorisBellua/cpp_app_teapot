@@ -1,5 +1,4 @@
-#ifndef CLIENT_HPP
-#define CLIENT_HPP
+#pragma once
 
 #include "Request.hpp"
 #include "RouteInfo.hpp"
@@ -59,5 +58,3 @@ class Client
 		void parseBody();
 		bool parseChunkedBody();
 };
-
-#endif

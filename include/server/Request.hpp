@@ -1,5 +1,4 @@
-#ifndef REQUEST_HPP
-#define REQUEST_HPP
+#pragma once
 
 #include <string>
 #include <vector>
@@ -80,5 +79,3 @@ struct Request
 			const std::string& scheme);
 		static bool isValidDomain(const std::string& domain);
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef COOKIE_HPP
-#define COOKIE_HPP
+#pragma once
 
 #include <string>
 #include <ctime>
@@ -32,5 +31,3 @@ class Cookie
 		bool has_expiration_date_;
 		std::time_t expiration_date_;
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef HEX_COLOR_CODE_HPP
-#define HEX_COLOR_CODE_HPP
+#pragma once
 
 #include <string>
 
@@ -19,5 +18,3 @@ class HexColorCode
 		static size_t insertStyleAttributeIfMissing(std::string& html,
 			size_t body_tag);
 };
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef RESPONSE_HPP
-#define RESPONSE_HPP
+#pragma once
 
 #include "Router.hpp"
 #include "CookieJar.hpp"
@@ -24,5 +23,3 @@ class Response
 			const std::string& value);
 		static std::string getCRLF();
 };
-
-#endif

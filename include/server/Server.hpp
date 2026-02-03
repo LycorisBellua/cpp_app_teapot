@@ -1,5 +1,4 @@
-#ifndef SERVER_HPP
-#define SERVER_HPP
+#pragma once
 
 #include "Listener.hpp"
 #include "Client.hpp"
@@ -45,5 +44,3 @@ class Server
 		void handleCgiCompletion();
 		void sendResponse(const std::map<int, Client>::iterator& it);
 };
-
-#endif

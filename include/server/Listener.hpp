@@ -1,5 +1,4 @@
-#ifndef LISTENER_HPP
-#define LISTENER_HPP
+#pragma once
 
 #include <string>
 
@@ -18,5 +17,3 @@ class Listener
 		const std::string ip_;
 		const int port_;
 };
-
-#endif

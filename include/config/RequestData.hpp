@@ -17,7 +17,6 @@ struct ResponseData {
   ResponseData(const int error_code, const std::map<int, std::string>& user_errors);
   ResponseData(const int return_code, const std::string& content, const std::string& content_type);
   ~ResponseData();
-
 };
 
 struct RequestData {
