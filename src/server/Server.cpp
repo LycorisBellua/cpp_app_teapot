@@ -1,13 +1,14 @@
-#include "Server.hpp"
-#include "Config.hpp"
-#include "Socket.hpp"
-#include "Log.hpp"
-#include "Response.hpp"
-#include "Cgi.hpp"
-#include <iostream>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/epoll.h>
+#include <sys/wait.h>
+#include <iostream>
+#include "Server.hpp"
+#include "Config.hpp"
+#include "Socket.hpp"
+#include "Response.hpp"
+#include "Cgi.hpp"
+#include "Log.hpp"
 
 Server* Server::singleton_ = NULL;
 bool Server::is_running_ = false;

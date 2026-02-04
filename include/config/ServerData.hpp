@@ -1,37 +1,21 @@
 #pragma once
 
-#include <cstdlib>
-#include <map>
 #include <string>
-#include <utility>
 #include <vector>
+#include <map>
+#include "LocationData.hpp"
 
-struct LocationData {
-  std::string path;
-  std::vector<std::string> allowed_methods;
-  std::string root;
-  std::string index;
-  bool autoindex;
-  std::string upload_path;
-  std::map<std::string, std::string> cgi;
-  std::pair<int, std::string> redirect;
+struct ServerData
+{
+	int port;
+	std::string host;
+	std::string name;
+	size_t client_body_max;
+	std::map<int, std::string> errors;
+	std::vector<LocationData> locations;
 
-  LocationData();
-  LocationData(const LocationData&);
-  ~LocationData();
-  LocationData& operator=(const LocationData&);
-};
-
-struct ServerData {
-  int port;
-  std::string host;
-  std::string name;
-  size_t client_body_max;
-  std::map<int, std::string> errors;
-  std::vector<LocationData> locations;
-
-  ServerData();
-  ServerData(const ServerData&);
-  ~ServerData();
-  ServerData& operator=(const ServerData&);
+	ServerData();
+	ServerData(const ServerData& src);
+	~ServerData();
+	ServerData& operator=(const ServerData& src);
 };

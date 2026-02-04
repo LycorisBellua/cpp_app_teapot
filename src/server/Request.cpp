@@ -1,6 +1,6 @@
+#include <algorithm>
 #include "Request.hpp"
 #include "Helper.hpp"
-#include <algorithm>
 
 /* Public (Instance) -------------------------------------------------------- */
 

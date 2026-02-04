@@ -1,6 +1,6 @@
+#include <algorithm>
 #include "CookieJar.hpp"
 #include "HexColorCode.hpp"
-#include <algorithm>
 
 /* Public (Instance) -------------------------------------------------------- */
 

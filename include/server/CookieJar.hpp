@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Cookie.hpp"
-#include "Client.hpp"
 #include <string>
 #include <vector>
+#include "Cookie.hpp"
+#include "Client.hpp"
 
 class CookieJar
 {

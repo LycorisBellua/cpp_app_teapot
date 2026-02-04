@@ -1,11 +1,12 @@
 #pragma once
 
+#include <ctime>
+#include <string>
+#include <vector>
 #include "Request.hpp"
 #include "RouteInfo.hpp"
 #include "RequestData.hpp"
-#include <string>
-#include <vector>
-#include <ctime>
+#include "ResponseData.hpp"
 
 class Client
 {

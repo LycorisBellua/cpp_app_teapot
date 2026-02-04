@@ -4,18 +4,21 @@
     <meta charset="UTF-8">
     <title>CGI Test</title>
     <style>
-        body {
+        body
+        {
             font-family: system-ui, -apple-system, sans-serif;
             max-width: 800px;
             margin: 50px auto;
             padding: 20px;
         }
 
-        h1 {
+        h1
+        {
             margin-bottom: 30px;
         }
 
-        .form-section {
+        .form-section
+        {
             border: 2px solid #ccc;
             border-radius: 8px;
             padding: 30px;
@@ -23,11 +26,13 @@
             margin-bottom: 20px;
         }
 
-        .form-group {
+        .form-group
+        {
             margin-bottom: 20px;
         }
 
-        label {
+        label
+        {
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
@@ -35,7 +40,8 @@
 
         input[type="text"],
         textarea,
-        select {
+        select
+        {
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
@@ -45,26 +51,31 @@
             font-family: monospace;
         }
 
-        textarea {
+        textarea
+        {
             resize: vertical;
             min-height: 100px;
         }
 
-        .query-params {
+        .query-params
+        {
             margin-top: 10px;
         }
 
-        .param-row {
+        .param-row
+        {
             display: flex;
             gap: 10px;
             margin-bottom: 10px;
         }
 
-        .param-row input {
+        .param-row input
+        {
             flex: 1;
         }
 
-        .param-row button {
+        .param-row button
+        {
             background: #dc3545;
             color: white;
             border: none;
@@ -73,11 +84,13 @@
             cursor: pointer;
         }
 
-        .param-row button:hover {
+        .param-row button:hover
+        {
             background: #c82333;
         }
 
-        .add-param-btn {
+        .add-param-btn
+        {
             background: #28a745;
             color: white;
             border: none;
@@ -87,23 +100,27 @@
             font-size: 14px;
         }
 
-        .add-param-btn:hover {
+        .add-param-btn:hover
+        {
             background: #218838;
         }
 
-        .method-group {
+        .method-group
+        {
             display: flex;
             gap: 20px;
         }
 
-        .method-group label {
+        .method-group label
+        {
             display: flex;
             align-items: center;
             gap: 8px;
             font-weight: normal;
         }
 
-        button[type="submit"] {
+        button[type="submit"]
+        {
             background: #0066cc;
             color: white;
             border: none;
@@ -114,11 +131,13 @@
             width: 100%;
         }
 
-        button[type="submit"]:hover {
+        button[type="submit"]:hover
+        {
             background: #0052a3;
         }
 
-        .response-section {
+        .response-section
+        {
             border: 2px solid #ccc;
             border-radius: 8px;
             padding: 30px;
@@ -126,12 +145,14 @@
             display: none;
         }
 
-        .response-section.show {
+        .response-section.show
+        {
             display: block;
         }
 
         .response-headers,
-        .response-body {
+        .response-body
+        {
             background: #fff;
             padding: 15px;
             border-radius: 4px;
@@ -141,21 +162,25 @@
             word-break: break-all;
         }
 
-        .response-status {
+        .response-status
+        {
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
         }
 
-        .response-status.success {
+        .response-status.success
+        {
             color: #28a745;
         }
 
-        .response-status.error {
+        .response-status.error
+        {
             color: #dc3545;
         }
 
-        h3 {
+        h3
+        {
             margin-top: 20px;
             margin-bottom: 10px;
         }
@@ -232,7 +257,8 @@
 </div>
 
 <script>
-    function addParam() {
+    function addParam()
+    {
         const container = document.getElementById('queryParams');
         const row = document.createElement('div');
         row.className = 'param-row';
@@ -244,27 +270,30 @@
         container.appendChild(row);
     }
 
-    function removeParam(button) {
+    function removeParam(button)
+    {
         button.parentElement.remove();
     }
 
-    function buildQueryString() {
+    function buildQueryString()
+    {
         const params = new URLSearchParams();
         const rows = document.querySelectorAll('.param-row');
 
-        rows.forEach(row => {
+        rows.forEach(row =>
+        {
             const key = row.querySelector('.param-key').value.trim();
             const value = row.querySelector('.param-value').value.trim();
-            if (key) {
+            if (key)
                 params.append(key, value);
-            }
         });
 
         const queryString = params.toString();
         return queryString ? '?' + queryString : '';
     }
 
-    document.getElementById('cgiForm').addEventListener('submit', async (e) => {
+    document.getElementById('cgiForm').addEventListener('submit', async (e) =>
+    {
         e.preventDefault();
 
         const scriptName = document.getElementById('scriptPath').value.trim();
@@ -277,10 +306,12 @@
         const url = scriptPath + queryString;
 
         // Normal mode: just navigate or submit
-        if (displayMode === 'normal') {
-            if (method === 'GET') {
+        if (displayMode === 'normal')
+        {
+            if (method === 'GET')
                 window.location.href = url;
-            } else if (method === 'POST') {
+            else if (method === 'POST')
+            {
                 // Create and submit a form
                 const form = document.createElement('form');
                 form.method = 'POST';
@@ -304,15 +335,19 @@
         const responseHeaders = document.getElementById('responseHeaders');
         const responseBody = document.getElementById('responseBody');
 
-        try {
-            const options = {
+        try
+        {
+            const options =
+            {
                 method: method,
                 redirect: 'manual'
             };
 
-            if (method === 'POST' && body) {
+            if (method === 'POST' && body)
+            {
                 options.body = body;
-                options.headers = {
+                options.headers =
+                {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 };
             }
@@ -323,7 +358,8 @@
             responseSection.classList.add('show');
 
             // Handle opaque redirects (browser hides details for security)
-            if (response.type === 'opaqueredirect') {
+            if (response.type === 'opaqueredirect')
+            {
                 responseStatus.textContent = '3xx Redirect (exact code hidden by browser)';
                 responseStatus.className = 'response-status';
                 responseHeaders.textContent = '(Browser security policy hides redirect headers)\n\nNote: Switch to "Normal" mode to follow the redirect and see the final destination.';
@@ -339,7 +375,8 @@
 
             // Headers
             let headersText = '';
-            response.headers.forEach((value, key) => {
+            response.headers.forEach((value, key) =>
+            {
                 headersText += `${key}: ${value}\n`;
             });
             responseHeaders.textContent = headersText || 'No headers';
@@ -350,7 +387,9 @@
             // Scroll to response
             responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-        } catch (error) {
+        }
+        catch (error)
+        {
             responseSection.classList.add('show');
             responseStatus.textContent = 'Request Failed';
             responseStatus.className = 'response-status error';

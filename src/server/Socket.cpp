@@ -1,9 +1,9 @@
-#include "Socket.hpp"
-#include "Log.hpp"
-#include <sstream>
+#include <unistd.h>
 #include <fcntl.h>
 #include <netdb.h>
-#include <unistd.h>
+#include <sstream>
+#include "Socket.hpp"
+#include "Log.hpp"
 
 /* Public (Static) ---------------------------------------------------------- */
 
@@ -76,11 +76,8 @@ bool Socket::createSocket(int& fd_listen)
 		Log::error("Error: Socket: createSocket: socket");
 		return false;
 	}
-	else if (fcntl(fd_listen, F_SETFL, O_NONBLOCK) < 0)
-	{
-		Log::error("Error: Socket: createSocket: fcntl");
+	else if (!makeFdNonBlocking(fd_listen))
 		return false;
-	}
 	return true;
 }
 

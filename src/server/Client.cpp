@@ -1,7 +1,7 @@
+#include <unistd.h>
 #include "Client.hpp"
 #include "HexColorCode.hpp"
 #include "Helper.hpp"
-#include <unistd.h>
 
 /* Public (Instance) -------------------------------------------------------- */
 

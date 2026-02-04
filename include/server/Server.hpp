@@ -1,10 +1,10 @@
 #pragma once
 
+#include <map>
+#include "Router.hpp"
 #include "Listener.hpp"
 #include "Client.hpp"
-#include "Router.hpp"
 #include "CookieJar.hpp"
-#include <map>
 
 class Server
 {

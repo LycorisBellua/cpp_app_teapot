@@ -1,6 +1,10 @@
 #include "Response.hpp"
-#include "Helper.hpp"
 #include "HexColorCode.hpp"
+#include "Helper.hpp"
+#include "Cgi.hpp"
+#include "Get.hpp"
+#include "Post.hpp"
+#include "Delete.hpp"
 
 /* Public (Static) ---------------------------------------------------------- */
 
