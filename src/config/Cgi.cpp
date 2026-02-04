@@ -12,14 +12,16 @@
 namespace
 {
 	void removeCodeAndContentTypeHeaders(ResponseData& response);
-	bool setStatus(const std::pair<std::string, std::string>& status_header, ResponseData& response);
+	bool setStatus(const std::pair<std::string, std::string>& status_header,
+		ResponseData& response);
 	bool validateCgiHeaders(ResponseData& response);
 	std::string getSplitMarker(const std::string& output);
 	std::string splitBody(const std::string& output);
-	std::set<std::pair<std::string, std::string> > splitHeaders(const std::string& output);
+	std::set< std::pair<std::string, std::string> > splitHeaders(
+		const std::string& output);
 	ResponseData cgiOutput(const RouteInfo& data);
-	ResponseData* runScript(RouteInfo& data, const std::vector<char*>& envPointers,
-			const std::vector<char*>& args);
+	ResponseData* runScript(RouteInfo& data,
+		const std::vector<char*>& envPointers, const std::vector<char*>& args);
 	std::vector<char*> getEnvPointers(std::vector<std::string>& envStrings);
 	std::vector<std::string> getEnvStrings(const RouteInfo& data);
 	std::vector<char*> getArgs(const RouteInfo& data);
@@ -32,7 +34,8 @@ namespace Cgi
 	{
 		if (!Filesystem::exists(data.full_path))
 		{
-			Log::error("[CGI] Requested Script does not exist: " + data.full_path);
+			Log::error("[CGI] Requested Script does not exist: "
+				+ data.full_path);
 			return new ResponseData(404, data.server.errors);
 		}
 		std::vector<std::string> envStrings = getEnvStrings(data);
@@ -45,7 +48,8 @@ namespace Cgi
 	{
 		if (data.request.method == "POST" && !data.request.body.empty())
 		{
-			ssize_t len = write(data.cgi.fd_output, data.request.body.c_str(), data.request.body.size());
+			ssize_t len = write(data.cgi.fd_output, data.request.body.c_str(),
+				data.request.body.size());
 			if (len < 0 || (size_t)len != data.request.body.size())
 			{
 				onIoError(data);
@@ -88,12 +92,14 @@ namespace Cgi
 				int exit_code = WEXITSTATUS(status);
 				if (exit_code == 0)
 					return new ResponseData(cgiOutput(data));
-				Log::error("[CGI] Script exited with code: " + Helper::nbrToString(exit_code));
+				Log::error("[CGI] Script exited with code: "
+					+ Helper::nbrToString(exit_code));
 			}
 			else if (WIFSIGNALED(status))
 			{
 				int signal = WTERMSIG(status);
-				Log::error("[CGI] Script killed by signal: " + Helper::nbrToString(signal));
+				Log::error("[CGI] Script killed by signal: "
+					+ Helper::nbrToString(signal));
 			}
 		}
 		return new ResponseData(500, data.server.errors);
@@ -103,12 +109,12 @@ namespace Cgi
 namespace
 {
 	typedef std::vector<std::string>::iterator str_vec_it;
-	typedef std::set<std::pair<std::string, std::string> >::iterator header_it;
+	typedef std::set< std::pair<std::string, std::string> >::iterator header_it;
 
 	void removeCodeAndContentTypeHeaders(ResponseData& response)
 	{
-		for (std::set<std::pair<std::string, std::string> >::iterator it = response.headers.begin();
-				it != response.headers.end();)
+		std::set< std::pair<std::string, std::string> >::iterator it;
+		for (it = response.headers.begin(); it != response.headers.end();)
 		{
 			if (it->first == "Status" || it->first == "Content-Type")
 				response.headers.erase(it++);
@@ -117,13 +123,16 @@ namespace
 		}
 	}
 
-	bool setStatus(const std::pair<std::string, std::string>& status_header, ResponseData& response)
+	bool setStatus(const std::pair<std::string, std::string>& status_header,
+		ResponseData& response)
 	{
-		std::vector<std::string> tokens = Helper::splitAtWhitespace(status_header.second);
+		std::vector<std::string> tokens =
+			Helper::splitAtWhitespace(status_header.second);
 		if (tokens.empty() || tokens[0].size() != 3 ||
-				tokens[0].find_first_not_of("1234567890") != std::string::npos)
+			tokens[0].find_first_not_of("1234567890") != std::string::npos)
 		{
-			Log::error("[CGI] Invalid status header" + status_header.first + " " + status_header.second);
+			Log::error("[CGI] Invalid status header" + status_header.first
+				+ " " + status_header.second);
 			return false;
 		}
 		response.code = std::atoi(tokens[0].c_str());
@@ -142,7 +151,8 @@ namespace
 		bool hasContentType = false;
 		bool hasLocation = false;
 
-		for (header_it it = response.headers.begin(); it != response.headers.end(); ++it)
+		header_it it;
+		for (it = response.headers.begin(); it != response.headers.end(); ++it)
 		{
 			if (Helper::insensitiveCmp(it->first, "Status"))
 			{
@@ -163,13 +173,15 @@ namespace
 
 		if (!hasStatus && !hasContentType && !hasLocation)
 		{
-			Log::error("[CGI] Missing required headers (need Status or Content-Type)");
+			Log::error("[CGI] Missing required headers (need Status or "
+				"Content-Type)");
 			return false;
 		}
 
 		if (!response.content.empty() && !hasContentType)
 		{
-			Log::error("[CGI] Missing required headers (need Content-Type when body is returned)");
+			Log::error("[CGI] Missing required headers (need Content-Type when "
+				"body is returned)");
 			return false;
 		}
 
@@ -209,9 +221,10 @@ namespace
 		return output.substr(split_pos + split_marker.length());
 	}
 
-	std::set<std::pair<std::string, std::string> > splitHeaders(const std::string& output)
+	std::set< std::pair<std::string, std::string> > splitHeaders(
+		const std::string& output)
 	{
-		std::set<std::pair<std::string, std::string> > result;
+		std::set< std::pair<std::string, std::string> > result;
 
 		size_t split_pos = output.find(getSplitMarker(output));
 		if (split_pos == std::string::npos)
@@ -233,16 +246,19 @@ namespace
 				continue;
 
 			std::string key = line.substr(0, i);
-			if (key.empty() || key.find_first_of(" \t\n\v\f\r") != std::string::npos)
+			if (key.empty()
+				|| key.find_first_of(" \t\n\v\f\r") != std::string::npos)
 			{
-				Log::error("[CGI] CGI Output Header Key empty or contains whitespace");
+				Log::error("[CGI] CGI Output Header Key empty or contains "
+					"whitespace");
 				result.clear();
 				return result;
 			}
 			++i;
 
 			std::string value;
-			while (i < line.size() && std::isspace(static_cast<unsigned char>(line[i])))
+			while (i < line.size() && std::isspace(
+				static_cast<unsigned char>(line[i])))
 				++i;
 			if (i < line.size())
 				value = Helper::trimWhitespaces(line.substr(i));
@@ -267,8 +283,8 @@ namespace
 		return response;
 	}
 
-	ResponseData* runScript(RouteInfo& data, const std::vector<char*>& envPointers,
-			const std::vector<char*>& args)
+	ResponseData* runScript(RouteInfo& data,
+		const std::vector<char*>& envPointers, const std::vector<char*>& args)
 	{
 		int stdin_pipe[2];
 		int stdout_pipe[2];
@@ -306,7 +322,8 @@ namespace
 			close(stdin_pipe[0]);
 			dup2(stdout_pipe[1], STDOUT_FILENO);
 			close(stdout_pipe[1]);
-			execve(data.cgi.interpreter.c_str(), args.data(), envPointers.data());
+			execve(data.cgi.interpreter.c_str(), args.data(),
+				envPointers.data());
 			_exit(1);
 		}
 
@@ -316,9 +333,10 @@ namespace
 		data.cgi.fd_input = stdout_pipe[0];
 		Socket::makeFdNonBlocking(data.cgi.fd_output);
 		Socket::makeFdNonBlocking(data.cgi.fd_input);
-		Server::getInstance()->addFdToEventHandler(data.cgi.fd_output, false, true);
-		Server::getInstance()->addFdToEventHandler(data.cgi.fd_input, true, false);
-		Server::getInstance()->addCgiProcess(data.cgi.pid, data.request.client_fd);
+		Server* s = Server::getInstance();
+		s->addFdToEventHandler(data.cgi.fd_output, false, true);
+		s->addFdToEventHandler(data.cgi.fd_input, true, false);
+		s->addCgiProcess(data.cgi.pid, data.request.client_fd);
 		return NULL;
 	}
 
@@ -336,9 +354,10 @@ namespace
 		std::vector<std::string> result;
 		if (data.request.method == "POST")
 		{
-			result.push_back("CONTENT_LENGTH=" + Helper::nbrToString(data.request.body.size()));
-			std::string c_type = (data.request.content_type.empty()) ? "application/octet-stream"
-				: data.request.content_type;
+			result.push_back("CONTENT_LENGTH="
+				+ Helper::nbrToString(data.request.body.size()));
+			std::string c_type = (data.request.content_type.empty()) ?
+				"application/octet-stream" : data.request.content_type;
 			result.push_back("CONTENT_TYPE=" + c_type);
 		}
 		result.push_back("GATEWAY_INTERFACE=CGI/1.1");
@@ -351,7 +370,8 @@ namespace
 		result.push_back("REQUEST_METHOD=" + data.request.method);
 		result.push_back("SCRIPT_NAME=" + data.cgi.script_name);
 		result.push_back("SERVER_NAME=" + data.request.host);
-		result.push_back("SERVER_PORT=" + Helper::nbrToString(data.request.port));
+		result.push_back("SERVER_PORT="
+			+ Helper::nbrToString(data.request.port));
 		result.push_back("SERVER_PROTOCOL=" + data.request.protocol);
 		result.push_back("SERVER_SOFTWARE=teapot");
 		result.push_back("REDIRECT_STATUS=200");

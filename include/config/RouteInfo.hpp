@@ -21,6 +21,7 @@ struct RouteInfo
 	const std::map<std::string, std::string> mime_list;
 	RequestData request;
 
-	RouteInfo(const ServerData& srv, const LocationData& loc, const std::map<std::string, std::string>& mime,
+	RouteInfo(const ServerData& srv, const LocationData& loc,
+		const std::map<std::string, std::string>& mime,
 		const RequestData& request);
 };

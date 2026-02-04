@@ -13,7 +13,7 @@ print(f"<p>Raw query: {query_string}</p>")
 print("<h2>Parsed Parameters:</h2>")
 print("<ul>")
 for key, values in params.items():
-    for value in values:
-        print(f"<li>{key} = {value}</li>")
+	for value in values:
+		print(f"<li>{key} = {value}</li>")
 print("</ul>")
 print("</body></html>")

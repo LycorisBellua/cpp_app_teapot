@@ -70,7 +70,8 @@ class Config
 		ServerDirective strToServerDirective(const ParsingData& data);
 		void parseServer(ParsingData& data);
 
-		enum LocationDirective { LOC, MET, ROOT, IND, AUTOIND, UPLOAD, CGI, REDIR, INVLD };
+		enum LocationDirective { LOC, MET, ROOT, IND, AUTOIND, UPLOAD, CGI,
+			REDIR, INVLD };
 		LocationDirective strToLocationDirective(const ParsingData& data);
 		void parseLocation(ParsingData& data);
 

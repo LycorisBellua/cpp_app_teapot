@@ -15,17 +15,20 @@ namespace Delete
 	{
 		if (!Filesystem::exists(data.full_path))
 		{
-			Log::error("[DELETE] Requested file does not exist: " + data.full_path);
+			Log::error("[DELETE] Requested file does not exist: "
+				+ data.full_path);
 			return ResponseData(404, data.server.errors);
 		}
 		if (Filesystem::isDir(data.full_path))
 		{
-			Log::error("[DELETE] Directory deletion is not allowed: " + data.full_path);
+			Log::error("[DELETE] Directory deletion is not allowed: "
+				+ data.full_path);
 			return ResponseData(403, data.server.errors);
 		}
 		if (!Filesystem::isRegularFile(data.full_path))
 		{
-			Log::error("[DELETE] Requested file is not a regular file: " + data.full_path);
+			Log::error("[DELETE] Requested file is not a regular file: "
+				+ data.full_path);
 			return ResponseData(403, data.server.errors);
 		}
 		return deleteFile(data);

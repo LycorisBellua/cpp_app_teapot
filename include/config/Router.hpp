@@ -19,7 +19,7 @@ class Router
 		Router(const Router& src);
 		~Router();
 
-		std::set<std::pair<std::string, int> > getPorts() const;
+		std::set< std::pair<std::string, int> > getPorts() const;
 		RouteInfo getRoute(const RequestData& request) const;
 
 	private:
@@ -41,16 +41,24 @@ class Router
 		};
 
 		const ServerData* getServer(const RequestData& request) const;
-		const LocationData* getLocation(const std::vector<LocationData>& locations,
-		const std::string& path, const RequestData& request) const;
+		const LocationData* getLocation(
+			const std::vector<LocationData>& locations, const std::string& path,
+			const RequestData& request) const;
 		const std::string getMime(const std::string& path) const;
 
-		const ServerData* serverSearch(const std::string& host, const int port) const;
+		const ServerData* serverSearch(const std::string& host, const int port)
+			const;
 		const ServerData* serverFirstMatchingPort(const int port) const;
-		const ServerData* serverFirstMatchingHost(const std::string& host) const;
-		std::string decodeUri(const std::string& uri_no_query, const RequestData& req) const;
-		std::string normalizePath(const std::string& path, const RequestData& request) const;
-		void validMethod(const RequestData& req, const LocationData* location) const;
-		void verifyBodySize(const RequestData& request, const ServerData* server) const;
-		RouteInfo errorReturn(int code, const ServerData* srv, const RequestData& req) const;
+		const ServerData* serverFirstMatchingHost(const std::string& host)
+			const;
+		std::string decodeUri(const std::string& uri_no_query,
+			const RequestData& req) const;
+		std::string normalizePath(const std::string& path,
+			const RequestData& request) const;
+		void validMethod(const RequestData& req, const LocationData* location)
+			const;
+		void verifyBodySize(const RequestData& request,
+			const ServerData* server) const;
+		RouteInfo errorReturn(int code, const ServerData* srv,
+			const RequestData& req) const;
 };

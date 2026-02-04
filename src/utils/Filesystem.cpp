@@ -91,7 +91,8 @@ namespace Filesystem
 		DIR* dir = opendir(index_path.c_str());
 		if (!dir)
 		{
-			Log::error("[DIRECTORY LISTING] Unable to open directory: " + index_path);
+			Log::error("[DIRECTORY LISTING] Unable to open directory: "
+				+ index_path);
 			return dir_listing;
 		}
 		struct dirent* file;

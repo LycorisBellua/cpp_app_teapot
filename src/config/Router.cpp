@@ -13,7 +13,8 @@ namespace
 
 	bool isHexChar(int c)
 	{
-		return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+		return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F')
+			|| (c >= 'a' && c <= 'f');
 	}
 
 	char decodeHex(const std::string& hex)
@@ -37,7 +38,8 @@ namespace
 
 	bool methodImplemented(const std::string& method)
 	{
-		return method == "GET" || method == "POST" || method == "DELETE" || method == "HEAD";
+		return method == "GET" || method == "HEAD" || method == "POST"
+			|| method == "DELETE";
 	}
 
 	CgiInfo splitCgiPath(const std::string& path,
@@ -79,18 +81,20 @@ namespace
 	void logSuccess(const RequestData& req, const RouteInfo& route)
 	{
 		std::stringstream log_str;
-		log_str << "[Router] Successfully matched request to Server/Location\n\nRequest:" << "\nPort: "
-			<< req.port << "\nHost: " << req.host << "\nURI: " << req.uri
-			<< "\nMethod: " << req.method << "\n\nRoute:" << "\nFull Path: " << route.full_path
-			<< "\nMime Type: " << route.mime_type << "\nLocation: " << route.location.path;
+		log_str << "[Router] Successfully matched request to Server/Location"
+			"\n\nRequest:" << "\nPort: " << req.port << "\nHost: " << req.host
+			<< "\nURI: " << req.uri << "\nMethod: " << req.method
+			<< "\n\nRoute:" << "\nFull Path: " << route.full_path
+			<< "\nMime Type: " << route.mime_type << "\nLocation: "
+			<< route.location.path;
 		Log::info(log_str.str());
 	}
-
 }
 
 /* CONSTRUCTORS / DESTRUCTOR ------------------------------------------------ */
 
-Router::Router(const Config& conf) : servers(conf.getServers()), mime(conf.getMime())
+Router::Router(const Config& conf)
+	: servers(conf.getServers()), mime(conf.getMime())
 {
 }
 
@@ -113,8 +117,8 @@ Router::RouterError::RouterError(const std::string msg)
 Router::RouterError::RouterError(const std::string& msg, const RequestData& req)
 {
 	std::stringstream err_string;
-	err_string << "[Router] " << msg << "\nPort: " << req.port << "\nHost: " << req.host
-		<< "\nURI: " << req.uri << "\nMethod: " << req.method;
+	err_string << "[Router] " << msg << "\nPort: " << req.port << "\nHost: "
+		<< req.host << "\nURI: " << req.uri << "\nMethod: " << req.method;
 	err_msg = err_string.str();
 	Log::error(err_string.str());
 }
@@ -130,9 +134,9 @@ const char* Router::RouterError::what() const throw()
 
 /* GETTERS ------------------------------------------------------------------ */
 
-std::set<std::pair<std::string, int> > Router::getPorts() const
+std::set< std::pair<std::string, int> > Router::getPorts() const
 {
-	std::set<std::pair<std::string, int> > ports;
+	std::set< std::pair<std::string, int> > ports;
 	for (srv_it s = servers.begin(); s != servers.end(); ++s)
 		ports.insert(std::make_pair(s->host, s->port));
 	return ports;
@@ -186,14 +190,14 @@ RouteInfo Router::getRoute(const RequestData& request) const
 		return route;
 	}
 	CgiInfo cgi = splitCgiPath(path, location->cgi, request.method);
-	route.full_path = Filesystem::normalisePaths(location->root + cgi.script_path.substr(1),
-			Filesystem::getCurrentDir());
+	route.full_path = Filesystem::normalisePaths(location->root
+		+ cgi.script_path.substr(1), Filesystem::getCurrentDir());
 	route.query = query;
 	route.mime_type = getMime(cgi.script_path);
 	if (!cgi.path_info.empty())
 	{
-		cgi.path_translated = Filesystem::normalisePaths(location->root + cgi.path_info.substr(1),
-				Filesystem::getCurrentDir());
+		cgi.path_translated = Filesystem::normalisePaths(location->root
+			+ cgi.path_info.substr(1), Filesystem::getCurrentDir());
 	}
 	cgi.script_name = cgi.script_path;
 	route.cgi = cgi;
@@ -232,20 +236,22 @@ const ServerData* Router::getServer(const RequestData& request) const
 	throw RouterError("No Matching server found for request", request);
 }
 
-const LocationData* Router::getLocation(const std::vector<LocationData>& locations,
-		const std::string& path, const RequestData& request) const
+const LocationData* Router::getLocation(
+	const std::vector<LocationData>& locations, const std::string& path,
+	const RequestData& request) const
 {
 	loc_it match = locations.end();
 	for (loc_it loc = locations.begin(); loc != locations.end(); ++loc)
 	{
 		if (path.compare(0, loc->path.length(), loc->path) == 0)
 		{
-			// Check boundary: must be exact match, followed by '/', or location is root
-			if (path.length() == loc->path.length() || path[loc->path.length()] == '/' ||
-					loc->path == "/")
+			// Check boundary: must be exact match, followed by '/', or 
+			// location is root
+			if (path.length() == loc->path.length()
+				|| path[loc->path.length()] == '/' || loc->path == "/")
 			{
-				match =
-					(match == locations.end() || (loc->path.length() > match->path.length())) ? loc : match;
+				match = (match == locations.end()
+					|| loc->path.length() > match->path.length()) ? loc : match;
 			}
 		}
 	}
@@ -263,7 +269,8 @@ const std::string Router::getMime(const std::string& path) const
 	return found == mime.end() ? "application/octet-stream" : found->second;
 }
 
-const ServerData* Router::serverSearch(const std::string& host, const int port) const
+const ServerData* Router::serverSearch(const std::string& host, const int port)
+	const
 {
 	for (srv_it server = servers.begin(); server != servers.end(); ++server)
 	{
@@ -293,7 +300,8 @@ const ServerData* Router::serverFirstMatchingHost(const std::string& host) const
 	return NULL;
 }
 
-std::string Router::decodeUri(const std::string& uri_no_query, const RequestData& req) const
+std::string Router::decodeUri(const std::string& uri_no_query,
+	const RequestData& req) const
 {
 	const std::string& uri = uri_no_query;
 	std::string result;
@@ -325,7 +333,8 @@ std::string Router::decodeUri(const std::string& uri_no_query, const RequestData
 	return result;
 }
 
-std::string Router::normalizePath(const std::string& path, const RequestData& request) const
+std::string Router::normalizePath(const std::string& path,
+	const RequestData& request) const
 {
 	if (path.empty() || path[0] != '/')
 		throw RouterError("Path must start with /", request);
@@ -384,35 +393,31 @@ std::string Router::normalizePath(const std::string& path, const RequestData& re
 	return result;
 }
 
-void Router::validMethod(const RequestData& req, const LocationData* location) const
+void Router::validMethod(const RequestData& req, const LocationData* location)
+	const
 {
 	const std::vector<std::string>& am = location->allowed_methods;
 	std::string method_str = (req.method == "HEAD") ? "GET" : req.method;
 	strvec_it method = std::find(am.begin(), am.end(), method_str);
 
-	bool is_valid = (method != am.end()) || (am.empty() && methodImplemented(method_str));
+	bool is_valid = method != am.end()
+		|| (am.empty() && methodImplemented(method_str));
 	if (!is_valid)
 		throw RouterError("Invalid Method for matched location", req);
 }
 
-void Router::verifyBodySize(const RequestData& request, const ServerData* server) const
+void Router::verifyBodySize(const RequestData& request,
+	const ServerData* server) const
 {
 	if (request.body.size() > server->client_body_max)
 		throw RouterError("Body Size too large for matched server", request);
 }
 
-RouteInfo Router::errorReturn(int code, const ServerData* srv, const RequestData& req) const
+RouteInfo Router::errorReturn(int code, const ServerData* srv,
+	const RequestData& req) const
 {
-	if (srv)
-	{
-		RouteInfo response(*srv, LocationData(), std::map<std::string, std::string>(), req);
-		response.error_code = code;
-		return response;
-	}
-	else
-	{
-		RouteInfo response(ServerData(), LocationData(), std::map<std::string, std::string>(), req);
-		response.error_code = code;
-		return response;
-	}
+	RouteInfo response(srv ? *srv : ServerData(), LocationData(),
+		std::map<std::string, std::string>(), req);
+	response.error_code = code;
+	return response;
 }

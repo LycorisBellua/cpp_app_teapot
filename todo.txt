@@ -1,0 +1,6 @@
+- Are all the explicit destructors, copy constructors and assignment operators 
+necessary?
+- Use namespaces in src/server/.
+- Timeout message for CGI and common connections.
+- Review config and utils code to maybe simplify it.
+- C++98 -> C++11.

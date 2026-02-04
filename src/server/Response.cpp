@@ -96,7 +96,7 @@ std::string Response::serialize(const ResponseData& res, bool is_head,
 		std::vector<std::string>::const_iterator itv;
 		for (itv = cookie_headers.begin(); itv != cookie_headers.end(); ++itv)
 			str += getHeaderLine("Set-Cookie", *itv);
-		std::set<std::pair<std::string, std::string> >::iterator its;
+		std::set< std::pair<std::string, std::string> >::iterator its;
 		for (its = res.headers.begin(); its != res.headers.end(); ++its)
 			str += getHeaderLine(its->first, its->second);
 		if (should_close)

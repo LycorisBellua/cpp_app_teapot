@@ -10,7 +10,8 @@
 namespace
 {
 	std::string getFileUrl(const std::string& filename, const RouteInfo& data);
-	bool writeFile(std::ofstream& output_file, const std::string& filepath, const std::string& body);
+	bool writeFile(std::ofstream& output_file, const std::string& filepath,
+		const std::string& body);
 	std::string lookupMime(const RouteInfo& data);
 	std::string getUploadBase();
 	std::string generateFilename(const RouteInfo& data);
@@ -43,16 +44,21 @@ namespace
 		return url_path + '/' + filename;
 	}
 
-	bool writeFile(std::ofstream& output_file, const std::string& filepath, const std::string& body)
+	bool writeFile(std::ofstream& output_file, const std::string& filepath,
+		const std::string& body)
 	{
 		if (!output_file.is_open())
-			Log::error("[POST] File Not Created: Could Not Open File Stream:\n" + filepath);
+		{
+			Log::error("[POST] File Not Created: Could Not Open File Stream:\n"
+				+ filepath);
+		}
 		output_file.write(body.c_str(), body.size());
 		if (!output_file.good())
 		{
 			output_file.close();
 			std::remove(filepath.c_str());
-			Log::error("[POST] File Not Created: Could not write to File Stream:\n" + filepath);
+			Log::error("[POST] File Not Created: Could not write to File "
+				"Stream:\n" + filepath);
 			return false;
 		}
 		output_file.close();
@@ -62,12 +68,14 @@ namespace
 
 	std::string lookupMime(const RouteInfo& data)
 	{
-		for (map_it it = data.mime_list.begin(); it != data.mime_list.end(); ++it)
+		map_it it;
+		for (it = data.mime_list.begin(); it != data.mime_list.end(); ++it)
 		{
 			if (it->second == data.request.content_type)
 				return it->first;
 		}
-		Log::info("[POST] No matching file extension found for: " + data.request.content_type);
+		Log::info("[POST] No matching file extension found for: "
+			+ data.request.content_type);
 		return "";
 	}
 
@@ -84,7 +92,8 @@ namespace
 
 	std::string generateFilename(const RouteInfo& data)
 	{
-		const std::set<std::string> dir_listing = Filesystem::getDirListing(data.full_path);
+		const std::set<std::string> dir_listing =
+			Filesystem::getDirListing(data.full_path);
 		const std::string base = getUploadBase();
 		const std::string extension = lookupMime(data);
 		std::stringstream filename;

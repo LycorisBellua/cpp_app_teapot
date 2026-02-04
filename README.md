@@ -119,8 +119,8 @@ Besides the index, here are the relevant routes:
 
 ## Resources
 
-For learning, we relied on the [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/418) 
-and on the RFCs:  
+For learning, we relied on the <a href="https://developer.mozilla.org/en-US/
+docs/Web/HTTP/Reference/Status/418">MDN Web Docs</a> and on the RFCs:  
 - [RFC 9110 - HTTP Semantics](https://datatracker.ietf.org/doc/html/rfc9110)
 - [RFC 9112 - HTTP/1.1](https://datatracker.ietf.org/doc/html/rfc9112)
 - [RFC 3986 - URI Syntax](https://datatracker.ietf.org/doc/html/rfc3986)

@@ -320,7 +320,8 @@ bool Request::isOriginForm(const std::string& uri)
 	return true;
 }
 
-bool Request::processAbsoluteForm(std::string& uri, std::string& domain, int& port)
+bool Request::processAbsoluteForm(std::string& uri, std::string& domain,
+	int& port)
 {
 	std::string scheme;
 	std::string path;
@@ -358,8 +359,8 @@ bool Request::setPath(const std::string& uri, const std::string& scheme,
 	return isOriginForm(path);
 }
 
-bool Request::setDomainAndPort(const std::string& uri, const std::string& scheme,
-	std::string& domain, std::string& str_port)
+bool Request::setDomainAndPort(const std::string& uri,
+	const std::string& scheme, std::string& domain, std::string& str_port)
 {
 	domain = uri.substr(scheme.length() + 3,
 		uri.find('/', scheme.length() + 3) - (scheme.length() + 3));

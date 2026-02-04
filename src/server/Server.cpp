@@ -101,8 +101,9 @@ void Server::signalHandler(int signum)
 Server::Server(const std::string& config_path)
 	: router_(Router(Config(config_path))), fd_epoll_(epoll_create(1))
 {
-	const std::set<std::pair<std::string, int> >& ip_ports = router_.getPorts();
-	std::set<std::pair<std::string, int> >::const_iterator it;
+	const std::set< std::pair<std::string, int> >& ip_ports =
+		router_.getPorts();
+	std::set< std::pair<std::string, int> >::const_iterator it;
 	for (it = ip_ports.begin(); it != ip_ports.end(); ++it)
 	{
 		const std::string& ip = it->first;

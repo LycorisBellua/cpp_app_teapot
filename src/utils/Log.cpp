@@ -4,7 +4,8 @@
 
 namespace
 {
-	void writeLog(std::ostream& os, const std::string& msg_type, const std::string& msg);
+	void writeLog(std::ostream& os, const std::string& msg_type,
+		const std::string& msg);
 }
 
 namespace Log
@@ -22,7 +23,8 @@ namespace Log
 
 namespace
 {
-	void writeLog(std::ostream& os, const std::string& msg_type, const std::string& msg)
+	void writeLog(std::ostream& os, const std::string& msg_type,
+		const std::string& msg)
 	{
 		const time_t now = std::time(0);
 		struct tm* timeinfo = std::localtime(&now);

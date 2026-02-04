@@ -17,7 +17,8 @@ Config::~Config()
 {
 }
 
-Config::ParsingData::ParsingData(const std::string& conf_file) : infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE)
+Config::ParsingData::ParsingData(const std::string& conf_file)
+	: infile(conf_file.c_str()), line_number(0), nest_level(0), state(NONE)
 {
 }
 
@@ -56,7 +57,8 @@ namespace
 	typedef std::vector<LocationData>::iterator location_it;
 	typedef std::string::const_iterator string_it;
 	typedef std::map<int, std::string>::iterator error_it;
-	typedef std::set<std::pair<int, std::string> >::const_iterator port_host_it;
+	typedef std::set< std::pair<int, std::string> >::const_iterator
+		port_host_it;
 	typedef std::map<std::string, std::string>::iterator cgi_it;
 
 	std::vector<std::string> tokenizeLine(std::string line)
@@ -77,9 +79,11 @@ namespace
 		return result;
 	}
 
-	bool findToken(const std::vector<std::string>& processed, const std::string& token)
+	bool findToken(const std::vector<std::string>& processed,
+		const std::string& token)
 	{
-		return std::find(processed.begin(), processed.end(), token) != processed.end();
+		return std::find(processed.begin(), processed.end(), token)
+			!= processed.end();
 	}
 }
 
@@ -182,7 +186,8 @@ void Config::handleLocationBlock(ParsingData& data)
 void Config::parseMime(ParsingData& data)
 {
 	size_t divide = data.tokens[0].find_first_of("/");
-	if (data.tokens.size() == 1 || divide == data.tokens[0].npos || divide == 0 || divide == data.tokens[0].length() - 1)
+	if (data.tokens.size() == 1 || divide == data.tokens[0].npos || divide == 0
+		|| divide == data.tokens[0].length() - 1)
 		throw ConfigError(data, "Invalid Mime Directive");
 	for (size_t i = 1; i < data.tokens.size(); ++i)
 		mime_types["." + data.tokens[i]] = data.tokens[0];
@@ -190,7 +195,8 @@ void Config::parseMime(ParsingData& data)
 
 Config::ServerDirective Config::strToServerDirective(const ParsingData& data)
 {
-	std::string type = data.tokens[0].substr(0, 11) == "error_page_" ? "error_page_" : data.tokens[0];
+	std::string type = data.tokens[0].substr(0, 11) == "error_page_" ?
+		"error_page_" : data.tokens[0];
 	static std::map<std::string, ServerDirective> types_map;
 	if (types_map.empty())
 	{
@@ -199,7 +205,8 @@ Config::ServerDirective Config::strToServerDirective(const ParsingData& data)
 		types_map["client_max_body_size"] = BODY;
 		types_map["error_page_"] = ERR;
 	}
-	std::map<std::string, ServerDirective>::const_iterator it = types_map.find(type);
+	std::map<std::string, ServerDirective>::const_iterator it =
+		types_map.find(type);
 	return it != types_map.end() ? it->second : INVALID;
 }
 
@@ -227,7 +234,8 @@ void Config::parseServer(ParsingData& data)
 	data.server_processed.push_back(data.tokens[0]);
 }
 
-Config::LocationDirective Config::strToLocationDirective(const ParsingData& data)
+Config::LocationDirective Config::strToLocationDirective(
+	const ParsingData& data)
 {
 	const std::string& type = data.tokens[0];
 	static std::map<std::string, LocationDirective> types_map;
@@ -242,13 +250,15 @@ Config::LocationDirective Config::strToLocationDirective(const ParsingData& data
 		types_map["cgi"] = CGI;
 		types_map["redirect"] = REDIR;
 	}
-	std::map<std::string, LocationDirective>::const_iterator it = types_map.find(type);
+	std::map<std::string, LocationDirective>::const_iterator it =
+		types_map.find(type);
 	return it != types_map.end() ? it->second : INVLD;
 }
 
 void Config::parseLocation(ParsingData& data)
 {
-	if (data.tokens[0] != "cgi" && findToken(data.location_processed, data.tokens[0]))
+	if (data.tokens[0] != "cgi" && findToken(data.location_processed,
+		data.tokens[0]))
 		throw ConfigError(data, "Duplicate Location Directive");
 	switch (strToLocationDirective(data))
 	{
@@ -285,18 +295,22 @@ void Config::parseLocation(ParsingData& data)
 Config::ParseState Config::validateBlockOpen(ParsingData& data)
 {
 	const std::vector<std::string>& tokens = data.tokens;
-	static std::map<std::string, std::pair<ParseState, int> > open_states;
+	static std::map< std::string, std::pair<ParseState, int> > open_states;
 	if (open_states.empty())
 	{
 		open_states["mime"] = std::make_pair(MIME, 0);
 		open_states["server"] = std::make_pair(SERVER, 0);
 		open_states["location"] = std::make_pair(LOCATION, 1);
 	}
-	std::map<std::string, std::pair<ParseState, int> >::const_iterator it = open_states.find(tokens[0]);
-	if (it == open_states.end() || tokens.size() > 3 || (tokens.size() == 2 && tokens[1] != "{") || (tokens.size() == 3 && tokens[2] != "{"))
+	std::map< std::string, std::pair<ParseState, int> >::const_iterator it =
+		open_states.find(tokens[0]);
+	if (it == open_states.end() || tokens.size() > 3
+		|| (tokens.size() == 2 && tokens[1] != "{")
+		|| (tokens.size() == 3 && tokens[2] != "{"))
 		return NONE;
 	if (it->second.second != data.nest_level)
-		throw ConfigError(data, "Can't open " + tokens[0] + " block here. Ensure previous blocks are closed");
+		throw ConfigError(data, "Can't open " + tokens[0]
+			+ " block here. Ensure previous blocks are closed");
 	++data.nest_level;
 	return it->second.first;
 }
@@ -316,7 +330,8 @@ void Config::setPort(const ParsingData& data)
 	const std::vector<std::string>& port = data.tokens;
 	if (port.size() != 2 || port[1].empty())
 		throw ConfigError(data, "One listen port must be specified per server");
-	if (port[1].length() == 0 || port[1].length() > 5 || port[1].find_first_not_of("1234567890") != port[1].npos)
+	if (port[1].length() == 0 || port[1].length() > 5
+		|| port[1].find_first_not_of("1234567890") != port[1].npos)
 		throw ConfigError(data, "Port value must be a number from 1-65535");
 	int port_number = std::atoi(port[1].c_str());
 	if (port_number < 1 || port_number > 65535)
@@ -334,7 +349,8 @@ void Config::setHost(const ParsingData& data)
 		servers.back().host = "127.0.0.1";
 		return;
 	}
-	if (host[1].find_first_not_of("1234567890.") != host[1].npos || host[1].length() < 7 || host[1].length() > 15)
+	if (host[1].find_first_not_of("1234567890.") != host[1].npos
+		|| host[1].length() < 7 || host[1].length() > 15)
 		throw ConfigError(data, "Invalid Host Value");
 	std::istringstream address(host[1]);
 	int a, b, c, d;
@@ -345,7 +361,8 @@ void Config::setHost(const ParsingData& data)
 		throw ConfigError(data, "Invalid IP address");
 	if (address.peek() != EOF)
 		throw ConfigError(data, "Invalid IP address");
-	if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0 || d > 255)
+	if (a < 0 || a > 255 || b < 0 || b > 255 || c < 0 || c > 255 || d < 0
+		|| d > 255)
 		throw ConfigError(data, "Invalid IP address");
 	servers.back().host = host[1];
 }
@@ -374,12 +391,15 @@ void Config::setErrorPage(const ParsingData& data)
 	if (errpage[0].length() != 14)
 		throw ConfigError(data, "Invalid error type");
 	std::string error_num = errpage[0].substr(11);
-	if (error_num.length() != 3 || error_num.find_first_not_of("1234567890") != error_num.npos)
+	if (error_num.length() != 3 || error_num.find_first_not_of("1234567890")
+		!= error_num.npos)
 		throw ConfigError(data, "Invalid error number");
 	if (!Filesystem::exists(errpage[1]))
-		throw ConfigError(data, "Error page file does not exist: " + errpage[1]);
+		throw ConfigError(data, "Error page file does not exist: "
+			+ errpage[1]);
 	if (!Filesystem::isRegularFile(errpage[1]))
-		throw ConfigError(data, "Specified error page is not a regular file: " + errpage[1]);
+		throw ConfigError(data, "Specified error page is not a regular file: "
+			+ errpage[1]);
 	servers.back().errors[std::atoi(error_num.c_str())] = errpage[1];
 }
 
@@ -390,8 +410,10 @@ void Config::setPath(const ParsingData& data)
 		throw ConfigError(data, "One path must be specified per location");
 	if (path[1][0] != '/' || path[2] != "{")
 		throw ConfigError(data, "Invalid Path");
-	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_./");
-	if (path[1].find_first_not_of(allowed) != path[1].npos || path[1].find("//") != path[1].npos)
+	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"1234567890-_./");
+	if (path[1].find_first_not_of(allowed) != path[1].npos
+		|| path[1].find("//") != path[1].npos)
 		throw ConfigError(data, "Invalid Path");
 	if (path[1].length() > 1 && path[1][path[1].length() - 1] == '/')
 		path[1] = path[1].substr(0, path[1].length() - 1);
@@ -402,18 +424,23 @@ void Config::setMethods(const ParsingData& data)
 {
 	const std::vector<std::string>& methods = data.tokens;
 	if (methods.size() < 2 || methods.size() > 4)
-		throw ConfigError(data, "A minimum of 1 and maximum of 3 allowed methods must be specified");
-	for (std::vector<std::string>::const_iterator m = methods.begin() + 1; m != methods.end(); ++m)
+		throw ConfigError(data, "A minimum of 1 and maximum of 3 allowed "
+			"methods must be specified");
+	std::vector<std::string>::const_iterator m; 
+	for (m = methods.begin() + 1; m != methods.end(); ++m)
 	{
 		if (*m != "GET" && *m != "POST" && *m != "DELETE" && *m != "HEAD")
 			throw ConfigError(data, "Invalid Method: " + *m);
-		for (std::vector<std::string>::const_iterator m2 = m + 1; m2 != methods.end(); ++m2)
+		std::vector<std::string>::const_iterator m2; 
+		for (m2 = m + 1; m2 != methods.end(); ++m2)
 		{
 			if (*m == *m2)
-				throw ConfigError(data, "Each method may only be specified once per location");
+				throw ConfigError(data,
+					"Each method may only be specified once per location");
 		}
 	}
-	servers.back().locations.back().allowed_methods.assign(methods.begin() + 1, methods.end());
+	servers.back().locations.back().allowed_methods.assign(methods.begin() + 1,
+		methods.end());
 }
 
 void Config::setRoot(const ParsingData& data)
@@ -433,7 +460,8 @@ void Config::setIndex(const ParsingData& data)
 	const std::vector<std::string>& index = data.tokens;
 	if (index.size() != 2 || index[1].empty() || index[1][0] == '.')
 		throw ConfigError(data, "Invalid index");
-	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.");
+	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"1234567890-_.");
 	if (index[1].find_first_not_of(allowed) != index[1].npos)
 		throw ConfigError(data, "Invalid characters in index");
 	size_t dot = index[1].find_first_of(".");
@@ -448,7 +476,8 @@ void Config::setIndex(const ParsingData& data)
 void Config::setAutoIndex(const ParsingData& data)
 {
 	const std::vector<std::string>& autoindex = data.tokens;
-	if (autoindex.size() != 2 || autoindex[1].empty() || (autoindex[1] != "true" && autoindex[1] != "false"))
+	if (autoindex.size() != 2 || autoindex[1].empty()
+		|| (autoindex[1] != "true" && autoindex[1] != "false"))
 		throw ConfigError(data, "A single 'true' or 'false' must be specified");
 	servers.back().locations.back().autoindex = autoindex[1] == "true";
 }
@@ -458,7 +487,8 @@ void Config::setUploadPath(const ParsingData& data)
 	const std::vector<std::string>& path = data.tokens;
 	if (path.size() != 2 || path[1].empty())
 		throw ConfigError(data, "One upload path must be specified");
-	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_/");
+	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"0123456789-_/");
 	if (path[1].find_first_not_of(allowed) != path[1].npos)
 		throw ConfigError(data, "Invalid characters in upload path");
 	if (path[1].find("//") != path[1].npos)
@@ -471,7 +501,9 @@ void Config::setCgi(const ParsingData& data)
 	const std::vector<std::string>& cgi = data.tokens;
 	if (cgi.size() != 3 || cgi[1].empty() || cgi[2].empty())
 		throw ConfigError(data, "Invalid cgi directive");
-	if (cgi[1].length() < 2 || cgi[1][0] != '.' || cgi[1].substr(1).find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUBWXYZ1234567890") != std::string::npos)
+	if (cgi[1].length() < 2 || cgi[1][0] != '.'
+		|| cgi[1].substr(1).find_first_not_of("abcdefghijklmnopqrstuvwxyz"
+		"ABCDEFGHIJKLMNOPQRSTUBWXYZ1234567890") != std::string::npos)
 		throw ConfigError(data, "Invalid cgi extension: " + cgi[1]);
 	if (!Filesystem::exists(cgi[2]))
 		throw ConfigError(data, "CGI interpreter does not exist: " + cgi[2]);
@@ -486,13 +518,16 @@ void Config::setRedirect(const ParsingData& data)
 {
 	const std::vector<std::string> redir = data.tokens;
 	if (redir.size() != 3 || redir[1].empty() || redir[2].empty())
-		throw ConfigError(data, "A valid response code and path must be specified");
+		throw ConfigError(data,
+			"A valid response code and path must be specified");
 	if (redir[1] != "301" && redir[1] != "302")
 		throw ConfigError(data, "Invalid Response Code");
-	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-_.:/");
+	std::string allowed("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"1234567890-_.:/");
 	if (redir[2].find_first_not_of(allowed) != redir[2].npos)
 		throw ConfigError(data, "Invalid characters in path");
-	servers.back().locations.back().redirect = std::make_pair(std::atoi(redir[1].c_str()), redir[2]);
+	servers.back().locations.back().redirect =
+		std::make_pair(std::atoi(redir[1].c_str()), redir[2]);
 }
 
 void Config::verifyRequiredData()
@@ -505,7 +540,8 @@ void Config::verifyRequiredData()
 	for (c_server_it srv = servers.begin(); srv != servers.end(); ++srv)
 	{
 		verifyServer(*srv);
-		for (c_location_it loc = srv->locations.begin(); loc != srv->locations.end(); ++loc)
+		c_location_it loc; 
+		for (loc = srv->locations.begin(); loc != srv->locations.end(); ++loc)
 			verifyLocation(*loc);
 	}
 
@@ -520,7 +556,8 @@ void Config::verifyServer(const ServerData& srv) const
 	if (srv.host.empty())
 		throw ConfigError("A host must be specified for each server");
 	if (srv.locations.empty())
-		throw ConfigError("At least one location block is required for each server");
+		throw ConfigError("At least one location block is required for each "
+			"server");
 }
 
 void Config::verifyLocation(const LocationData& loc) const
@@ -530,22 +567,28 @@ void Config::verifyLocation(const LocationData& loc) const
 		return;
 	// Root required if not redirect
 	if (loc.root.empty())
-		throw ConfigError("Location " + loc.path + ": root must be specified for all non-redirect locations");
-	if (std::find(loc.allowed_methods.begin(), loc.allowed_methods.end(), "POST") != loc.allowed_methods.end())
+		throw ConfigError("Location " + loc.path
+			+ ": root must be specified for all non-redirect locations");
+	if (std::find(loc.allowed_methods.begin(), loc.allowed_methods.end(),
+		"POST") != loc.allowed_methods.end())
 	{
 		if (loc.cgi.empty() && loc.upload_path.empty())
-			throw ConfigError("Location " + loc.path + ": CGI or upload_path must be specified for POST locations");
+			throw ConfigError("Location " + loc.path
+				+ ": CGI or upload_path must be specified for POST locations");
 	}
 }
 
 void Config::verifyPortHostPairs() const
 {
-	std::set<std::pair<int, std::string> > port_host_pairs;
-	for (c_server_it server = servers.begin(); server != servers.end(); ++server)
+	std::set< std::pair<int, std::string> > port_host_pairs;
+	c_server_it server; 
+	for (server = servers.begin(); server != servers.end(); ++server)
 	{
-		std::pair<int, std::string> current_server = std::make_pair(server->port, server->host);
+		std::pair<int, std::string> current_server =
+			std::make_pair(server->port, server->host);
 		if (port_host_pairs.find(current_server) != port_host_pairs.end())
-			throw ConfigError("Duplicate port/host pair found: " + Helper::nbrToString(server->port) + " " + server->host);
+			throw ConfigError("Duplicate port/host pair found: "
+				+ Helper::nbrToString(server->port) + " " + server->host);
 		port_host_pairs.insert(current_server);
 	}
 }
@@ -564,15 +607,19 @@ void Config::normalisePaths()
 			if (!l->cgi.empty())
 			{
 				for (cgi_it c = l->cgi.begin(); c != l->cgi.end(); ++c)
-					c->second = Filesystem::normalisePaths(c->second, current_dir);
+					c->second = Filesystem::normalisePaths(c->second,
+						current_dir);
 			}
 			if (!l->upload_path.empty())
 			{
-				l->upload_path = Filesystem::normalisePaths(l->upload_path, l->root);
+				l->upload_path = Filesystem::normalisePaths(l->upload_path,
+					l->root);
 				if (!Filesystem::exists(l->upload_path))
-					throw ConfigError("Upload Path does not exist: " + l->upload_path);
+					throw ConfigError("Upload Path does not exist: "
+						+ l->upload_path);
 				if (!Filesystem::isDir(l->upload_path))
-					throw ConfigError("Upload Path is not a directory: " + l->upload_path);
+					throw ConfigError("Upload Path is not a directory: "
+						+ l->upload_path);
 			}
 		}
 	}
