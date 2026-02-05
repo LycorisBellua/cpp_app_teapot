@@ -1,7 +1,5 @@
 #include "Listener.hpp"
 
-/* Public (Instance) -------------------------------------------------------- */
-
 Listener::Listener(int fd, const std::string& ip, int port)
 	: fd_(fd), ip_(ip), port_(port)
 {

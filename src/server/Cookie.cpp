@@ -1,8 +1,6 @@
 #include "Cookie.hpp"
 #include "Helper.hpp"
 
-/* Public (Instance) -------------------------------------------------------- */
-
 Cookie::Cookie(const std::string& key, const std::string& value,
 	const std::string& domain, const std::string& path)
 	: creation_time_(std::time(0)),

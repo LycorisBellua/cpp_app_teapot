@@ -1,4 +1,3 @@
-- Use namespaces in src/server/.
 - Review config and utils code to maybe simplify it.
 - Timeout message for CGI and common connections.
 - C++98 -> C++11.

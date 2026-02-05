@@ -2,8 +2,6 @@
 #include "CookieJar.hpp"
 #include "HexColorCode.hpp"
 
-/* Public (Instance) -------------------------------------------------------- */
-
 CookieJar::CookieJar(const std::string& ip) : ip_(ip)
 {
 }
