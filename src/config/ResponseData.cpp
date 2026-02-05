@@ -29,7 +29,3 @@ ResponseData::ResponseData(const int return_code, const std::string &content,
 	content(content), content_type(content_type)
 {
 }
-
-ResponseData::~ResponseData()
-{
-}

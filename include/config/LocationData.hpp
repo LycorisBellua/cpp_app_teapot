@@ -16,7 +16,4 @@ struct LocationData
 	std::pair<int, std::string> redirect;
 
 	LocationData();
-	LocationData(const LocationData& src);
-	~LocationData();
-	LocationData& operator=(const LocationData& src);
 };

@@ -16,8 +16,6 @@ class Router
 {
 	public:
 		Router(const Config& conf);
-		Router(const Router& src);
-		~Router();
 
 		std::set< std::pair<std::string, int> > getPorts() const;
 		RouteInfo getRoute(const RequestData& request) const;

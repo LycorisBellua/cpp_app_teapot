@@ -5,16 +5,12 @@
 #include "Helper.hpp"
 #include "Log.hpp"
 
-/* CONSTRUCTORS / DESTRUCTOR ------------------------------------------------ */
+/* CONSTRUCTORS ------------------------------------------------------------- */
 
 Config::Config(const std::string& conf) : conf_path(conf)
 {
 	Log::info("Config File: " + conf_path);
 	parse();
-}
-
-Config::~Config()
-{
 }
 
 Config::ParsingData::ParsingData(const std::string& conf_file)

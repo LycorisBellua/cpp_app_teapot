@@ -91,18 +91,10 @@ namespace
 	}
 }
 
-/* CONSTRUCTORS / DESTRUCTOR ------------------------------------------------ */
+/* CONSTRUCTOR -------------------------------------------------------------- */
 
 Router::Router(const Config& conf)
 	: servers(conf.getServers()), mime(conf.getMime())
-{
-}
-
-Router::Router(const Router& src) : servers(src.servers), mime(src.mime)
-{
-}
-
-Router::~Router()
 {
 }
 

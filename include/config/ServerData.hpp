@@ -15,7 +15,4 @@ struct ServerData
 	std::vector<LocationData> locations;
 
 	ServerData();
-	ServerData(const ServerData& src);
-	~ServerData();
-	ServerData& operator=(const ServerData& src);
 };

@@ -11,7 +11,6 @@ class Config
 {
 	public:
 		Config(const std::string& conf);
-		~Config();
 
 		const std::string& getPath() const;
 		const std::map<std::string, std::string>& getMime() const;
@@ -22,11 +21,6 @@ class Config
 		const std::string conf_path;
 		std::vector<ServerData> servers;
 		std::map<std::string, std::string> mime_types;
-
-		// OCF Requirements
-		Config();
-		Config(const Config&);
-		Config& operator=(const Config&);
 
 		// Parsing State
 		enum ParseState { NONE, MIME, SERVER, LOCATION };
