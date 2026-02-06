@@ -126,13 +126,25 @@ namespace Helper
 		return random % (max - min + 1) + min;
 	}
 
-	std::string getDateGMT(const std::time_t& time)
+	/* RFC format and GMT */
+	std::string getDateRFC(const std::time_t& time)
 	{
-		std::tm *gmt = std::gmtime(&time);
-		if (!gmt)
+		std::tm *tm = std::gmtime(&time);
+		if (!tm)
 			return "";
 		char buffer[64] = {0};
-		std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", gmt);
+		std::strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", tm);
+		return buffer;
+	}
+
+	/* ISO format and local */
+	std::string getDateISO(const std::time_t& time)
+	{
+		std::tm* tm = std::localtime(&time);
+		if (!tm)
+			return "";
+		char buffer[64] = {0};
+		std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", tm);
 		return buffer;
 	}
 }

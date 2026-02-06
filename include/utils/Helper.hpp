@@ -27,7 +27,8 @@ namespace Helper
 	std::string touppercase(const std::string& str);
 	bool isPrintableAscii(const std::string& str);
 	int rngMinmax(int *seed, int min, int max);
-	std::string getDateGMT(const std::time_t& time);
+	std::string getDateRFC(const std::time_t& time);
+	std::string getDateISO(const std::time_t& time);
 
 	/* Template definitions ------------------------------------------------- */
 

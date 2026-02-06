@@ -100,7 +100,7 @@ namespace
 			str += getCRLF();
 		else
 		{
-			str += getHeaderLine("Date", Helper::getDateGMT(std::time(0)));
+			str += getHeaderLine("Date", Helper::getDateRFC(std::time(0)));
 			str += getHeaderLine("Content-Length",
 				Helper::nbrToString(res.content.length()));
 			if (!res.content.empty())

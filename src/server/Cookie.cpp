@@ -55,7 +55,7 @@ std::string Cookie::getSetCookieValue() const
 	if (has_max_age_)
 		str += "; Max-Age=" + Helper::nbrToString(max_age_);
 	else if (has_expiration_date_)
-		str += "; Expires=" + Helper::getDateGMT(expiration_date_);
+		str += "; Expires=" + Helper::getDateRFC(expiration_date_);
 	if (!domain_.empty())
 		str += "; Domain=" + domain_;
 	if (!path_.empty())
